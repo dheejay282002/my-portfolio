@@ -12,31 +12,45 @@ export function getDb(): Pool {
         ? false
         : { rejectUnauthorized: false },
     });
-    initDb().catch((err) => console.error("Database initialization failed:", err));
   }
   return pool;
 }
 
+let initPromise: Promise<void> | null = null;
+
+export async function ensureDbInitialized(): Promise<void> {
+  if (!initPromise) {
+    const db = getDb();
+    initPromise = initDb(db).catch((err) => {
+      initPromise = null; // Reset on failure so we try again next request
+      console.error("Database initialization failed:", err);
+      throw err;
+    });
+  }
+  return initPromise;
+}
+
 export async function queryAll(sql: string, params: any[] = []) {
+  await ensureDbInitialized();
   const db = getDb();
   const res = await db.query(sql, params);
   return res.rows;
 }
 
 export async function queryOne(sql: string, params: any[] = []) {
+  await ensureDbInitialized();
   const db = getDb();
   const res = await db.query(sql, params);
   return res.rows[0] || null;
 }
 
 export async function execute(sql: string, params: any[] = []) {
+  await ensureDbInitialized();
   const db = getDb();
   return await db.query(sql, params);
 }
 
-async function initDb() {
-  const db = pool;
-
+async function initDb(db: Pool) {
   await db.query(`
     CREATE TABLE IF NOT EXISTS users (
       id SERIAL PRIMARY KEY,
@@ -205,7 +219,7 @@ async function initDb() {
     await db.query(`
       INSERT INTO email_config (id, smtp_host, smtp_port, smtp_user, smtp_password, sender_email, sender_name, provider)
       VALUES (1, 'smtp.gmail.com', 587, '', '', '', '', 'smtp')
-      ON CONFLICT DO NOTHING
+      ON CONFLICT (id) DO NOTHING
     `);
   }
 
