@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getDb } from "@/lib/db";
+import { queryOne, execute } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 
 export async function GET(
@@ -9,16 +9,20 @@ export async function GET(
   const user = await getSession();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { id } = await params;
-  const db = getDb();
+  try {
+    const { id } = await params;
 
-  const call = db
-    .prepare("SELECT * FROM calls WHERE id = ? AND (caller_id = ? OR callee_id = ?)")
-    .get(id, user.id, user.id) as Record<string, unknown> | undefined;
+    const call = await queryOne(
+      "SELECT * FROM calls WHERE id = $1 AND (caller_id = $2 OR callee_id = $3)",
+      [id, user.id, user.id]
+    ) as Record<string, any> | null;
 
-  if (!call) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    if (!call) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  return NextResponse.json({ call });
+    return NextResponse.json({ call });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message || "Something went wrong" }, { status: 500 });
+  }
 }
 
 export async function PATCH(
@@ -28,26 +32,30 @@ export async function PATCH(
   const user = await getSession();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { id } = await params;
-  const { status } = await req.json();
+  try {
+    const { id } = await params;
+    const { status } = await req.json();
 
-  if (!["accepted", "rejected", "ended", "missed"].includes(status)) {
-    return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+    if (!["accepted", "rejected", "ended", "missed"].includes(status)) {
+      return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+    }
+
+    const call = await queryOne(
+      "SELECT * FROM calls WHERE id = $1 AND (caller_id = $2 OR callee_id = $3)",
+      [id, user.id, user.id]
+    ) as Record<string, any> | null;
+
+    if (!call) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+    const dbStatus = status === "accepted" ? "active" : status;
+
+    await execute(
+      "UPDATE calls SET status = $1, updated_at = NOW() WHERE id = $2",
+      [dbStatus, Number(id)]
+    );
+
+    return NextResponse.json({ success: true });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message || "Something went wrong" }, { status: 500 });
   }
-
-  const db = getDb();
-
-  const call = db
-    .prepare("SELECT * FROM calls WHERE id = ? AND (caller_id = ? OR callee_id = ?)")
-    .get(id, user.id, user.id) as Record<string, unknown> | undefined;
-
-  if (!call) return NextResponse.json({ error: "Not found" }, { status: 404 });
-
-  const dbStatus = status === "accepted" ? "active" : status;
-
-  db.prepare(
-    "UPDATE calls SET status = ?, updated_at = datetime('now') WHERE id = ?"
-  ).run(dbStatus, Number(id));
-
-  return NextResponse.json({ success: true });
 }

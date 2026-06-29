@@ -1,39 +1,41 @@
 import { NextResponse } from "next/server";
-import { getDb } from "@/lib/db";
+import { queryAll, queryOne, execute } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 
 export async function GET() {
   const user = await getSession();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const db = getDb();
-  const conversations = db
-    .prepare(
+  try {
+    const conversations = await queryAll(
       `SELECT c.*,
               u1.id as u1_id, u1.name as u1_name, u1.profile_photo as u1_photo,
               u2.id as u2_id, u2.name as u2_name, u2.profile_photo as u2_photo
        FROM conversations c
        JOIN users u1 ON c.user1_id = u1.id
        JOIN users u2 ON c.user2_id = u2.id
-       WHERE c.user1_id = ? OR c.user2_id = ?
-       ORDER BY c.last_message_at DESC`
-    )
-    .all(user.id, user.id) as Array<Record<string, unknown>>;
+       WHERE c.user1_id = $1 OR c.user2_id = $2
+       ORDER BY c.last_message_at DESC`,
+      [user.id, user.id]
+    ) as Array<Record<string, any>>;
 
-  const result = conversations.map((c) => {
-    const isUser1 = c.user1_id === user.id;
-    const other = isUser1
-      ? { id: c.u2_id, name: c.u2_name, photo: c.u2_photo }
-      : { id: c.u1_id, name: c.u1_name, photo: c.u1_photo };
-    return {
-      id: c.id,
-      other_user: other,
-      last_message: c.last_message,
-      last_message_at: c.last_message_at,
-    };
-  });
+    const result = conversations.map((c) => {
+      const isUser1 = c.user1_id === user.id;
+      const other = isUser1
+        ? { id: c.u2_id, name: c.u2_name, photo: c.u2_photo }
+        : { id: c.u1_id, name: c.u1_name, photo: c.u1_photo };
+      return {
+        id: c.id,
+        other_user: other,
+        last_message: c.last_message,
+        last_message_at: c.last_message_at,
+      };
+    });
 
-  return NextResponse.json({ conversations: result });
+    return NextResponse.json({ conversations: result });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message || "Something went wrong" }, { status: 500 });
+  }
 }
 
 export async function POST(req: Request) {
@@ -45,33 +47,29 @@ export async function POST(req: Request) {
     if (!receiver_id)
       return NextResponse.json({ error: "receiver_id is required" }, { status: 400 });
 
-    const db = getDb();
-
-    let conv = db
-      .prepare(
-        `SELECT id FROM conversations
-         WHERE (user1_id = ? AND user2_id = ?) OR (user1_id = ? AND user2_id = ?)`
-      )
-      .get(user.id, receiver_id, receiver_id, user.id) as { id: number } | undefined;
+    let conv = await queryOne(
+      `SELECT id FROM conversations
+       WHERE (user1_id = $1 AND user2_id = $2) OR (user1_id = $3 AND user2_id = $4)`,
+      [user.id, receiver_id, receiver_id, user.id]
+    ) as { id: number } | null;
 
     if (!conv) {
-      const result = db
-        .prepare("INSERT INTO conversations (user1_id, user2_id) VALUES (?, ?)")
-        .run(user.id, receiver_id);
-      conv = { id: Number(result.lastInsertRowid) };
+      conv = await queryOne(
+        "INSERT INTO conversations (user1_id, user2_id) VALUES ($1, $2) RETURNING id",
+        [user.id, receiver_id]
+      ) as { id: number };
     }
 
-    const full = db
-      .prepare(
-        `SELECT c.*,
-                u1.id as u1_id, u1.name as u1_name, u1.profile_photo as u1_photo,
-                u2.id as u2_id, u2.name as u2_name, u2.profile_photo as u2_photo
-         FROM conversations c
-         JOIN users u1 ON c.user1_id = u1.id
-         JOIN users u2 ON c.user2_id = u2.id
-         WHERE c.id = ?`
-      )
-      .get(conv.id) as Record<string, unknown>;
+    const full = await queryOne(
+      `SELECT c.*,
+              u1.id as u1_id, u1.name as u1_name, u1.profile_photo as u1_photo,
+              u2.id as u2_id, u2.name as u2_name, u2.profile_photo as u2_photo
+       FROM conversations c
+       JOIN users u1 ON c.user1_id = u1.id
+       JOIN users u2 ON c.user2_id = u2.id
+       WHERE c.id = $1`,
+      [conv.id]
+    ) as Record<string, any>;
 
     const isUser1 = full.user1_id === user.id;
     const other = isUser1
@@ -86,7 +84,7 @@ export async function POST(req: Request) {
         last_message_at: full.last_message_at,
       },
     }, { status: 201 });
-  } catch {
-    return NextResponse.json({ error: "Something went wrong" }, { status: 500 });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message || "Something went wrong" }, { status: 500 });
   }
 }

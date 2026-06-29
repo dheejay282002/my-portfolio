@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getDb } from "@/lib/db";
+import { queryOne, execute } from "@/lib/db";
 import nodemailer from "nodemailer";
 
 export async function POST(req: Request) {
@@ -10,13 +10,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Name and email are required" }, { status: 400 });
     }
 
-    const db = getDb();
-    const existing = db.prepare("SELECT id FROM users WHERE email = ?").get(email);
+    const existing = await queryOne("SELECT id FROM users WHERE email = $1", [email]);
     if (existing) {
       return NextResponse.json({ error: "Email already registered" }, { status: 409 });
     }
 
-    const config = db.prepare("SELECT * FROM email_config WHERE id = 1").get() as any;
+    const config = await queryOne("SELECT * FROM email_config WHERE id = 1") as any;
     if (!config || !config.smtp_host || !config.smtp_user || !config.smtp_password) {
       return NextResponse.json(
         { error: "Email service is not configured by the administrator yet." },
@@ -26,10 +25,12 @@ export async function POST(req: Request) {
 
     const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
 
-    db.prepare(`
-      INSERT OR REPLACE INTO pending_otps (email, code, expires_at)
-      VALUES (?, ?, datetime('now', '+5 minutes'))
-    `).run(email, otpCode);
+    await execute(`
+      INSERT INTO pending_otps (email, code, expires_at)
+      VALUES ($1, $2, NOW() + INTERVAL '5 minutes')
+      ON CONFLICT (email) DO UPDATE 
+      SET code = EXCLUDED.code, expires_at = EXCLUDED.expires_at
+    `, [email, otpCode]);
 
     const transporter = nodemailer.createTransport({
       host: config.smtp_host,

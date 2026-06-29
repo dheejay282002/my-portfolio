@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getDb } from "@/lib/db";
+import { queryAll } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 
 export async function GET() {
@@ -8,9 +8,6 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
-  const db = getDb();
-  const users = db
-    .prepare("SELECT id, name, email, role, created_at FROM users ORDER BY created_at DESC")
-    .all();
+  const users = await queryAll("SELECT id, name, email, role, created_at FROM users ORDER BY created_at DESC");
   return NextResponse.json({ users });
 }

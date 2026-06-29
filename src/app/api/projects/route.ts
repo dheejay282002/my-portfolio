@@ -1,21 +1,24 @@
 import { NextResponse } from "next/server";
-import { getDb } from "@/lib/db";
+import { queryAll, queryOne, execute } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 
 export async function GET() {
-  const db = getDb();
-  const projects = db
-    .prepare("SELECT * FROM projects ORDER BY created_at DESC")
-    .all() as Array<Record<string, unknown>>;
+  try {
+    const projects = await queryAll("SELECT * FROM projects ORDER BY created_at DESC") as Array<Record<string, any>>;
 
-  const result = projects.map((p) => {
-    const images = db
-      .prepare("SELECT id, url FROM project_images WHERE project_id = ? ORDER BY sort_order")
-      .all(p.id) as Array<{ id: number; url: string }>;
-    return { ...p, images };
-  });
+    const result = [];
+    for (const p of projects) {
+      const images = await queryAll(
+        "SELECT id, url FROM project_images WHERE project_id = $1 ORDER BY sort_order",
+        [p.id]
+      ) as Array<{ id: number; url: string }>;
+      result.push({ ...p, images });
+    }
 
-  return NextResponse.json({ projects: result });
+    return NextResponse.json({ projects: result });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message || "Failed to fetch projects" }, { status: 500 });
+  }
 }
 
 export async function POST(req: Request) {
@@ -25,8 +28,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { title, description, live_url, images, tech_stack } =
-      await req.json();
+    const { title, description, live_url, images, tech_stack } = await req.json();
     const imageUrls = (images || []) as string[];
 
     if (!title || !description) {
@@ -36,21 +38,18 @@ export async function POST(req: Request) {
       );
     }
 
-    const db = getDb();
+    const result = await queryOne(
+      "INSERT INTO projects (title, description, live_url, image_url, tech_stack) VALUES ($1, $2, $3, $4, $5) RETURNING id",
+      [title, description, live_url || "", imageUrls[0] || "", tech_stack || ""]
+    ) as { id: number };
 
-    const result = db
-      .prepare(
-        "INSERT INTO projects (title, description, live_url, image_url, tech_stack) VALUES (?, ?, ?, ?, ?)"
-      )
-      .run(title, description, live_url || "", imageUrls[0] || "", tech_stack || "");
+    const projectId = result.id;
 
-    const projectId = Number(result.lastInsertRowid);
-
-    const insertImg = db.prepare(
-      "INSERT INTO project_images (project_id, url, sort_order) VALUES (?, ?, ?)"
-    );
     for (let i = 0; i < imageUrls.length; i++) {
-      insertImg.run(projectId, imageUrls[i], i);
+      await execute(
+        "INSERT INTO project_images (project_id, url, sort_order) VALUES ($1, $2, $3)",
+        [projectId, imageUrls[i], i]
+      );
     }
 
     return NextResponse.json({ id: projectId }, { status: 201 });
@@ -69,31 +68,32 @@ export async function PATCH(req: Request) {
   }
 
   try {
-    const { id, title, description, live_url, images, tech_stack } =
-      await req.json();
+    const { id, title, description, live_url, images, tech_stack } = await req.json();
 
     if (!id) {
       return NextResponse.json({ error: "ID is required" }, { status: 400 });
     }
 
-    const db = getDb();
     const fields: string[] = [];
     const values: (string | number)[] = [];
-    if (title !== undefined) { fields.push("title = ?"); values.push(title); }
-    if (description !== undefined) { fields.push("description = ?"); values.push(description); }
-    if (live_url !== undefined) { fields.push("live_url = ?"); values.push(live_url); }
-    if (tech_stack !== undefined) { fields.push("tech_stack = ?"); values.push(tech_stack); }
+    let idx = 1;
+
+    if (title !== undefined) { fields.push(`title = $${idx++}`); values.push(title); }
+    if (description !== undefined) { fields.push(`description = $${idx++}`); values.push(description); }
+    if (live_url !== undefined) { fields.push(`live_url = $${idx++}`); values.push(live_url); }
+    if (tech_stack !== undefined) { fields.push(`tech_stack = $${idx++}`); values.push(tech_stack); }
 
     if (images !== undefined) {
       const imageUrls = images as string[];
-      fields.push("image_url = ?");
+      fields.push(`image_url = $${idx++}`);
       values.push(imageUrls[0] || "");
-      db.prepare("DELETE FROM project_images WHERE project_id = ?").run(Number(id));
-      const insertImg = db.prepare(
-        "INSERT INTO project_images (project_id, url, sort_order) VALUES (?, ?, ?)"
-      );
+      
+      await execute("DELETE FROM project_images WHERE project_id = $1", [Number(id)]);
       for (let i = 0; i < imageUrls.length; i++) {
-        insertImg.run(Number(id), imageUrls[i], i);
+        await execute(
+          "INSERT INTO project_images (project_id, url, sort_order) VALUES ($1, $2, $3)",
+          [Number(id), imageUrls[i], i]
+        );
       }
     }
 
@@ -102,7 +102,7 @@ export async function PATCH(req: Request) {
     }
 
     values.push(Number(id));
-    db.prepare(`UPDATE projects SET ${fields.join(", ")} WHERE id = ?`).run(...values);
+    await execute(`UPDATE projects SET ${fields.join(", ")} WHERE id = $${idx}`, values);
     return NextResponse.json({ success: true });
   } catch {
     return NextResponse.json({ error: "Something went wrong" }, { status: 500 });
@@ -117,9 +117,8 @@ export async function DELETE(req: Request) {
 
   try {
     const { id } = await req.json();
-    const db = getDb();
-    db.prepare("DELETE FROM project_images WHERE project_id = ?").run(id);
-    db.prepare("DELETE FROM projects WHERE id = ?").run(id);
+    await execute("DELETE FROM project_images WHERE project_id = $1", [id]);
+    await execute("DELETE FROM projects WHERE id = $1", [id]);
     return NextResponse.json({ success: true });
   } catch {
     return NextResponse.json(

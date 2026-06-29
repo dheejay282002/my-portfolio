@@ -1,235 +1,237 @@
-import Database from "better-sqlite3";
-import path from "path";
+import { Pool } from "pg";
 import bcrypt from "bcryptjs";
 
-const dbPath = path.join(process.cwd(), "data.db");
+let pool: Pool;
 
-let db: Database.Database;
-
-export function getDb() {
-  if (!db) {
-    db = new Database(dbPath);
-    db.pragma("journal_mode = WAL");
-    db.pragma("synchronous = NORMAL");
-    db.pragma("busy_timeout = 5000");
-    db.pragma("journal_size_limit = 6144000");
-    initDb();
+export function getDb(): Pool {
+  if (!pool) {
+    const connectionString = process.env.DATABASE_URL || "postgresql://postgres:postgres@localhost:5432/portfolio";
+    pool = new Pool({
+      connectionString,
+      ssl: connectionString.includes("localhost") || connectionString.includes("127.0.0.1")
+        ? false
+        : { rejectUnauthorized: false },
+    });
+    initDb().catch((err) => console.error("Database initialization failed:", err));
   }
-  return db;
+  return pool;
 }
 
-function initDb() {
-  db.exec(`
+export async function queryAll(sql: string, params: any[] = []) {
+  const db = getDb();
+  const res = await db.query(sql, params);
+  return res.rows;
+}
+
+export async function queryOne(sql: string, params: any[] = []) {
+  const db = getDb();
+  const res = await db.query(sql, params);
+  return res.rows[0] || null;
+}
+
+export async function execute(sql: string, params: any[] = []) {
+  const db = getDb();
+  return await db.query(sql, params);
+}
+
+async function initDb() {
+  const db = pool;
+
+  await db.query(`
     CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      email TEXT UNIQUE NOT NULL,
-      password TEXT NOT NULL,
-      role TEXT NOT NULL DEFAULT 'client' CHECK(role IN ('admin', 'client')),
-      created_at TEXT DEFAULT (datetime('now'))
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      email VARCHAR(255) UNIQUE NOT NULL,
+      password VARCHAR(255) NOT NULL,
+      role VARCHAR(50) NOT NULL DEFAULT 'client',
+      last_name VARCHAR(255) DEFAULT '',
+      profile_photo TEXT DEFAULT '',
+      bio TEXT DEFAULT '',
+      github_url VARCHAR(255) DEFAULT '',
+      linkedin_url VARCHAR(255) DEFAULT '',
+      twitter_url VARCHAR(255) DEFAULT '',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
 
-  db.exec(`
+  await db.query(`
     CREATE TABLE IF NOT EXISTS projects (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      title TEXT NOT NULL,
+      id SERIAL PRIMARY KEY,
+      title VARCHAR(255) NOT NULL,
       description TEXT NOT NULL,
-      live_url TEXT DEFAULT '',
-      image_url TEXT DEFAULT '',
-      tech_stack TEXT DEFAULT '',
-      created_at TEXT DEFAULT (datetime('now'))
+      live_url VARCHAR(255) DEFAULT '',
+      image_url VARCHAR(255) DEFAULT '',
+      tech_stack VARCHAR(255) DEFAULT '',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
 
-  db.exec(`
+  await db.query(`
     CREATE TABLE IF NOT EXISTS services (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      title TEXT NOT NULL,
+      id SERIAL PRIMARY KEY,
+      title VARCHAR(255) NOT NULL,
       description TEXT NOT NULL,
-      icon TEXT DEFAULT 'Code2',
-      created_at TEXT DEFAULT (datetime('now'))
+      icon VARCHAR(50) DEFAULT 'Code2',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
 
-  db.exec(`
+  await db.query(`
     CREATE TABLE IF NOT EXISTS skills (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      category TEXT NOT NULL DEFAULT 'Other',
-      icon TEXT DEFAULT 'Terminal',
-      created_at TEXT DEFAULT (datetime('now'))
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      category VARCHAR(50) NOT NULL DEFAULT 'Other',
+      icon VARCHAR(50) DEFAULT 'Terminal',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
 
-  db.exec(`
+  await db.query(`
     CREATE TABLE IF NOT EXISTS conversations (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user1_id INTEGER NOT NULL,
-      user2_id INTEGER NOT NULL,
+      id SERIAL PRIMARY KEY,
+      user1_id INTEGER NOT NULL REFERENCES users(id),
+      user2_id INTEGER NOT NULL REFERENCES users(id),
       last_message TEXT DEFAULT '',
-      last_message_at TEXT DEFAULT (datetime('now')),
-      created_at TEXT DEFAULT (datetime('now')),
-      FOREIGN KEY (user1_id) REFERENCES users(id),
-      FOREIGN KEY (user2_id) REFERENCES users(id)
+      last_message_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
 
-  db.exec(`
+  await db.query(`
     CREATE TABLE IF NOT EXISTS messages (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      conversation_id INTEGER NOT NULL,
-      sender_id INTEGER NOT NULL,
+      id SERIAL PRIMARY KEY,
+      conversation_id INTEGER NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+      sender_id INTEGER NOT NULL REFERENCES users(id),
       content TEXT NOT NULL,
       read INTEGER DEFAULT 0,
-      created_at TEXT DEFAULT (datetime('now')),
-      FOREIGN KEY (conversation_id) REFERENCES conversations(id),
-      FOREIGN KEY (sender_id) REFERENCES users(id)
+      attachment_url TEXT DEFAULT '',
+      attachment_type VARCHAR(100) DEFAULT '',
+      reactions TEXT DEFAULT '{}',
+      reply_to_id INTEGER DEFAULT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
 
-  db.exec(`
+  await db.query(`
     CREATE TABLE IF NOT EXISTS project_images (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      project_id INTEGER NOT NULL,
+      id SERIAL PRIMARY KEY,
+      project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
       url TEXT NOT NULL,
-      sort_order INTEGER DEFAULT 0,
-      FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+      sort_order INTEGER DEFAULT 0
     )
   `);
 
-  db.exec(`
+  await db.query(`
     CREATE TABLE IF NOT EXISTS project_requests (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      client_id INTEGER NOT NULL,
-      project_name TEXT NOT NULL,
+      id SERIAL PRIMARY KEY,
+      client_id INTEGER NOT NULL REFERENCES users(id),
+      project_name VARCHAR(255) NOT NULL,
       description TEXT NOT NULL,
-      tech_stack TEXT DEFAULT '',
-      status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','accepted','rejected','in_progress','testing','completed','delivered')),
-      conversation_id INTEGER,
-      created_at TEXT DEFAULT (datetime('now')),
-      updated_at TEXT DEFAULT (datetime('now')),
-      FOREIGN KEY (client_id) REFERENCES users(id),
-      FOREIGN KEY (conversation_id) REFERENCES conversations(id)
+      tech_stack VARCHAR(255) DEFAULT '',
+      status VARCHAR(50) NOT NULL DEFAULT 'pending',
+      conversation_id INTEGER REFERENCES conversations(id),
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
 
-  // Add profile columns if missing
-  try { db.exec("ALTER TABLE users ADD COLUMN last_name TEXT DEFAULT ''"); } catch {}
-  try { db.exec("ALTER TABLE users ADD COLUMN profile_photo TEXT DEFAULT ''"); } catch {}
-  try { db.exec("ALTER TABLE users ADD COLUMN bio TEXT DEFAULT ''"); } catch {}
-  try { db.exec("ALTER TABLE users ADD COLUMN github_url TEXT DEFAULT ''"); } catch {}
-  try { db.exec("ALTER TABLE users ADD COLUMN linkedin_url TEXT DEFAULT ''"); } catch {}
-  try { db.exec("ALTER TABLE users ADD COLUMN twitter_url TEXT DEFAULT ''"); } catch {}
-  try { db.exec("ALTER TABLE messages ADD COLUMN attachment_url TEXT DEFAULT ''"); } catch {}
-  try { db.exec("ALTER TABLE messages ADD COLUMN attachment_type TEXT DEFAULT ''"); } catch {}
-  try { db.exec("ALTER TABLE messages ADD COLUMN reactions TEXT DEFAULT '{}'"); } catch {}
-  try { db.exec("ALTER TABLE messages ADD COLUMN reply_to_id INTEGER DEFAULT NULL"); } catch {}
-
-  db.exec(`
+  await db.query(`
     CREATE TABLE IF NOT EXISTS reviews (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      project_request_id INTEGER UNIQUE NOT NULL,
-      client_id INTEGER NOT NULL,
+      id SERIAL PRIMARY KEY,
+      project_request_id INTEGER UNIQUE NOT NULL REFERENCES project_requests(id) ON DELETE CASCADE,
+      client_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       rating INTEGER NOT NULL CHECK(rating >= 1 AND rating <= 5),
       content TEXT NOT NULL,
-      created_at TEXT DEFAULT (datetime('now')),
-      FOREIGN KEY (project_request_id) REFERENCES project_requests(id) ON DELETE CASCADE,
-      FOREIGN KEY (client_id) REFERENCES users(id) ON DELETE CASCADE
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
 
-  db.exec(`
+  await db.query(`
     CREATE TABLE IF NOT EXISTS calls (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      caller_id INTEGER NOT NULL,
-      callee_id INTEGER NOT NULL,
-      status TEXT NOT NULL DEFAULT 'ringing' CHECK(status IN ('ringing','active','ended','rejected','missed')),
-      created_at TEXT DEFAULT (datetime('now')),
-      updated_at TEXT DEFAULT (datetime('now')),
-      FOREIGN KEY (caller_id) REFERENCES users(id),
-      FOREIGN KEY (callee_id) REFERENCES users(id)
+      id SERIAL PRIMARY KEY,
+      caller_id INTEGER NOT NULL REFERENCES users(id),
+      callee_id INTEGER NOT NULL REFERENCES users(id),
+      status VARCHAR(50) NOT NULL DEFAULT 'ringing',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
 
-  db.exec(`
+  await db.query(`
     CREATE TABLE IF NOT EXISTS call_signals (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      call_id INTEGER NOT NULL,
-      sender_id INTEGER NOT NULL,
-      type TEXT NOT NULL,
+      id SERIAL PRIMARY KEY,
+      call_id INTEGER NOT NULL REFERENCES calls(id) ON DELETE CASCADE,
+      sender_id INTEGER NOT NULL REFERENCES users(id),
+      type VARCHAR(50) NOT NULL,
       data TEXT NOT NULL,
-      created_at TEXT DEFAULT (datetime('now')),
-      FOREIGN KEY (call_id) REFERENCES calls(id),
-      FOREIGN KEY (sender_id) REFERENCES users(id)
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
 
-  db.exec(`
+  await db.query(`
     CREATE TABLE IF NOT EXISTS typing_status (
       conversation_id INTEGER NOT NULL,
-      user_id INTEGER NOT NULL,
-      updated_at TEXT DEFAULT (datetime('now')),
+      user_id INTEGER NOT NULL REFERENCES users(id),
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       PRIMARY KEY (conversation_id, user_id)
     )
   `);
 
-  db.exec(`
+  await db.query(`
     CREATE TABLE IF NOT EXISTS email_config (
       id INTEGER PRIMARY KEY CHECK (id = 1),
-      smtp_host TEXT NOT NULL DEFAULT '',
+      smtp_host VARCHAR(255) NOT NULL DEFAULT '',
       smtp_port INTEGER NOT NULL DEFAULT 587,
-      smtp_user TEXT NOT NULL DEFAULT '',
-      smtp_password TEXT NOT NULL DEFAULT '',
-      sender_email TEXT NOT NULL DEFAULT '',
-      sender_name TEXT NOT NULL DEFAULT '',
-      provider TEXT NOT NULL DEFAULT 'smtp',
-      updated_at TEXT DEFAULT (datetime('now'))
+      smtp_user VARCHAR(255) NOT NULL DEFAULT '',
+      smtp_password VARCHAR(255) NOT NULL DEFAULT '',
+      sender_email VARCHAR(255) NOT NULL DEFAULT '',
+      sender_name VARCHAR(255) NOT NULL DEFAULT '',
+      provider VARCHAR(50) NOT NULL DEFAULT 'smtp',
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
 
-  db.exec(`
+  await db.query(`
     CREATE TABLE IF NOT EXISTS pending_otps (
-      email TEXT PRIMARY KEY,
-      code TEXT NOT NULL,
-      created_at TEXT DEFAULT (datetime('now')),
-      expires_at TEXT NOT NULL
+      email VARCHAR(255) PRIMARY KEY,
+      code VARCHAR(50) NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      expires_at TIMESTAMP NOT NULL
     )
   `);
 
-  const hasConfig = db.prepare("SELECT id FROM email_config WHERE id = 1").get();
+  const hasConfig = (await db.query("SELECT id FROM email_config WHERE id = 1")).rows[0];
   if (!hasConfig) {
-    db.prepare(`
+    await db.query(`
       INSERT INTO email_config (id, smtp_host, smtp_port, smtp_user, smtp_password, sender_email, sender_name, provider)
       VALUES (1, 'smtp.gmail.com', 587, '', '', '', '', 'smtp')
-    `).run();
+      ON CONFLICT DO NOTHING
+    `);
   }
 
-  const existing = db
-    .prepare("SELECT id FROM users WHERE role = 'admin'")
-    .get();
-  if (!existing) {
+  const adminRes = await db.query("SELECT id FROM users WHERE role = 'admin'");
+  if (adminRes.rowCount === 0) {
     const hash = bcrypt.hashSync("admin123", 10);
-    db.prepare(
-      "INSERT INTO users (name, email, password, role, github_url, linkedin_url, twitter_url) VALUES (?, ?, ?, ?, ?, ?, ?)"
-    ).run(
+    await db.query(`
+      INSERT INTO users (name, email, password, role, github_url, linkedin_url, twitter_url) 
+      VALUES ($1, $2, $3, 'admin', $4, $5, $6)
+    `, [
       "Dee Jay",
       "admin@deejay.dev",
       hash,
-      "admin",
       "https://github.com/deejay-cristobal",
       "https://linkedin.com/in/deejay-cristobal",
       "https://twitter.com/deejay_cristobal"
-    );
+    ]);
   } else {
     try {
-      db.prepare(`
+      await db.query(`
         UPDATE users 
         SET github_url = CASE WHEN github_url = '' OR github_url IS NULL THEN 'https://github.com/deejay-cristobal' ELSE github_url END,
             linkedin_url = CASE WHEN linkedin_url = '' OR linkedin_url IS NULL THEN 'https://linkedin.com/in/deejay-cristobal' ELSE linkedin_url END,
             twitter_url = CASE WHEN twitter_url = '' OR twitter_url IS NULL THEN 'https://twitter.com/deejay_cristobal' ELSE twitter_url END
         WHERE role = 'admin'
-      `).run();
+      `);
     } catch {}
   }
 }

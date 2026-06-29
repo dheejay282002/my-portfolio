@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
-import { getDb } from "@/lib/db";
+import { queryAll, queryOne } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 
 export async function GET() {
-  const db = getDb();
-  const services = db
-    .prepare("SELECT * FROM services ORDER BY created_at DESC")
-    .all();
-  return NextResponse.json({ services });
+  try {
+    const services = await queryAll("SELECT * FROM services ORDER BY created_at DESC");
+    return NextResponse.json({ services });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message || "Something went wrong" }, { status: 500 });
+  }
 }
 
 export async function POST(req: Request) {
@@ -20,12 +21,12 @@ export async function POST(req: Request) {
     if (!title || !description)
       return NextResponse.json({ error: "Required fields missing" }, { status: 400 });
 
-    const db = getDb();
-    const result = db
-      .prepare("INSERT INTO services (title, description, icon) VALUES (?, ?, ?)")
-      .run(title, description, icon || "Code2");
+    const result = await queryOne(
+      "INSERT INTO services (title, description, icon) VALUES ($1, $2, $3) RETURNING id",
+      [title, description, icon || "Code2"]
+    ) as { id: number };
 
-    return NextResponse.json({ id: Number(result.lastInsertRowid) }, { status: 201 });
+    return NextResponse.json({ id: result.id }, { status: 201 });
   } catch {
     return NextResponse.json({ error: "Something went wrong" }, { status: 500 });
   }

@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
-import { getDb } from "@/lib/db";
+import { queryAll, queryOne } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 
 export async function GET() {
-  const db = getDb();
-  const skills = db
-    .prepare("SELECT * FROM skills ORDER BY category, name")
-    .all();
-  return NextResponse.json({ skills });
+  try {
+    const skills = await queryAll("SELECT * FROM skills ORDER BY category, name");
+    return NextResponse.json({ skills });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message || "Something went wrong" }, { status: 500 });
+  }
 }
 
 export async function POST(req: Request) {
@@ -20,12 +21,12 @@ export async function POST(req: Request) {
     if (!name)
       return NextResponse.json({ error: "Name is required" }, { status: 400 });
 
-    const db = getDb();
-    const result = db
-      .prepare("INSERT INTO skills (name, category, icon) VALUES (?, ?, ?)")
-      .run(name, category || "Other", icon || "Terminal");
+    const result = await queryOne(
+      "INSERT INTO skills (name, category, icon) VALUES ($1, $2, $3) RETURNING id",
+      [name, category || "Other", icon || "Terminal"]
+    ) as { id: number };
 
-    return NextResponse.json({ id: Number(result.lastInsertRowid) }, { status: 201 });
+    return NextResponse.json({ id: result.id }, { status: 201 });
   } catch {
     return NextResponse.json({ error: "Something went wrong" }, { status: 500 });
   }
