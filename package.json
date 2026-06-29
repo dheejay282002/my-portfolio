@@ -11,6 +11,7 @@
   "dependencies": {
     "@formspree/react": "^3.0.0",
     "@swc/helpers": "^0.5.23",
+    "@vercel/analytics": "^2.0.1",
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^12.11.1",
     "jsonwebtoken": "^9.0.3",
