@@ -40,7 +40,8 @@ export async function POST(req: Request) {
     });
 
     return response;
-  } catch {
+  } catch (err) {
+    console.error("[LOGIN ERROR]", err);
     return NextResponse.json({ error: "Something went wrong" }, { status: 500 });
   }
 }
