@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useForm, ValidationError } from "@formspree/react";
 import { Mail, MapPin, Phone, Send, CheckCircle } from "lucide-react";
-import { FaGithub, FaLinkedin, FaTwitter } from "react-icons/fa";
+import { FaGithub, FaLinkedin, FaFacebook } from "react-icons/fa";
 import ScrollReveal from "./ScrollReveal";
 
 export default function ContactSection() {
@@ -11,7 +11,7 @@ export default function ContactSection() {
   const [links, setLinks] = useState({
     github: "https://github.com/deejay-cristobal",
     linkedin: "https://linkedin.com/in/deejay-cristobal",
-    twitter: "https://twitter.com/deejay_cristobal",
+    facebook: "https://facebook.com/deejay_cristobal",
   });
 
   useEffect(() => {
@@ -22,7 +22,7 @@ export default function ContactSection() {
           setLinks({
             github: data.admin.github_url || "https://github.com/deejay-cristobal",
             linkedin: data.admin.linkedin_url || "https://linkedin.com/in/deejay-cristobal",
-            twitter: data.admin.twitter_url || "https://twitter.com/deejay_cristobal",
+            facebook: data.admin.twitter_url || "https://facebook.com/deejay_cristobal",
           });
         }
       })
@@ -32,7 +32,7 @@ export default function ContactSection() {
   const socials = [
     { icon: FaGithub, href: links.github, label: "GitHub" },
     { icon: FaLinkedin, href: links.linkedin, label: "LinkedIn" },
-    { icon: FaTwitter, href: links.twitter, label: "Twitter" },
+    { icon: FaFacebook, href: links.facebook, label: "Facebook" },
   ];
 
   if (state.succeeded) {

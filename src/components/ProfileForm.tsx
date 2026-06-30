@@ -270,12 +270,12 @@ export default function ProfileForm() {
                   />
                 </div>
                 <div>
-                  <label className="mb-2 block text-xs text-zinc-500">Twitter (X) Link</label>
+                  <label className="mb-2 block text-xs text-zinc-500">Facebook Link</label>
                   <input
                     type="url"
                     value={form.twitter_url}
                     onChange={(e) => setForm({ ...form, twitter_url: e.target.value })}
-                    placeholder="https://x.com/..."
+                    placeholder="https://facebook.com/..."
                     className="glass w-full rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-600 outline-none focus:border-cyan-500/50"
                   />
                 </div>

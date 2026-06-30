@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { FaGithub, FaLinkedin, FaTwitter } from "react-icons/fa";
+import { FaGithub, FaLinkedin, FaFacebook } from "react-icons/fa";
 
 export default function Footer() {
   const [links, setLinks] = useState({
     github: "https://github.com/deejay-cristobal",
     linkedin: "https://linkedin.com/in/deejay-cristobal",
-    twitter: "https://twitter.com/deejay_cristobal",
+    facebook: "https://facebook.com/deejay_cristobal",
   });
 
   useEffect(() => {
@@ -18,7 +18,7 @@ export default function Footer() {
           setLinks({
             github: data.admin.github_url || "https://github.com/deejay-cristobal",
             linkedin: data.admin.linkedin_url || "https://linkedin.com/in/deejay-cristobal",
-            twitter: data.admin.twitter_url || "https://twitter.com/deejay_cristobal",
+            facebook: data.admin.twitter_url || "https://facebook.com/deejay_cristobal",
           });
         }
       })
@@ -28,7 +28,7 @@ export default function Footer() {
   const socials = [
     { icon: FaGithub, href: links.github, label: "GitHub" },
     { icon: FaLinkedin, href: links.linkedin, label: "LinkedIn" },
-    { icon: FaTwitter, href: links.twitter, label: "Twitter" },
+    { icon: FaFacebook, href: links.facebook, label: "Facebook" },
   ];
 
   return (
