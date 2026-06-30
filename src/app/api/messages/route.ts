@@ -37,6 +37,13 @@ export async function POST(req: Request) {
     if (!receiver_id || (!content && !attachment_url))
       return NextResponse.json({ error: "Missing fields" }, { status: 400 });
 
+    if (user.role === "client") {
+      const receiver = await queryOne("SELECT role FROM users WHERE id = $1", [receiver_id]);
+      if (!receiver || receiver.role !== "admin") {
+        return NextResponse.json({ error: "Clients can only chat with the admin" }, { status: 403 });
+      }
+    }
+
     let conv = await queryOne(
       `SELECT id FROM conversations
        WHERE (user1_id = $1 AND user2_id = $2) OR (user1_id = $3 AND user2_id = $4)`,

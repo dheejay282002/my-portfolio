@@ -7,17 +7,22 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    const conversations = await queryAll(
-      `SELECT c.*,
-              u1.id as u1_id, u1.name as u1_name, u1.profile_photo as u1_photo,
-              u2.id as u2_id, u2.name as u2_name, u2.profile_photo as u2_photo
-       FROM conversations c
-       JOIN users u1 ON c.user1_id = u1.id
-       JOIN users u2 ON c.user2_id = u2.id
-       WHERE c.user1_id = $1 OR c.user2_id = $2
-       ORDER BY c.last_message_at DESC`,
-      [user.id, user.id]
-    ) as Array<Record<string, any>>;
+    let query = `SELECT c.*,
+                        u1.id as u1_id, u1.name as u1_name, u1.profile_photo as u1_photo,
+                        u2.id as u2_id, u2.name as u2_name, u2.profile_photo as u2_photo
+                 FROM conversations c
+                 JOIN users u1 ON c.user1_id = u1.id
+                 JOIN users u2 ON c.user2_id = u2.id
+                 WHERE (c.user1_id = $1 OR c.user2_id = $2)`;
+    const params: any[] = [user.id, user.id];
+
+    if (user.role === "client") {
+      query += ` AND (u1.role = 'admin' OR u2.role = 'admin')`;
+    }
+
+    query += ` ORDER BY c.last_message_at DESC`;
+
+    const conversations = await queryAll(query, params) as Array<Record<string, any>>;
 
     const result = conversations.map((c) => {
       const isUser1 = c.user1_id === user.id;
@@ -46,6 +51,13 @@ export async function POST(req: Request) {
     const { receiver_id } = await req.json();
     if (!receiver_id)
       return NextResponse.json({ error: "receiver_id is required" }, { status: 400 });
+
+    if (user.role === "client") {
+      const receiver = await queryOne("SELECT role FROM users WHERE id = $1", [receiver_id]);
+      if (!receiver || receiver.role !== "admin") {
+        return NextResponse.json({ error: "Clients can only chat with the admin" }, { status: 403 });
+      }
+    }
 
     let conv = await queryOne(
       `SELECT id FROM conversations

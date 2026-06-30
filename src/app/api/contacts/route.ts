@@ -7,10 +7,18 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    const contacts = await queryAll(
-      "SELECT id, name, email, role, profile_photo FROM users WHERE id != $1 ORDER BY name ASC",
-      [user.id]
-    );
+    let contacts;
+    if (user.role === "client") {
+      contacts = await queryAll(
+        "SELECT id, name, email, role, profile_photo FROM users WHERE role = 'admin' LIMIT 1",
+        []
+      );
+    } else {
+      contacts = await queryAll(
+        "SELECT id, name, email, role, profile_photo FROM users WHERE role = 'client' ORDER BY name ASC",
+        []
+      );
+    }
 
     return NextResponse.json({ contacts });
   } catch (err: any) {
