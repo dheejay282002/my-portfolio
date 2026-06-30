@@ -23,7 +23,7 @@ export default function HeroSection() {
 
       <div className="relative text-center">
         <p className="text-sm font-medium tracking-widest text-cyan-400 uppercase">
-          Full-Stack Developer
+          Web Developer
         </p>
 
         <h1 className="mt-4 text-5xl font-bold leading-tight tracking-tight sm:text-6xl lg:text-7xl">
