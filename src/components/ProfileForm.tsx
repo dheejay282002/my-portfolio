@@ -235,12 +235,12 @@ export default function ProfileForm() {
           )}
 
           <div>
-            <label className="mb-2 block text-xs text-zinc-500">Bio</label>
+            <label className="mb-2 block text-xs text-zinc-500">About Me</label>
             <textarea
               rows={4}
               value={form.bio}
               onChange={(e) => setForm({ ...form, bio: e.target.value })}
-              placeholder="Tell visitors about yourself..."
+              placeholder="Write about yourself — this will appear on the homepage About section..."
               className="glass w-full resize-none rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-500 outline-none focus:border-cyan-500/50"
             />
           </div>
