@@ -15,9 +15,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Dee Jay | Full-Stack Developer Portfolio",
+  title: "Dee Jay | Web Developer Portfolio",
   description:
-    "Full-Stack Developer specializing in Python, Django, React, and modern web technologies. I build scalable web solutions with clean code.",
+    "Web Developer specializing in Python, Django, React, and modern web technologies. I build scalable web solutions with clean code.",
 };
 
 export default function RootLayout({

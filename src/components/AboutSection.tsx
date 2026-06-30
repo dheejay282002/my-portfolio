@@ -26,7 +26,7 @@ export default function AboutSection() {
   const bioParagraphs = admin?.bio
     ? admin.bio.split("\n").filter(Boolean)
     : [
-        "I'm a passionate Full-Stack Developer with expertise in building modern, scalable web applications. I love turning complex problems into simple, beautiful, and intuitive solutions.",
+        "I'm a passionate Web Developer with expertise in building modern, scalable web applications. I love turning complex problems into simple, beautiful, and intuitive solutions.",
         "With a strong foundation in Python and modern web technologies, I deliver clean, maintainable code that drives real business results. Every project is an opportunity to push boundaries and create something exceptional.",
         "When I'm not coding, you'll find me exploring new technologies, contributing to open-source, or sharing knowledge with the developer community.",
       ];
