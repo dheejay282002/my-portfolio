@@ -144,6 +144,8 @@ export default function ProjectsSection() {
   const autoScrollRef = useRef<number>(0);
   const pausedRef = useRef(false);
   const pausedForDrag = useRef(false);
+  const lastPausedCardIndexRef = useRef<number>(-1);
+  const resumeScrollAtRef = useRef<number>(0);
 
   const REPEAT_COUNT = 6;
   const repeatedProjects = Array.from({ length: REPEAT_COUNT }, () => projects).flat();
@@ -251,7 +253,38 @@ export default function ProjectsSection() {
       if (!running) return;
       const container = scrollRef.current;
       if (container && !pausedRef.current && !pausedForDrag.current) {
-        container.scrollLeft += 0.8;
+        const now = Date.now();
+        if (now >= resumeScrollAtRef.current) {
+          container.scrollLeft += 0.8;
+
+          // Check if any card is now centered
+          const containerCenter = container.scrollLeft + container.clientWidth / 2;
+          
+          let closestIndex = -1;
+          let minDistance = Infinity;
+          
+          cardRefs.current.forEach((card, idx) => {
+            if (!card) return;
+            const cardCenter = card.offsetLeft + card.offsetWidth / 2;
+            const dist = Math.abs(containerCenter - cardCenter);
+            if (dist < minDistance) {
+              minDistance = dist;
+              closestIndex = idx;
+            }
+          });
+
+          // Since scroll step is 0.8px, a threshold of 0.6px guarantees at least one frame lands in the target area
+          if (minDistance < 0.6 && closestIndex !== lastPausedCardIndexRef.current) {
+            resumeScrollAtRef.current = now + 1000;
+            lastPausedCardIndexRef.current = closestIndex;
+            // Snap to exactly center for perfect visual alignment!
+            if (cardRefs.current[closestIndex]) {
+              const card = cardRefs.current[closestIndex]!;
+              const cardCenter = card.offsetLeft + card.offsetWidth / 2;
+              container.scrollLeft = cardCenter - container.clientWidth / 2;
+            }
+          }
+        }
       }
       updateCardScales();
       autoScrollRef.current = requestAnimationFrame(tick);
@@ -274,6 +307,7 @@ export default function ProjectsSection() {
     dragState.current.startX = e.pageX - container.offsetLeft;
     dragState.current.scrollLeft = container.scrollLeft;
     dragState.current.moved = false;
+    lastPausedCardIndexRef.current = -1;
   }, []);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {

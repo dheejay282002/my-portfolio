@@ -20,12 +20,15 @@ export async function POST(req: Request) {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
+    const isVideo = file.type?.startsWith("video") || /\.(mp4|mov|webm|avi|mkv)$/i.test(file.name);
+    const resourceType = isVideo ? "video" : "auto";
+
     // Upload to Cloudinary
     const result = await new Promise<{ secure_url: string }>((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
           folder: "portfolio-uploads",
-          resource_type: "auto",
+          resource_type: resourceType,
         },
         (error, result) => {
           if (error || !result) return reject(error);

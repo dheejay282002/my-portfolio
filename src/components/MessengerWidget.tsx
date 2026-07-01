@@ -292,6 +292,9 @@ export default function MessengerWidget() {
         setReplyTo(null);
         await fetchMessages(activeConv.id);
         await fetchConversations();
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        alert(errorData.error || "Failed to send message. Please ensure files are under 4.5MB.");
       }
     } finally {
       setSending(false);

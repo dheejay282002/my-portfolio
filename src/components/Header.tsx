@@ -135,6 +135,11 @@ export default function Header() {
         </div>
       </header>
 
+      {/* Mobile menu backdrop click to close */}
+      {!isHideNav && mobileMenuOpen && (
+        <div className="fixed inset-0 z-30 md:hidden" onClick={() => setMobileMenuOpen(false)} />
+      )}
+
       {/* Mobile slide-down menu for public homepage */}
       {!isHideNav && mobileMenuOpen && (
         <div className="fixed top-[65px] left-0 right-0 z-40 glass border-t border-white/10 md:hidden animate-in slide-in-from-top-2 duration-200">

@@ -7,11 +7,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: "Missing token" }, { status: 400 });
     }
 
-    const verifyRes = await fetch("https://www.google.com/recaptcha/api/siteverify", {
+    const verifyRes = await fetch("https://hcaptcha.com/siteverify", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
-        secret: process.env.RECAPTCHA_SECRET_KEY!,
+        secret: process.env.HCAPTCHA_SECRET_KEY!,
         response: token,
       }),
     });

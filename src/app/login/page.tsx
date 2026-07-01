@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useWebSettings } from "@/hooks/useWebSettings";
 import LoadingOverlay from "@/components/LoadingOverlay";
 
-const RECAPTCHA_SITEKEY = "6Ldy4D4tAAAAAHwUg4jFLlPybO2GugCT1EZ4okyv";
+const HCAPTCHA_SITEKEY = "8986062e-d2ac-452e-ae48-c66a07e8b462";
 const SITEVERIFY_URL = "/api/verify-captcha";
 
 type Mode = "login" | "signup" | "forgot" | "forgot-otp" | "reset-success";
@@ -42,17 +42,17 @@ export default function LoginPage() {
   const [forgotError, setForgotError] = useState("");
   const [forgotLoading, setForgotLoading] = useState(false);
 
-  // reCAPTCHA — shared across login, signup, forgot
+  // hCaptcha — shared across login, signup, forgot
   const [captchaContext, setCaptchaContext] = useState<"login" | "signup" | "forgot" | null>(null);
   const [captchaVerifying, setCaptchaVerifying] = useState(false);
   const captchaContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (document.getElementById("grecaptcha-script")) return;
+    if (document.getElementById("hcaptcha-script")) return;
     const script = document.createElement("script");
-    script.id = "grecaptcha-script";
-    script.src = "https://www.google.com/recaptcha/api.js?render=explicit";
+    script.id = "hcaptcha-script";
+    script.src = "https://js.hcaptcha.com/1/api.js?render=explicit";
     script.async = true;
     script.defer = true;
     document.head.appendChild(script);
@@ -72,7 +72,7 @@ export default function LoginPage() {
         if (captchaContext === "login") setLoginError(err);
         else if (captchaContext === "forgot") setForgotError(err);
         else setSignupError(err);
-        if ((window as any).grecaptcha) (window as any).grecaptcha.reset();
+        if ((window as any).hcaptcha) (window as any).hcaptcha.reset();
         setCaptchaVerifying(false);
         return;
       }
@@ -115,13 +115,13 @@ export default function LoginPage() {
     finally { setCaptchaVerifying(false); }
   }, [captchaContext, loginEmail, loginPassword, signupName, signupEmail, forgotEmail, router]);
 
-  // Render reCAPTCHA widget when the captcha step is shown
+  // Render hCaptcha widget when the captcha step is shown
   useEffect(() => {
     if (!captchaContext || !captchaContainerRef.current) return;
-    (window as any).grecaptcha.render(captchaContainerRef.current, {
-      sitekey: RECAPTCHA_SITEKEY,
+    (window as any).hcaptcha.render(captchaContainerRef.current, {
+      sitekey: HCAPTCHA_SITEKEY,
       callback: (token: string) => runAfterCaptcha(token),
-      "expired-callback": () => { if ((window as any).grecaptcha) (window as any).grecaptcha.reset(); },
+      "expired-callback": () => { if ((window as any).hcaptcha) (window as any).hcaptcha.reset(); },
       "error-callback": () => {
         const err = "CAPTCHA error. Please try again.";
         if (captchaContext === "login") setLoginError(err);
