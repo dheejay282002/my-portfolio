@@ -65,7 +65,7 @@ export default function ServicesPage() {
     setSaving(true);
     try {
       if (editing) {
-        await fetch(`/api/services/id/${editing.id}`, {
+        await fetch(`/api/services/${editing.id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(form),
@@ -90,7 +90,7 @@ export default function ServicesPage() {
 
   const handleDelete = async (id: number) => {
     if (!confirm("Delete this service?")) return;
-    const res = await fetch(`/api/services/id/${id}`, { method: "DELETE" });
+    const res = await fetch(`/api/services/${id}`, { method: "DELETE" });
     if (res.ok) setServices((p) => p.filter((s) => s.id !== id));
   };
 
