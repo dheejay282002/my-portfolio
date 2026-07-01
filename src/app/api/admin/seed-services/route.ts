@@ -1,17 +1,7 @@
-// Run: node scripts/seed-services.mjs
-// Seeds the services table with default offerings
-
-import pg from "pg";
-const { Pool } = pg;
-
-const connectionString = process.env.DATABASE_URL || "postgresql://postgres:postgres@localhost:5432/portfolio";
-
-const pool = new Pool({
-  connectionString,
-  ssl: connectionString.includes("localhost") || connectionString.includes("127.0.0.1")
-    ? false
-    : { rejectUnauthorized: false },
-});
+import { NextResponse } from "next/server";
+import { queryAll, queryOne } from "@/lib/db";
+import { getSession } from "@/lib/auth";
+import { ensureServicesTable } from "@/lib/schema";
 
 const services = [
   {
@@ -76,25 +66,25 @@ const services = [
   },
 ];
 
-async function main() {
-  const exists = await pool.query("SELECT COUNT(*)::int AS cnt FROM services");
-  if (exists.rows[0].cnt > 0) {
-    console.log(`Services table already has ${exists.rows[0].cnt} entries — skipping seed.`);
-    await pool.end();
-    return;
-  }
+export async function POST() {
+  const user = await getSession();
+  if (!user || user.role !== "admin")
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
 
-  for (const s of services) {
-    await pool.query(
-      "INSERT INTO services (title, description, icon) VALUES ($1, $2, $3)",
-      [s.title, s.description, s.icon]
-    );
+  try {
+    await ensureServicesTable();
+    const existing = await queryAll("SELECT COUNT(*)::int AS cnt FROM services");
+    if (existing[0].cnt > 0) {
+      return NextResponse.json({ message: `Services table already has ${existing[0].cnt} entries — no changes made.` });
+    }
+    for (const s of services) {
+      await queryOne(
+        "INSERT INTO services (title, description, icon) VALUES ($1, $2, $3) RETURNING id",
+        [s.title, s.description, s.icon]
+      );
+    }
+    return NextResponse.json({ message: `Seeded ${services.length} services successfully.` });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message || "Something went wrong" }, { status: 500 });
   }
-  console.log(`Seeded ${services.length} services successfully.`);
-  await pool.end();
 }
-
-main().catch((err) => {
-  console.error("Seed failed:", err.message);
-  process.exit(1);
-});

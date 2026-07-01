@@ -20,6 +20,27 @@ export default function ServicesPage() {
   const [editing, setEditing] = useState<Service | null>(null);
   const [form, setForm] = useState({ title: "", description: "", icon: "Code2" });
   const [saving, setSaving] = useState(false);
+  const [seeding, setSeeding] = useState(false);
+  const [seedMessage, setSeedMessage] = useState("");
+
+  const handleSeed = async () => {
+    setSeeding(true);
+    setSeedMessage("");
+    try {
+      const res = await fetch("/api/admin/seed-services", { method: "POST" });
+      const data = await res.json();
+      setSeedMessage(data.message || data.error || "Done");
+      if (res.ok) {
+        const r = await fetch("/api/services");
+        const d = await r.json();
+        setServices(d.services || []);
+      }
+    } catch {
+      setSeedMessage("Failed to seed services");
+    } finally {
+      setSeeding(false);
+    }
+  };
 
   useEffect(() => {
     fetch("/api/services")
@@ -116,19 +137,38 @@ export default function ServicesPage() {
             Manage the services displayed on your portfolio.
           </p>
         </div>
-        <button
-          onClick={openAdd}
-          className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-5 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
-        >
-          <Plus className="h-4 w-4" />
-          Add Service
-        </button>
+        <div className="flex items-center gap-3">
+          {services.length === 0 && (
+            <button
+              onClick={handleSeed}
+              disabled={seeding}
+              className="inline-flex items-center gap-2 rounded-xl border border-cyan-500/20 bg-cyan-500/10 px-5 py-2.5 text-sm font-medium text-cyan-400 transition-all hover:bg-cyan-500/20 disabled:opacity-50"
+            >
+              {seeding ? "Restoring..." : "Restore Defaults"}
+            </button>
+          )}
+          <button
+            onClick={openAdd}
+            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-5 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
+          >
+            <Plus className="h-4 w-4" />
+            Add Service
+          </button>
+        </div>
       </div>
+
+      {seedMessage && (
+        <div className="mt-6 text-center">
+          <p className={`text-sm ${seedMessage.includes("successfully") ? "text-green-400" : "text-zinc-400"}`}>
+            {seedMessage}
+          </p>
+        </div>
+      )}
 
       <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {services.length === 0 ? (
           <div className="col-span-full py-16 text-center text-zinc-500">
-            No services yet. Add your first service.
+            No services yet. Click "Restore Defaults" to populate or add manually.
           </div>
         ) : (
           services.map((s) => {

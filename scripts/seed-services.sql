@@ -1,67 +1,19 @@
--- Seed services table with default offerings
--- Run: psql -d portfolio -f scripts/seed-services.sql
+-- Seed services table with realistic default offerings
+-- Run: psql -d portfolio -p 3305 -f scripts/seed-services.sql
 
 INSERT INTO services (title, description, icon)
 SELECT * FROM (VALUES
-  (
-    'Full-Stack Web Development',
-    'What''s Included: End-to-end web applications built with Next.js, React, TypeScript & Node.js. Custom APIs, authentication, real-time features, and responsive UIs designed for performance. | Best For: Startups, SaaS platforms, and businesses needing a modern web presence.',
-    'Code2'
-  ),
-  (
-    'Mobile Application Development',
-    'What''s Included: Cross-platform mobile apps using React Native with native performance. Push notifications, offline support, app store deployment, and seamless backend integration. | Best For: MVPs, product launches, and businesses expanding to mobile.',
-    'Smartphone'
-  ),
-  (
-    'UI/UX Design & Prototyping',
-    'What''s Included: User research, wireframing, high-fidelity mockups, interactive prototypes, and design systems. Figma-based collaboration with developer handoff included. | Best For: Early-stage products needing a polished, user-centered design.',
-    'Palette'
-  ),
-  (
-    'Cloud Infrastructure & DevOps',
-    'What''s Included: AWS/Azure/GCP setup, Docker containerization, CI/CD pipelines, auto-scaling, monitoring with Grafana & Prometheus, and infrastructure as code with Terraform. | Best For: Growing platforms that need reliable, scalable cloud architecture.',
-    'Cloud'
-  ),
-  (
-    'API Development & Integration',
-    'What''s Included: RESTful & GraphQL API design, third-party integrations (Stripe, Twilio, OpenAI, etc.), webhook systems, API documentation with Swagger/OpenAPI, and rate limiting. | Best For: Products that need to connect multiple services or expose data to partners.',
-    'Braces'
-  ),
-  (
-    'Database Architecture & Optimization',
-    'What''s Included: Schema design (SQL & NoSQL), query optimization, indexing strategies, migration planning, replication setup, and performance tuning for high-traffic applications. | Best For: Data-heavy applications, analytics platforms, and systems scaling past 1M users.',
-    'Database'
-  ),
-  (
-    'Cybersecurity & Compliance',
-    'What''s Included: Vulnerability assessments, penetration testing, OWASP Top 10 remediation, SOC 2/PCI-DSS compliance prep, WAF configuration, and security audit documentation. | Best For: Fintech, healthcare, and any application handling sensitive user data.',
-    'Shield'
-  ),
-  (
-    'Full-Stack Architecture & Growth',
-    'What''s Included: Complete system architecture design, microservices migration, performance optimization, caching strategies (Redis/CDN), load testing, and technical scalability planning. | Best For: Series A+ startups preparing for rapid growth and scale.',
-    'Rocket'
-  ),
-  (
-    'Legacy System Modernization',
-    'What''s Included: Migration from monolithic to microservices architecture, legacy code refactoring, database migration planning, API extraction, and incremental deployment strategies with zero downtime. | Best For: Established businesses modernizing their tech stack.',
-    'Layers'
-  ),
-  (
-    'Server Management & Hosting',
-    'What''s Included: VPS/dedicated server setup, Nginx/Apache configuration, SSL/TLS management, backup automation, disaster recovery planning, and 24/7 monitoring with alerting. | Best For: Businesses that need reliable, hands-off server operations.',
-    'Server'
-  ),
-  (
-    'E-Commerce Solutions',
-    'What''s Included: Custom e-commerce platforms, payment gateway integration (Stripe, PayPal, Square), inventory management systems, shopping cart optimization, and checkout flow UX improvement. | Best For: Retailers, digital product sellers, and subscription-based businesses.',
-    'Globe'
-  ),
-  (
-    'DevOps & CI/CD Pipeline Engineering',
-    'What''s Included: GitHub Actions/GitLab CI setup, automated testing & deployment, Kubernetes orchestration, blue/green deployments, feature flags, and release management workflows. | Best For: Engineering teams wanting to ship faster with confidence.',
-    'GitBranch'
-  )
+  ('Full-Stack Web Development', 'What''s Included: Custom web apps built with Next.js, React, TypeScript, and Node.js. Authentication, databases, admin panels, payment integration, and responsive design. | Best For: Startups, small businesses, and founders launching a digital product.', 'Code2'),
+  ('API Development & Integration', 'What''s Included: RESTful & GraphQL API design, third-party integrations (Stripe, Twilio, OpenAI, Google), webhook setup, rate limiting, and auto-generated API docs. | Best For: Products that need to connect external services or expose data to partners.', 'Braces'),
+  ('E-Commerce Development', 'What''s Included: Custom online stores, payment gateway setup (Stripe, PayPal, GCash), inventory management, shopping cart, order tracking, and checkout optimization. | Best For: Retailers, digital product sellers, and small e-commerce brands.', 'Globe'),
+  ('Mobile App Development', 'What''s Included: Cross-platform mobile apps using React Native. Push notifications, offline support, app store deployment (iOS & Android), and real-time features. | Best For: MVPs, startups, and businesses wanting a mobile presence.', 'Smartphone'),
+  ('UI/UX Design & Implementation', 'What''s Included: Wireframing, high-fidelity Figma mockups, design systems, responsive layouts, animations, and pixel-perfect implementation in code. | Best For: Early-stage products needing a professional, user-friendly interface.', 'Palette'),
+  ('Website Redesign & Migration', 'What''s Included: Legacy site audit, redesign strategy, content migration, SEO preservation, performance improvements, and zero-downtime deployment. | Best For: Businesses stuck on outdated platforms wanting a modern web presence.', 'Layers'),
+  ('Performance Optimization', 'What''s Included: Core Web Vitals audit, image optimization, code splitting, caching strategy, CDN setup, bundle size reduction, and Lighthouse score improvement. | Best For: Sites with slow load times, high bounce rates, or poor SEO rankings.', 'Rocket'),
+  ('Database Design & Management', 'What''s Included: Schema design (PostgreSQL, MySQL, MongoDB), query optimization, indexing, migration planning, data backup strategies, and replication setup. | Best For: Data-heavy applications and platforms experiencing slow queries.', 'Database'),
+  ('Maintenance & Support', 'What''s Included: Bug fixes, dependency updates, security patches, uptime monitoring, performance checks, and priority email support with same-day response. | Best For: Businesses that need their site running smoothly without hiring a full-time developer.', 'Server'),
+  ('Technical Consultation & Code Review', 'What''s Included: Architecture review, security audit, code quality assessment, tech stack recommendations, performance analysis, and a detailed improvement roadmap. | Best For: Teams wanting an expert second opinion before or after a major launch.', 'Shield'),
+  ('Cloud Deployment & DevOps', 'What''s Included: Vercel, AWS, or DigitalOcean setup. CI/CD pipelines, Docker containerization, SSL configuration, environment management, and deployment automation. | Best For: Developers and teams wanting reliable, automated deployments.', 'Cloud'),
+  ('Chat & Real-Time Features', 'What''s Included: WebSocket-based messaging, live notifications, video/voice call integration, typing indicators, read receipts, and scalable real-time infrastructure. | Best For: Platforms needing in-app chat, customer support tools, or collaboration features.', 'GitBranch')
 ) AS v(title, description, icon)
 WHERE NOT EXISTS (SELECT 1 FROM services LIMIT 1);
