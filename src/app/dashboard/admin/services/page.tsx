@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Plus, Pencil, Trash2, X, Code2, Shield, Server, Globe, Database, GitBranch } from "lucide-react";
+import Skeleton from "@/components/Skeleton";
 
 const iconOptions = ["Code2", "Shield", "Server", "Globe", "Database", "GitBranch"];
 
@@ -14,6 +15,7 @@ interface Service {
 
 export default function ServicesPage() {
   const [services, setServices] = useState<Service[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Service | null>(null);
   const [form, setForm] = useState({ title: "", description: "", icon: "Code2" });
@@ -22,7 +24,7 @@ export default function ServicesPage() {
   useEffect(() => {
     fetch("/api/services")
       .then((r) => r.json())
-      .then((d) => setServices(d.services));
+      .then((d) => { setServices(d.services); setLoading(false); });
   }, []);
 
   const openAdd = () => {
@@ -74,6 +76,36 @@ export default function ServicesPage() {
   const iconMap: Record<string, React.ElementType> = {
     Code2, Shield, Server, Globe, Database, GitBranch,
   };
+
+  if (loading) {
+    return (
+      <div className="px-6 py-24">
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-40" />
+            <Skeleton className="h-4 w-64" />
+          </div>
+          <Skeleton className="h-11 w-36 rounded-xl" />
+        </div>
+        <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="glass rounded-2xl p-6">
+              <div className="flex items-start justify-between">
+                <Skeleton className="h-10 w-10 rounded-lg" />
+                <div className="flex gap-1">
+                  <Skeleton className="h-7 w-7 rounded-lg" />
+                  <Skeleton className="h-7 w-7 rounded-lg" />
+                </div>
+              </div>
+              <Skeleton className="mt-4 h-5 w-3/4" />
+              <Skeleton className="mt-2 h-4 w-full" />
+              <Skeleton className="mt-1 h-4 w-1/2" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="px-6 py-24">

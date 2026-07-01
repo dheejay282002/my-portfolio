@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Plus, Pencil, Trash2, X, Terminal, Database, Globe, Layout, Shield, Cpu } from "lucide-react";
+import Skeleton from "@/components/Skeleton";
 
 const iconOptions = ["Terminal", "Database", "Globe", "Layout", "Shield", "Cpu"];
 const categoryOptions = ["Languages", "Frameworks", "Databases & Tools", "Frontend", "Other"];
@@ -15,6 +16,7 @@ interface Skill {
 
 export default function SkillsPage() {
   const [skills, setSkills] = useState<Skill[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Skill | null>(null);
   const [form, setForm] = useState({ name: "", category: "Other", icon: "Terminal" });
@@ -23,7 +25,7 @@ export default function SkillsPage() {
   useEffect(() => {
     fetch("/api/skills")
       .then((r) => r.json())
-      .then((d) => setSkills(d.skills));
+      .then((d) => { setSkills(d.skills); setLoading(false); });
   }, []);
 
   const openAdd = () => {
@@ -81,6 +83,35 @@ export default function SkillsPage() {
     acc[s.category].push(s);
     return acc;
   }, {});
+
+  if (loading) {
+    return (
+      <div className="px-6 py-24">
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-32" />
+            <Skeleton className="h-4 w-56" />
+          </div>
+          <Skeleton className="h-11 w-32 rounded-xl" />
+        </div>
+        <div className="mt-8 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i}>
+              <Skeleton className="h-3 w-24" />
+              <div className="mt-3 space-y-2">
+                {Array.from({ length: 3 }).map((_, j) => (
+                  <div key={j} className="glass flex items-center gap-3 rounded-xl px-4 py-3">
+                    <Skeleton className="h-4 w-4 rounded" />
+                    <Skeleton className="h-4 w-32" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="px-6 py-24">

@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Upload, X, Save, Eye, EyeOff, Lock, CheckCircle, Loader2 } from "lucide-react";
+import { Upload, X, Save, Eye, EyeOff, Lock, CheckCircle } from "lucide-react";
 import Image from "next/image";
+import Skeleton from "@/components/Skeleton";
 
 export default function ProfileForm() {
   const router = useRouter();
@@ -96,7 +97,44 @@ export default function ProfileForm() {
     }
   };
 
-  if (loading) return null;
+  if (loading) {
+    return (
+      <div className="px-6 py-10">
+        <div className="mx-auto max-w-2xl space-y-8">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-4 w-72" />
+          <div className="flex flex-col items-center gap-4 sm:flex-row">
+            <Skeleton className="h-24 w-24 shrink-0 rounded-full" />
+            <Skeleton className="h-11 w-36 rounded-xl" />
+          </div>
+          <div className="grid gap-6 sm:grid-cols-2">
+            <Skeleton className="h-[60px] w-full rounded-xl" />
+            <Skeleton className="h-[60px] w-full rounded-xl" />
+          </div>
+          <Skeleton className="h-[60px] w-full rounded-xl" />
+          <div className="border-t border-white/5 pt-6">
+            <div className="flex items-center justify-between">
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-3 w-48" />
+              </div>
+              <Skeleton className="h-10 w-40 rounded-xl" />
+            </div>
+          </div>
+          <Skeleton className="h-[120px] w-full rounded-xl" />
+          <div className="border-t border-white/5 pt-6 space-y-6">
+            <Skeleton className="h-4 w-32" />
+            <div className="grid gap-6 sm:grid-cols-3">
+              <Skeleton className="h-[60px] w-full rounded-xl" />
+              <Skeleton className="h-[60px] w-full rounded-xl" />
+              <Skeleton className="h-[60px] w-full rounded-xl" />
+            </div>
+          </div>
+          <Skeleton className="h-11 w-40 rounded-xl" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="px-6 py-10">
@@ -412,7 +450,7 @@ function ChangePasswordModal({ onClose }: { onClose: () => void }) {
               className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-8 py-3 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
             >
               {verifying ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Skeleton className="h-4 w-4 rounded-full" />
               ) : (
                 <CheckCircle className="h-4 w-4" />
               )}

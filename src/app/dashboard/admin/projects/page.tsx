@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { Plus, Pencil, Trash2, ExternalLink, X, Upload } from "lucide-react";
+import Skeleton from "@/components/Skeleton";
 
 interface ProjectImage {
   id: number;
@@ -20,6 +21,7 @@ interface Project {
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Project | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -36,7 +38,7 @@ export default function ProjectsPage() {
   useEffect(() => {
     fetch("/api/projects")
       .then((r) => r.json())
-      .then((d) => setProjects(d.projects));
+      .then((d) => { setProjects(d.projects); setLoading(false); });
   }, []);
 
   const openAdd = () => {
@@ -125,6 +127,36 @@ export default function ProjectsPage() {
   const removeImage = (index: number) => {
     setForm((f) => ({ ...f, images: f.images.filter((_, i) => i !== index) }));
   };
+
+  if (loading) {
+    return (
+      <div className="px-6 py-24">
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-40" />
+            <Skeleton className="h-4 w-64" />
+          </div>
+          <Skeleton className="h-11 w-36 rounded-xl" />
+        </div>
+        <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="glass rounded-2xl overflow-hidden">
+              <Skeleton className="aspect-video w-full rounded-none" />
+              <div className="p-5 space-y-3">
+                <Skeleton className="h-5 w-3/4" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-1/2" />
+                <div className="flex gap-1.5">
+                  <Skeleton className="h-5 w-16 rounded-full" />
+                  <Skeleton className="h-5 w-20 rounded-full" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="px-6 py-24">

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { X, Check, XCircle, ChevronDown } from "lucide-react";
+import Skeleton from "@/components/Skeleton";
 
 interface ProjectRequest {
   id: number;
@@ -30,13 +31,14 @@ const progressOptions = ["in_progress", "testing", "completed", "delivered"];
 
 export default function ProjectRequestsPage() {
   const [requests, setRequests] = useState<ProjectRequest[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<ProjectRequest | null>(null);
   const [openDropdown, setOpenDropdown] = useState<number | null>(null);
 
   useEffect(() => {
     fetch("/api/project-requests")
       .then((r) => r.json())
-      .then((d) => setRequests(d.requests));
+      .then((d) => { setRequests(d.requests); setLoading(false); });
   }, []);
 
   const updateStatus = async (id: number, status: string) => {
@@ -53,6 +55,39 @@ export default function ProjectRequestsPage() {
     }
     setOpenDropdown(null);
   };
+
+  if (loading) {
+    return (
+      <div className="px-6 py-24">
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-4 w-72" />
+        </div>
+        <div className="mt-8">
+          <div className="glass rounded-2xl border border-white/5 p-5 space-y-4">
+            <div className="flex gap-8 border-b border-white/5 pb-4">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-4 w-14" />
+              <Skeleton className="h-4 w-12 ml-auto" />
+            </div>
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="flex gap-8">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-5 w-14 rounded-full" />
+                <Skeleton className="h-4 w-12 ml-auto" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="px-6 py-24">

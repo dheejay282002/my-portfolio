@@ -5,6 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import LoadingOverlay from "@/components/LoadingOverlay";
+import Skeleton from "@/components/Skeleton";
 import { LayoutDashboard, ClipboardList, Settings, LogOut, Menu } from "lucide-react";
 
 const navItems = [
@@ -61,7 +62,26 @@ export default function ClientLayout({
     return () => document.removeEventListener("mousedown", handleClick);
   }, [expanded]);
 
-  if (loading) return null;
+  if (loading) {
+    return (
+      <div className="flex min-h-screen pt-16">
+        <aside className="fixed bottom-0 left-0 top-16 z-40 w-16 border-r border-white/5 glass md:flex flex-col items-center py-4 hidden">
+          <Skeleton className="h-5 w-5 rounded-lg" />
+          <div className="flex flex-col gap-4 mt-6 px-2">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Skeleton key={i} className="h-10 w-10 rounded-xl" />
+            ))}
+          </div>
+          <div className="mt-auto">
+            <Skeleton className="h-10 w-10 rounded-xl" />
+          </div>
+        </aside>
+        <div className="flex-1 md:pl-16">
+          <Skeleton className="h-full w-full" />
+        </div>
+      </div>
+    );
+  }
 
   const showExpanded = expanded || mobileOpen;
   const sidebarWidth = expanded ? "w-64" : "w-16";

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Skeleton from "@/components/Skeleton";
 
 interface User {
   id: number;
@@ -12,12 +13,42 @@ interface User {
 
 export default function UserManagement() {
   const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetch("/api/users")
       .then((r) => (r.ok ? r.json() : { users: [] }))
-      .then((d) => setUsers(d.users));
+      .then((d) => { setUsers(d.users); setLoading(false); });
   }, []);
+
+  if (loading) {
+    return (
+      <div className="px-6 py-24">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="mt-1 h-4 w-72" />
+        <div className="mt-8 overflow-x-auto">
+          <div className="glass w-full rounded-2xl p-5 space-y-4">
+            <div className="flex gap-8 border-b border-white/5 pb-4">
+              <Skeleton className="h-4 w-8" />
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-4 w-12" />
+              <Skeleton className="h-4 w-20" />
+            </div>
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="flex gap-8">
+                <Skeleton className="h-4 w-8" />
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-5 w-14 rounded-full" />
+                <Skeleton className="h-4 w-20" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="px-6 py-24">
