@@ -267,11 +267,15 @@ export default function MessengerWidget() {
         const formData = new FormData();
         formData.append("file", file);
         const uploadRes = await fetch("/api/upload", { method: "POST", body: formData });
-        if (uploadRes.ok) {
-          const d = await uploadRes.json();
-          attachmentUrl = d.url;
-          attachmentType = file.type;
+        if (!uploadRes.ok) {
+          alert("Failed to upload file. Please ensure it is under 4.5MB.");
+          setAttachmentFile(null);
+          setAttachmentPreview(null);
+          return;
         }
+        const d = await uploadRes.json();
+        attachmentUrl = d.url;
+        attachmentType = file.type;
       }
       const res = await fetch("/api/messages", {
         method: "POST",

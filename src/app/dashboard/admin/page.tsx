@@ -10,6 +10,9 @@ import {
   Mail,
   Globe,
   Settings,
+  Shield,
+  AlertTriangle,
+  Activity,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -27,6 +30,21 @@ interface ProjectRequest {
   client_name: string;
   status: string;
   created_at: string;
+}
+
+interface SecurityEvent {
+  id: number;
+  event_type: string;
+  ip_address: string;
+  user_agent: string;
+  email: string;
+  details: string;
+  created_at: string;
+}
+
+interface SecuritySummary {
+  event_type: string;
+  cnt: number;
 }
 
 const statusColors: Record<string, string> = {
@@ -68,6 +86,9 @@ export default function AdminDashboard() {
   const [projectsCount, setProjectsCount] = useState(0);
   const [servicesCount, setServicesCount] = useState(0);
   const [skillsCount, setSkillsCount] = useState(0);
+  const [securityEvents, setSecurityEvents] = useState<SecurityEvent[]>([]);
+  const [securitySummary, setSecuritySummary] = useState<SecuritySummary[]>([]);
+  const [securityLast24h, setSecurityLast24h] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -78,8 +99,9 @@ export default function AdminDashboard() {
       fetch("/api/projects").then((r) => r.json()),
       fetch("/api/services").then((r) => r.json()),
       fetch("/api/skills").then((r) => r.json()),
+      fetch("/api/admin/security-events").then((r) => r.json()),
     ])
-      .then(([me, reqData, usersData, projData, svcData, skillData]) => {
+      .then(([me, reqData, usersData, projData, svcData, skillData, secData]) => {
         setAdminName(me.user?.name || "Admin");
         setRequests(reqData.requests || []);
         setUsersCount(usersData.users?.length || 0);
@@ -87,6 +109,9 @@ export default function AdminDashboard() {
         setProjectsCount(projData.projects?.length || 0);
         setServicesCount(svcData.services?.length || 0);
         setSkillsCount(skillData.skills?.length || 0);
+        setSecurityEvents(secData.events || []);
+        setSecuritySummary(secData.summary || []);
+        setSecurityLast24h(secData.last24h || 0);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -229,6 +254,98 @@ export default function AdminDashboard() {
               ))}
             </div>
           )}
+        </div>
+      </div>
+
+      {/* ── DDoS / Security Monitor ── */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Shield className="h-5 w-5 text-cyan-400" />
+            <h2 className="text-lg font-semibold text-white">DDoS Protection &amp; Security Monitor</h2>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="flex items-center gap-1.5 rounded-full bg-cyan-500/10 px-3 py-1 text-[10px] font-medium text-cyan-400">
+              <Activity className="h-3 w-3" />
+              {securityLast24h} events (24h)
+            </span>
+            <span className="flex items-center gap-1.5 rounded-full bg-red-500/10 px-3 py-1 text-[10px] font-medium text-red-400">
+              <AlertTriangle className="h-3 w-3" />
+              {securitySummary.find((s) => s.event_type === "failed_login")?.cnt || 0} failed logins
+            </span>
+          </div>
+        </div>
+
+        <div className="grid gap-4 lg:grid-cols-4">
+          {/* Summary breakdown */}
+          <div className="lg:col-span-1 space-y-2">
+            {securitySummary.length === 0 ? (
+              <div className="glass rounded-2xl p-5 text-center">
+                <Shield className="mx-auto h-6 w-6 text-zinc-600" />
+                <p className="mt-2 text-xs text-zinc-500">No threats detected</p>
+              </div>
+            ) : (
+              <div className="glass rounded-2xl p-4 space-y-2">
+                {securitySummary.map((s) => (
+                  <div key={s.event_type} className="flex items-center justify-between rounded-xl bg-white/2 px-3.5 py-2.5">
+                    <span className="text-xs font-medium text-zinc-300 capitalize">
+                      {s.event_type.replace(/_/g, " ")}
+                    </span>
+                    <span className="text-sm font-bold text-white">{s.cnt}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Event log */}
+          <div className="lg:col-span-3">
+            {securityEvents.length === 0 ? (
+              <div className="glass rounded-2xl p-8 text-center">
+                <Shield className="mx-auto h-8 w-8 text-zinc-600" />
+                <p className="mt-2 text-sm text-zinc-500">
+                  No security events yet. Failed login attempts will appear here.
+                </p>
+              </div>
+            ) : (
+              <div className="glass rounded-2xl max-h-[320px] overflow-y-auto scrollbar-hide">
+                <table className="w-full text-left">
+                  <thead className="sticky top-0 bg-zinc-900/90 backdrop-blur-sm">
+                    <tr className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+                      <th className="px-4 py-3">Time</th>
+                      <th className="px-4 py-3">Type</th>
+                      <th className="px-4 py-3">IP Address</th>
+                      <th className="px-4 py-3">Email</th>
+                      <th className="px-4 py-3">User Agent</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5 text-xs text-zinc-400">
+                    {securityEvents.slice(0, 20).map((ev) => (
+                      <tr key={ev.id} className="hover:bg-white/2 transition-colors">
+                        <td className="px-4 py-3 whitespace-nowrap text-zinc-500">
+                          {new Date(ev.created_at).toLocaleString()}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                            ev.event_type === "failed_login"
+                              ? "bg-red-500/10 text-red-400"
+                              : "bg-yellow-500/10 text-yellow-400"
+                          }`}>
+                            {ev.event_type.replace(/_/g, " ")}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 font-mono text-zinc-300">{ev.ip_address}</td>
+                        <td className="px-4 py-3">{ev.email || "-"}</td>
+                        <td className="px-4 py-3 max-w-[200px] truncate" title={ev.user_agent}>
+                          {ev.user_agent ? ev.user_agent.slice(0, 60) + "..." : "-"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
