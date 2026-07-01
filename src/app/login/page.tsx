@@ -74,13 +74,22 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (document.getElementById("hcaptcha-script")) return;
-    const script = document.createElement("script");
-    script.id = "hcaptcha-script";
-    script.src = "https://js.hcaptcha.com/1/api.js?render=explicit";
-    script.async = true;
-    script.defer = true;
-    document.head.appendChild(script);
+    if (!document.getElementById("hcaptcha-script")) {
+      const script = document.createElement("script");
+      script.id = "hcaptcha-script";
+      script.src = "https://js.hcaptcha.com/1/api.js?render=explicit";
+      script.async = true;
+      script.defer = true;
+      document.head.appendChild(script);
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const tabParam = params.get("tab");
+    if (tabParam === "signup") {
+      setTab("signup");
+    } else if (tabParam === "login") {
+      setTab("login");
+    }
   }, []);
 
   const runAfterCaptcha = useCallback(async (token: string) => {

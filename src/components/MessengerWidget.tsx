@@ -425,8 +425,6 @@ export default function MessengerWidget() {
 
 
 
-  if (!user) return null;
-
   return (<>
     <div className="fixed bottom-6 right-6 z-[100]">
       {!open ? (
@@ -441,6 +439,45 @@ export default function MessengerWidget() {
             </span>
           )}
         </button>
+      ) : !user ? (
+        <div className="glass-strong flex h-[420px] w-[340px] flex-col justify-between overflow-hidden rounded-2xl p-6 shadow-2xl max-sm:h-[380px] max-sm:w-[calc(100vw-48px)]">
+          {/* Header */}
+          <div className="flex items-center justify-between border-b border-white/10 pb-4">
+            <h3 className="text-sm font-semibold text-white">Get Started</h3>
+            <button onClick={() => setOpen(false)} className="text-zinc-500 transition-colors hover:text-white">
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          
+          {/* Body */}
+          <div className="flex flex-col items-center justify-center text-center py-6 space-y-4">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500/20 to-blue-600/20">
+              <MessageSquare className="h-7 w-7 text-cyan-400" />
+            </div>
+            <div>
+              <h4 className="text-base font-bold text-white">Let&apos;s Collaborate!</h4>
+              <p className="mt-2 text-xs text-zinc-400 leading-relaxed px-2">
+                Sign in or create an account to start a live conversation, submit project requests, and track progress in real-time.
+              </p>
+            </div>
+          </div>
+          
+          {/* Actions */}
+          <div className="space-y-2">
+            <button
+              onClick={() => { setOpen(false); router.push("/login"); }}
+              className="w-full rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 py-2.5 text-xs font-semibold text-white transition-opacity hover:opacity-90"
+            >
+              Sign In
+            </button>
+            <button
+              onClick={() => { setOpen(false); router.push("/login?tab=signup"); }}
+              className="w-full rounded-xl border border-white/10 py-2.5 text-xs font-semibold text-zinc-300 transition-colors hover:border-white/20 hover:text-white"
+            >
+              Create Account
+            </button>
+          </div>
+        </div>
       ) : (
         <div className="glass-strong flex h-[520px] w-[380px] flex-col overflow-hidden rounded-2xl shadow-2xl max-sm:h-[480px] max-sm:w-[calc(100vw-48px)]">
           {/* Header */}
