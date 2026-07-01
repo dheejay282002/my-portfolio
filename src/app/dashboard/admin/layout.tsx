@@ -44,6 +44,36 @@ export default function AdminLayout({
   const [expanded, setExpanded] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  
+  interface ToastAlert {
+    id: number;
+    project_name: string;
+    client_name: string;
+  }
+  const [activeToast, setActiveToast] = useState<ToastAlert | null>(null);
+  const prevRequestsCountRef = useRef<number>(-1);
+
+  const playNotificationSound = () => {
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.frequency.value = 520;
+      gain.gain.setValueAtTime(0.15, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+      osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.15);
+      setTimeout(() => {
+        const osc2 = ctx.createOscillator();
+        const gain2 = ctx.createGain();
+        osc2.connect(gain2); gain2.connect(ctx.destination);
+        osc2.frequency.value = 680;
+        gain2.gain.setValueAtTime(0.15, ctx.currentTime);
+        gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+        osc2.start(ctx.currentTime); osc2.stop(ctx.currentTime + 0.15);
+      }, 160);
+    } catch {}
+  };
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -54,6 +84,45 @@ export default function AdminLayout({
         setLoading(false);
       });
   }, [router]);
+
+  useEffect(() => {
+    if (loading || !user) return;
+
+    const checkNewRequests = async () => {
+      try {
+        const res = await fetch("/api/project-requests");
+        if (res.ok) {
+          const data = await res.json();
+          const requestsList = data.requests || [];
+          const currentCount = requestsList.length;
+
+          if (prevRequestsCountRef.current !== -1 && currentCount > prevRequestsCountRef.current) {
+            const newRequests = requestsList.slice(0, currentCount - prevRequestsCountRef.current);
+            const latest = newRequests[0];
+            if (latest && latest.status === "pending") {
+              setActiveToast({
+                id: latest.id,
+                project_name: latest.project_name,
+                client_name: latest.client_name || "A client",
+              });
+              playNotificationSound();
+            }
+          }
+          prevRequestsCountRef.current = currentCount;
+        }
+      } catch {}
+    };
+
+    checkNewRequests();
+    const interval = setInterval(checkNewRequests, 10000);
+    return () => clearInterval(interval);
+  }, [loading, user]);
+
+  useEffect(() => {
+    if (!activeToast) return;
+    const timer = setTimeout(() => setActiveToast(null), 6000);
+    return () => clearTimeout(timer);
+  }, [activeToast]);
 
   useEffect(() => {
     const handler = () => setMobileOpen((v) => !v);
@@ -197,6 +266,38 @@ export default function AdminLayout({
       <div className={`flex-1 transition-all duration-300 ${expanded ? "md:pl-64" : "md:pl-16"}`}>
         {children}
       </div>
+
+      {activeToast && (
+        <div className="fixed right-6 top-6 z-[250] flex w-full max-w-sm overflow-hidden rounded-2xl border border-cyan-500/20 bg-zinc-950/85 backdrop-blur-xl p-4 shadow-xl shadow-cyan-500/10 transition-all duration-300 animate-slide-in">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-600/20 text-cyan-400">
+              <ClipboardList className="h-5 w-5 animate-pulse" />
+            </div>
+            <div className="flex-1 min-w-0 text-left">
+              <p className="text-sm font-bold text-white">New Project Request!</p>
+              <p className="mt-1 text-xs text-zinc-400 leading-normal">
+                <span className="font-semibold text-white">{activeToast.client_name}</span> submitted a request:
+                <span className="italic block mt-0.5 text-cyan-400 truncate">{activeToast.project_name}</span>
+              </p>
+              <div className="mt-3 flex gap-2">
+                <Link
+                  href="/dashboard/admin/project-requests"
+                  onClick={() => setActiveToast(null)}
+                  className="rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-[10px] font-semibold text-white transition-opacity hover:opacity-90"
+                >
+                  View Request
+                </Link>
+                <button
+                  onClick={() => setActiveToast(null)}
+                  className="rounded-lg border border-white/10 px-3 py-1.5 text-[10px] font-semibold text-zinc-400 transition-colors hover:border-white/20 hover:text-white"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
