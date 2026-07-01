@@ -69,7 +69,7 @@ export default function Footer() {
               href="https://ko-fi.com/itsmeyourdeejay"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-xl bg-amber-500/10 border border-amber-500/20 px-4 py-1.5 text-xs font-semibold text-amber-400 transition-all hover:bg-amber-500/20 hover:border-amber-500/30"
+              className="inline-flex items-center gap-2 rounded-xl bg-cyan-500/10 border border-cyan-500/20 px-4 py-1.5 text-xs font-semibold text-cyan-400 transition-all hover:bg-cyan-500/20 hover:border-cyan-500/30"
             >
               <span>☕</span> Buy me a coffee
             </a>
