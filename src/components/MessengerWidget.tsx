@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { MessageSquare, X, Send, Plus, ChevronLeft, User, FileText, Camera, CornerUpLeft, Phone, Video, VideoOff, Mic, MicOff, PhoneOff, X as XIcon } from "lucide-react";
+import { MessageSquare, X, Send, Plus, ChevronLeft, User, FileText, Camera, CornerUpLeft, Phone, Video, VideoOff, Mic, MicOff, PhoneOff, X as XIcon, Upload, AlertCircle, Check, CreditCard } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 
@@ -105,6 +105,37 @@ export default function MessengerWidget() {
   const [attachmentPreview, setAttachmentPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [availableProducts, setAvailableProducts] = useState<Product[]>([]);
+  const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
+  const [currency, setCurrency] = useState("USD");
+  const [rate, setRate] = useState(1);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [paymentReceiptUrl, setPaymentReceiptUrl] = useState("");
+  const [paymentReferenceNo, setPaymentReferenceNo] = useState("");
+  const [uploadingReceipt, setUploadingReceipt] = useState(false);
+  const [showQRId, setShowQRId] = useState<number | null>(null);
+
+  const formatPrice = (baseline: string) => {
+    if (currency === "USD" || rate === 1) return baseline;
+    const numbers = baseline.replace(/,/g, "").match(/\d+/g);
+    if (!numbers || numbers.length === 0) return baseline;
+
+    const convertedNumbers = numbers.map((n) => {
+      const num = Number(n);
+      const converted = Math.round(num * rate);
+      return new Intl.NumberFormat(undefined, {
+        style: "currency",
+        currency,
+        maximumFractionDigits: 0,
+      }).format(converted);
+    });
+
+    if (convertedNumbers.length === 2) {
+      return `${convertedNumbers[0]} – ${convertedNumbers[1]}${baseline.includes("+") ? "+" : ""}`;
+    } else if (convertedNumbers.length === 1) {
+      return `${convertedNumbers[0]}${baseline.includes("+") ? "+" : ""}`;
+    }
+    return baseline;
+  };
 
   const msgEndRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -143,6 +174,43 @@ export default function MessengerWidget() {
         if (d.products) setAvailableProducts(d.products);
       })
       .catch(() => {});
+
+    // Fetch active payment methods
+    fetch("/api/payment-methods")
+      .then((r) => r.json())
+      .then((d) => {
+        setPaymentMethods(d.methods?.filter((m: any) => m.is_active) || []);
+      })
+      .catch(() => {});
+
+    // Live Geolocation and Currency Rates check
+    fetch("https://ipapi.co/json/")
+      .then((res) => res.json())
+      .then((data) => {
+        const cur = data.currency || "USD";
+        setCurrency(cur);
+        fetch("https://open.er-api.com/v6/latest/USD")
+          .then((r) => r.json())
+          .then((ratesData) => {
+            if (ratesData.rates && ratesData.rates[cur]) {
+              setRate(ratesData.rates[cur]);
+            }
+          });
+      })
+      .catch(() => {
+        // Fallback guess using timezone offset
+        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        if (tz === "Asia/Manila") {
+          setCurrency("PHP");
+          fetch("https://open.er-api.com/v6/latest/USD")
+            .then((r) => r.json())
+            .then((ratesData) => {
+              if (ratesData.rates && ratesData.rates["PHP"]) {
+                setRate(ratesData.rates["PHP"]);
+              }
+            });
+        }
+      });
   }, []);
 
   useEffect(() => {
@@ -300,7 +368,12 @@ export default function MessengerWidget() {
   const submitProjectRequest = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!projectForm.project_name.trim() || !projectForm.description.trim()) return;
+    if (!paymentReceiptUrl || !paymentReferenceNo.trim()) {
+      setErrorMsg("Please upload your 50% downpayment receipt and enter reference number.");
+      return;
+    }
     setSubmittingProject(true);
+    setErrorMsg("");
     try {
       const res = await fetch("/api/project-requests", {
         method: "POST",
@@ -308,6 +381,8 @@ export default function MessengerWidget() {
         body: JSON.stringify({
           ...projectForm,
           conversation_id: activeConv?.id,
+          payment_receipt_url: paymentReceiptUrl,
+          payment_reference_no: paymentReferenceNo.trim(),
         }),
       });
       if (res.ok) {
@@ -316,10 +391,39 @@ export default function MessengerWidget() {
           setSubmittedInvites((prev) => new Set(prev).add(activeInviteMsgId));
         }
         setProjectForm({ project_name: "", description: "", tech_stack: "", product_id: "" });
+        setPaymentReceiptUrl("");
+        setPaymentReferenceNo("");
         setTimeout(() => { setShowProjectForm(false); setProjectSubmitted(false); setActiveInviteMsgId(null); }, 2000);
+      } else {
+        const data = await res.json();
+        setErrorMsg(data.error || "Fake receipt flagged or invalid reference code. Please verify.");
       }
+    } catch {
+      setErrorMsg("Something went wrong. Please try again.");
     } finally {
       setSubmittingProject(false);
+    }
+  };
+
+  const handleReceiptUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingReceipt(true);
+    setErrorMsg("");
+    const fd = new FormData();
+    fd.append("file", file);
+    try {
+      const res = await fetch("/api/upload", { method: "POST", body: fd });
+      if (res.ok) {
+        const data = await res.json();
+        setPaymentReceiptUrl(data.url);
+      } else {
+        setErrorMsg("Failed to upload screenshot. Make sure file size is under 4.5MB.");
+      }
+    } catch {
+      setErrorMsg("An error occurred during file upload.");
+    } finally {
+      setUploadingReceipt(false);
     }
   };
 
@@ -924,7 +1028,7 @@ export default function MessengerWidget() {
           {/* Project Request Form Modal */}
           {showProjectForm && (
             <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/60 rounded-2xl">
-              <div className="glass-strong mx-4 w-full max-w-sm rounded-2xl p-6" onClick={(e) => e.stopPropagation()}>
+              <div className="glass-strong mx-4 w-full max-w-sm rounded-2xl p-6 max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
                 {projectSubmitted ? (
                   <div className="py-8 text-center">
                     <p className="text-sm text-green-400 font-medium">Project request submitted!</p>
@@ -932,7 +1036,15 @@ export default function MessengerWidget() {
                   </div>
                 ) : (
                   <>
-                    <h4 className="text-sm font-semibold text-white mb-4">New Project Request</h4>
+                    <h4 className="text-sm font-semibold text-white mb-4 text-left">New Project Request</h4>
+                    
+                    {errorMsg && (
+                      <div className="mb-3 rounded-xl bg-red-500/10 border border-red-500/20 p-2.5 text-[10px] text-red-400 flex items-center gap-1.5 text-left">
+                        <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                        {errorMsg}
+                      </div>
+                    )}
+
                     <form onSubmit={submitProjectRequest} className="space-y-3">
                       <div>
                         <select
@@ -946,53 +1058,127 @@ export default function MessengerWidget() {
                               project_name: prod ? `Request for ${prod.package_tier}` : projectForm.project_name,
                             });
                           }}
-                          className="glass w-full rounded-xl px-4 py-2.5 text-xs text-white placeholder-zinc-500 outline-none focus:border-cyan-500/50 bg-zinc-950"
+                          className="glass w-full rounded-xl px-4 py-2.5 text-xs text-white placeholder-zinc-500 outline-none focus:border-cyan-500/50 bg-zinc-950 text-left"
                         >
                           <option value="" className="text-zinc-500">Select Package Tier (optional)</option>
                           {availableProducts.map((p) => (
                             <option key={p.id} value={p.id} className="text-white bg-zinc-950">
-                              {p.package_tier} ({p.project_baseline})
+                              {p.package_tier} ({formatPrice(p.project_baseline)})
                             </option>
                           ))}
                         </select>
                       </div>
+                      
                       <input
                         type="text"
                         placeholder="Project Name"
                         value={projectForm.project_name}
                         onChange={(e) => setProjectForm({ ...projectForm, project_name: e.target.value })}
                         required
-                        className="glass w-full rounded-xl px-4 py-2.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-cyan-500/50"
+                        className="glass w-full rounded-xl px-4 py-2.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-cyan-500/50 text-left"
                       />
+                      
                       <textarea
-                        rows={3}
+                        rows={2}
                         placeholder="Project Description"
                         value={projectForm.description}
                         onChange={(e) => setProjectForm({ ...projectForm, description: e.target.value })}
                         required
-                        className="glass w-full resize-none rounded-xl px-4 py-2.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-cyan-500/50"
+                        className="glass w-full resize-none rounded-xl px-4 py-2.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-cyan-500/50 text-left"
                       />
+                      
                       <input
                         type="text"
                         placeholder="Preferred Tech Stack (optional)"
                         value={projectForm.tech_stack}
                         onChange={(e) => setProjectForm({ ...projectForm, tech_stack: e.target.value })}
-                        className="glass w-full rounded-xl px-4 py-2.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-cyan-500/50"
+                        className="glass w-full rounded-xl px-4 py-2.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-cyan-500/50 text-left"
                       />
-                      <div className="flex gap-2 pt-1">
+
+                      {/* Payment Bank Details Instructions */}
+                      <div className="my-2 rounded-xl border border-white/5 bg-zinc-950 p-3 text-[10px] text-zinc-400 space-y-2 text-left max-h-[110px] overflow-y-auto leading-relaxed">
+                        <p className="font-bold text-white uppercase text-[9px] tracking-wider flex items-center gap-1">
+                          <CreditCard className="h-3 w-3 text-cyan-400" />
+                          🔑 Settle 50% Downpayment
+                        </p>
+                        <p>A 50% downpayment is required before request submission. Please transfer to any developer account below:</p>
+                        <div className="space-y-2 mt-1">
+                          {paymentMethods.length === 0 ? (
+                            <p className="italic text-zinc-600">No payment accounts configured yet.</p>
+                          ) : (
+                            paymentMethods.map(m => (
+                              <div key={m.id} className="border-t border-white/5 pt-1.5 space-y-0.5">
+                                <p className="font-semibold text-zinc-300">{m.provider_name}</p>
+                                <p className="text-white font-mono">{m.account_number} ({m.account_name})</p>
+                                {m.qr_code_url && (
+                                  <div>
+                                    <button
+                                      type="button"
+                                      onClick={() => setShowQRId(showQRId === m.id ? null : m.id)}
+                                      className="text-cyan-400 hover:underline text-[9px]"
+                                    >
+                                      {showQRId === m.id ? "Hide QR" : "Show QR Code ↗"}
+                                    </button>
+                                    {showQRId === m.id && (
+                                      <div className="relative h-20 w-20 border border-white/10 rounded-lg overflow-hidden bg-white mt-1">
+                                        <img src={m.qr_code_url} alt="QR" className="h-full w-full object-contain" />
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Downpayment Inputs */}
+                      <div className="space-y-2 text-left pt-1 border-t border-white/5">
+                        <input
+                          type="text"
+                          placeholder="Transaction Reference Number"
+                          value={paymentReferenceNo}
+                          onChange={(e) => setPaymentReferenceNo(e.target.value)}
+                          required
+                          className="glass w-full rounded-xl px-4 py-2.5 text-xs text-white placeholder-zinc-500 outline-none focus:border-cyan-500/50 bg-zinc-950 text-left"
+                        />
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="file"
+                            id="downpayment-receipt-upload"
+                            onChange={handleReceiptUpload}
+                            accept="image/*"
+                            className="hidden"
+                          />
+                          <label
+                            htmlFor="downpayment-receipt-upload"
+                            className="cursor-pointer rounded-xl border border-white/10 px-3.5 py-2 text-xs font-semibold text-zinc-300 transition-colors hover:border-white/20 hover:text-white bg-zinc-950/40 inline-flex items-center gap-1.5"
+                          >
+                            <Upload className="h-3 w-3" />
+                            {uploadingReceipt ? "Uploading..." : "Upload Receipt Screenshot"}
+                          </label>
+                          {paymentReceiptUrl && (
+                            <span className="text-[10px] text-green-400 font-semibold flex items-center gap-0.5">
+                              <Check className="h-3 w-3" /> Added
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2 pt-2 border-t border-white/5">
                         <button
                           type="button"
-                          onClick={() => { setShowProjectForm(false); setProjectSubmitted(false); setActiveInviteMsgId(null); }}
+                          onClick={() => { setShowProjectForm(false); setProjectSubmitted(false); setActiveInviteMsgId(null); setErrorMsg(""); }}
                           className="flex-1 rounded-xl border border-white/10 px-4 py-2.5 text-xs font-medium text-zinc-400 transition-colors hover:border-white/20 hover:text-white"
                         >
                           Cancel
                         </button>
                         <button
                           type="submit"
-                          disabled={submittingProject}
+                          disabled={submittingProject || uploadingReceipt}
                           className="flex-1 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2.5 text-xs font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
                         >
-                          {submittingProject ? "Submitting..." : "Submit Request"}
+                          {submittingProject ? "Analyzing..." : "Submit Request"}
                         </button>
                       </div>
                     </form>

@@ -24,6 +24,31 @@ export default function ServicesSection() {
   const [products, setProducts] = useState<Product[]>([]);
   const [popularId, setPopularId] = useState<number>(-1);
   const [recommendedId, setRecommendedId] = useState<number>(-1);
+  const [currency, setCurrency] = useState("USD");
+  const [rate, setRate] = useState(1);
+
+  const formatPrice = (baseline: string) => {
+    if (currency === "USD" || rate === 1) return baseline;
+    const numbers = baseline.replace(/,/g, "").match(/\d+/g);
+    if (!numbers || numbers.length === 0) return baseline;
+
+    const convertedNumbers = numbers.map((n) => {
+      const num = Number(n);
+      const converted = Math.round(num * rate);
+      return new Intl.NumberFormat(undefined, {
+        style: "currency",
+        currency,
+        maximumFractionDigits: 0,
+      }).format(converted);
+    });
+
+    if (convertedNumbers.length === 2) {
+      return `${convertedNumbers[0]} – ${convertedNumbers[1]}${baseline.includes("+") ? "+" : ""}`;
+    } else if (convertedNumbers.length === 1) {
+      return `${convertedNumbers[0]}${baseline.includes("+") ? "+" : ""}`;
+    }
+    return baseline;
+  };
 
   const fetchProducts = () => {
     fetch("/api/products", { cache: "no-store" })
@@ -73,6 +98,35 @@ export default function ServicesSection() {
 
   useEffect(() => {
     fetchProducts();
+
+    // Live Geolocation check
+    fetch("https://ipapi.co/json/")
+      .then((res) => res.json())
+      .then((data) => {
+        const cur = data.currency || "USD";
+        setCurrency(cur);
+        fetch("https://open.er-api.com/v6/latest/USD")
+          .then((r) => r.json())
+          .then((ratesData) => {
+            if (ratesData.rates && ratesData.rates[cur]) {
+              setRate(ratesData.rates[cur]);
+            }
+          });
+      })
+      .catch(() => {
+        // Safe time-zone fallback detection
+        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        if (tz === "Asia/Manila") {
+          setCurrency("PHP");
+          fetch("https://open.er-api.com/v6/latest/USD")
+            .then((r) => r.json())
+            .then((ratesData) => {
+              if (ratesData.rates && ratesData.rates["PHP"]) {
+                setRate(ratesData.rates["PHP"]);
+              }
+            });
+        }
+      });
   }, []);
 
   if (products.length === 0) return null;
@@ -132,8 +186,8 @@ export default function ServicesSection() {
                   </h3>
 
                   <div className="mt-4 flex items-baseline gap-2">
-                    <span className="text-2xl font-extrabold text-white tracking-tight">
-                      {p.project_baseline}
+                    <span className="text-2xl font-extrabold text-white tracking-tight animate-fade-in">
+                      {formatPrice(p.project_baseline)}
                     </span>
                   </div>
 

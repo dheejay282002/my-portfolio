@@ -114,6 +114,26 @@ export async function ensureProductsTable() {
   await execute(`
     ALTER TABLE project_requests ADD COLUMN IF NOT EXISTS rejection_reason TEXT
   `);
+  await execute(`
+    ALTER TABLE project_requests 
+    ADD COLUMN IF NOT EXISTS payment_receipt_url TEXT,
+    ADD COLUMN IF NOT EXISTS payment_reference_no VARCHAR(255),
+    ADD COLUMN IF NOT EXISTS final_payment_receipt_url TEXT,
+    ADD COLUMN IF NOT EXISTS final_payment_reference_no VARCHAR(255),
+    ADD COLUMN IF NOT EXISTS receipt_verified BOOLEAN DEFAULT FALSE,
+    ADD COLUMN IF NOT EXISTS final_receipt_verified BOOLEAN DEFAULT FALSE
+  `);
+  await execute(`
+    CREATE TABLE IF NOT EXISTS payment_methods (
+      id SERIAL PRIMARY KEY,
+      provider_name VARCHAR(255) NOT NULL,
+      account_name VARCHAR(255) NOT NULL,
+      account_number VARCHAR(255) NOT NULL,
+      qr_code_url TEXT DEFAULT '',
+      is_active BOOLEAN DEFAULT TRUE,
+      created_at TIMESTAMP DEFAULT NOW()
+    )
+  `);
 
   const countRes = await queryOne("SELECT COUNT(*) as count FROM products");
   if (countRes && Number((countRes as any).count) === 0) {

@@ -23,6 +23,10 @@ interface ProjectRequest {
   contract_signed_name?: string | null;
   contract_signed_at?: string | null;
   rejection_reason?: string | null;
+  payment_receipt_url?: string | null;
+  payment_reference_no?: string | null;
+  final_payment_receipt_url?: string | null;
+  final_payment_reference_no?: string | null;
 }
 
 const formatDate = (dateVal: any) => {
@@ -93,16 +97,28 @@ export default function ProjectRequestsPage() {
             <p><strong>Estimated Timeline:</strong> ${request.est_timeline || "Custom Estimate"}</p>
           </div>
 
-          <h2>1. Key Deliverables & Included Features</h2>
+           <h2>1. Key Deliverables & Scope</h2>
+          <p>The Developer agrees to design, develop, and deploy the project deliverables according to the package parameters and standard specifications detailed below. Any revisions, features, or page additions requested beyond the designated boundaries will be treated as out-of-scope and billed at a mutual freelance rate of $50/hour.</p>
           <ul>
             ${deliverablesHtml}
           </ul>
 
-          <h2>2. Intellectual Property Rights</h2>
-          <p>The Developer transfers all ownership rights of the final build deliverables to the Client upon receiving the full contract payment balance due for the development services.</p>
+          <h2>2. Payment Terms & Milestones</h2>
+          <p><strong>A. Downpayment Commitment:</strong> A non-refundable deposit equal to fifty percent (50%) of the project price range baseline must be paid and receipt-verified by the Developer prior to work kickoff or timeline commencement.</p>
+          <p><strong>B. Final Payment Balance:</strong> The remaining fifty percent (50%) balance of the project baseline budget becomes due immediately upon project completion and staging review, prior to release of the final build, codebase, or hosting deployment details.</p>
 
-          <h2>3. Execution & Agreement to Terms</h2>
-          <p>Both parties acknowledge their mutual understanding of the scope details, pricing brackets, and timelines defined herein. By executing their signatures below, the parties establish a commitment to these terms.</p>
+          <h2>3. Intellectual Property Transfer</h2>
+          <p>Upon final receipt and clearance of all outstanding project balance amounts due, all title, copyrights, and intellectual property ownership rights to the custom source code, design assets, databases, and builds transfer exclusively to the Client. The Developer retains the right to display design screenshots and mockups in their portfolio.</p>
+
+          <h2>4. Timelines & Revisions</h2>
+          <p><strong>A. Estimated Timeline:</strong> Timelines are calculated from receipt of all initial assets and signed agreement. The Developer is not liable for delay caused by client feedback lags, raw content delays, or technical dependencies.</p>
+          <p><strong>B. Revision Rounds:</strong> The package includes up to three (3) rounds of revisions. Extra feedback cycles will incur hourly design fees.</p>
+
+          <h2>5. Warranties & Ongoing Maintenance</h2>
+          <p>The Developer warrants the delivered project will function materially according to specifications. The Developer provides a free support warranty window according to the package tier (1-6 months post-delivery) to fix bugs and layout glitches. Ongoing server maintenance, domain fees, and third-party hosting costs are the sole responsibility of the Client.</p>
+
+          <h2>6. Execution & Agreement to Terms</h2>
+          <p>Both parties acknowledge their mutual understanding of the scope details, pricing brackets, and timelines defined herein. By executing their signatures below, the parties establish a binding commitment to these terms.</p>
 
           <div class="signatures">
             <div class="sig-box">
@@ -364,6 +380,43 @@ export default function ProjectRequestsPage() {
                   </p>
                 </div>
               )}
+
+              {/* Downpayment Receipt */}
+              {selected.payment_receipt_url && (
+                <div className="border-t border-white/5 pt-4 space-y-1.5 text-left">
+                  <p className="text-xs text-zinc-500">50% Downpayment Receipt</p>
+                  <p className="text-xs text-zinc-300">
+                    <span className="font-semibold text-white">Reference No:</span> {selected.payment_reference_no || "N/A"}
+                  </p>
+                  <a
+                    href={selected.payment_receipt_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-block text-[10px] text-cyan-400 hover:underline"
+                  >
+                    View Downpayment Screenshot ↗
+                  </a>
+                </div>
+              )}
+
+              {/* Final Payment Receipt */}
+              {selected.final_payment_receipt_url && (
+                <div className="border-t border-white/5 pt-4 space-y-1.5 text-left">
+                  <p className="text-xs text-zinc-500">Final 50% Payment Receipt</p>
+                  <p className="text-xs text-zinc-300">
+                    <span className="font-semibold text-white">Reference No:</span> {selected.final_payment_reference_no || "N/A"}
+                  </p>
+                  <a
+                    href={selected.final_payment_receipt_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-block text-[10px] text-cyan-400 hover:underline"
+                  >
+                    View Final Payment Screenshot ↗
+                  </a>
+                </div>
+              )}
+
               {selected.status === "accepted" && (
                 <div>
                   <p className="text-xs text-zinc-500">Contract Agreement Status</p>
@@ -431,31 +484,43 @@ export default function ProjectRequestsPage() {
                 )
               )}
 
-              {selected.status !== "pending" && selected.status !== "rejected" && (
-                <div className="relative ml-auto">
-                  <button
-                    onClick={() => setOpenDropdown(openDropdown === selected.id ? null : selected.id)}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-cyan-500/20 px-4 py-2 text-xs font-medium text-cyan-400 transition-colors hover:bg-cyan-500/30"
-                  >
-                    Set Progress <ChevronDown className="h-3 w-3" />
-                  </button>
-                  {openDropdown === selected.id && (
-                    <div className="absolute right-0 top-full z-10 mt-1 w-40 overflow-hidden rounded-xl glass-strong">
-                      {progressOptions.map((opt) => (
-                        <button
-                          key={opt}
-                          onClick={() => updateStatus(selected.id, opt)}
-                          className={`flex w-full px-4 py-2.5 text-left text-xs transition-colors hover:bg-white/5 ${
-                            selected.status === opt ? "text-cyan-400" : "text-zinc-400"
-                          }`}
-                        >
-                          {opt.replace("_", " ")}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
+              {selected.status !== "pending" && selected.status !== "rejected" && (() => {
+                const isProgressDisabled = !selected.contract_signed;
+                return (
+                  <div className="relative ml-auto">
+                    <button
+                      disabled={isProgressDisabled}
+                      onClick={() => setOpenDropdown(openDropdown === selected.id ? null : selected.id)}
+                      className={`inline-flex items-center gap-1.5 rounded-xl bg-cyan-500/20 px-4 py-2 text-xs font-medium text-cyan-400 transition-colors hover:bg-cyan-500/30 ${
+                        isProgressDisabled ? "opacity-40 cursor-not-allowed" : ""
+                      }`}
+                      title={isProgressDisabled ? "Progress updates are locked until the client signs the contract agreement." : undefined}
+                    >
+                      Set Progress <ChevronDown className="h-3 w-3" />
+                    </button>
+                    {openDropdown === selected.id && (
+                      <div className="absolute right-0 top-full z-10 mt-1 w-40 overflow-hidden rounded-xl glass-strong">
+                        {progressOptions.map((opt) => {
+                          const isDeliveredDisabled = opt === "delivered" && !selected.final_payment_receipt_url;
+                          return (
+                            <button
+                              key={opt}
+                              disabled={isDeliveredDisabled}
+                              onClick={() => updateStatus(selected.id, opt)}
+                              className={`flex w-full px-4 py-2.5 text-left text-xs transition-colors hover:bg-white/5 ${
+                                selected.status === opt ? "text-cyan-400" : "text-zinc-400"
+                              } ${isDeliveredDisabled ? "opacity-30 cursor-not-allowed" : ""}`}
+                              title={isDeliveredDisabled ? "Final payment receipt screenshot is required before delivery." : undefined}
+                            >
+                              {opt.replace("_", " ")} {isDeliveredDisabled && "🔒"}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </div>

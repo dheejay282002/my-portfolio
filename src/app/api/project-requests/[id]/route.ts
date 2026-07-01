@@ -21,13 +21,67 @@ export async function PATCH(
 
     const body = await req.json();
 
-    // Client action: sign contract
+    // Client action: sign contract or upload final payment
     if (user.role !== "admin") {
       if (request.client_id !== user.id) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
       }
 
-      const { contract_signed, contract_signed_name } = body;
+      const { contract_signed, contract_signed_name, final_payment_receipt_url, final_payment_reference_no } = body;
+
+      // Final payment receipt upload
+      if (final_payment_receipt_url !== undefined) {
+        if (!final_payment_receipt_url || !final_payment_reference_no) {
+          return NextResponse.json({ error: "Receipt image and reference number are required" }, { status: 400 });
+        }
+
+        // --- FAKE RECEIPT DETECTOR SCAN ---
+        const invalidKeywords = ["fake", "dummy", "test", "mock", "sample", "fabricated", "screenshot_123", "placeholder"];
+        const fileLower = final_payment_receipt_url.toLowerCase();
+        const refLower = final_payment_reference_no.toLowerCase();
+
+        const containsFakeKeyword = invalidKeywords.some(
+          (kw) => fileLower.includes(kw) || refLower.includes(kw)
+        );
+
+        const refClean = final_payment_reference_no.trim();
+        const isValidRefFormat = /^[a-zA-Z0-9-]{8,24}$/.test(refClean);
+
+        if (containsFakeKeyword || !isValidRefFormat) {
+          return NextResponse.json(
+            { error: "Fake Receipt Detected: Our automated payment scanner flagged this receipt or transaction reference as invalid. Please verify and upload your actual banking receipt." },
+            { status: 400 }
+          );
+        }
+        // ----------------------------------
+
+        await execute(
+          `UPDATE project_requests 
+           SET final_payment_receipt_url = $1, 
+               final_payment_reference_no = $2, 
+               final_receipt_verified = TRUE,
+               updated_at = NOW() 
+           WHERE id = $3`,
+          [final_payment_receipt_url, refClean, Number(id)]
+        );
+
+        // Send chat message on final payment
+        if (request.conversation_id) {
+          const msg = `💰 I have uploaded the final 50% payment receipt! Transaction reference: "${refClean}".`;
+          await execute(
+            "INSERT INTO messages (conversation_id, sender_id, content) VALUES ($1, $2, $3)",
+            [request.conversation_id, user.id, msg]
+          );
+          await execute(
+            "UPDATE conversations SET last_message = $1, last_message_at = NOW() WHERE id = $2",
+            [msg, request.conversation_id]
+          );
+        }
+
+        return NextResponse.json({ success: true });
+      }
+
+      // Contract signature
       if (contract_signed !== undefined) {
         await execute(
           `UPDATE project_requests 
@@ -74,6 +128,16 @@ export async function PATCH(
       const validStatuses = ["pending", "accepted", "rejected", "in_progress", "testing", "completed", "delivered"];
       if (!validStatuses.includes(status)) {
         return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+      }
+
+      // Escrow / status lock checks
+      if (status === "delivered") {
+        if (!request.contract_signed) {
+          return NextResponse.json({ error: "Contract unsigned: Client must sign the contract before project handover." }, { status: 400 });
+        }
+        if (!request.final_payment_receipt_url) {
+          return NextResponse.json({ error: "Final payment pending: Client must upload final payment receipt before marking as delivered." }, { status: 400 });
+        }
       }
 
       const { rejection_reason } = body;
