@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Mail, Lock, Server, User, Send, Check, AlertCircle, Eye, EyeOff } from "lucide-react";
+import Skeleton from "@/components/Skeleton";
 
 export default function EmailConfigPage() {
   const [form, setForm] = useState({
@@ -93,8 +94,48 @@ export default function EmailConfigPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-cyan-500 border-t-transparent" />
+      <div className="px-6 py-10 max-w-2xl mx-auto space-y-6">
+        <div className="space-y-3">
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-4 w-80" />
+        </div>
+        <div className="glass rounded-2xl p-6 border border-white/5 space-y-6">
+          <Skeleton className="h-4 w-32" />
+          <div className="grid gap-6 sm:grid-cols-3">
+            <div className="sm:col-span-2 space-y-2">
+              <Skeleton className="h-3 w-20" />
+              <Skeleton className="h-11 w-full rounded-xl" />
+            </div>
+            <div className="space-y-2">
+              <Skeleton className="h-3 w-16" />
+              <Skeleton className="h-11 w-full rounded-xl" />
+            </div>
+          </div>
+          <div className="grid gap-6 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Skeleton className="h-3 w-24" />
+              <Skeleton className="h-11 w-full rounded-xl" />
+            </div>
+            <div className="space-y-2">
+              <Skeleton className="h-3 w-20" />
+              <Skeleton className="h-11 w-full rounded-xl" />
+            </div>
+          </div>
+        </div>
+        <div className="glass rounded-2xl p-6 border border-white/5 space-y-6">
+          <Skeleton className="h-4 w-28" />
+          <div className="grid gap-6 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Skeleton className="h-3 w-24" />
+              <Skeleton className="h-11 w-full rounded-xl" />
+            </div>
+            <div className="space-y-2">
+              <Skeleton className="h-3 w-20" />
+              <Skeleton className="h-11 w-full rounded-xl" />
+            </div>
+          </div>
+        </div>
+        <Skeleton className="h-11 w-40 rounded-xl" />
       </div>
     );
   }

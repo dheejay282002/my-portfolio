@@ -7,6 +7,9 @@ const publicPaths = [
   "/login",
   "/api/auth/login",
   "/api/auth/signup",
+  "/api/auth/signup/request-otp",
+  "/api/auth/forgot-password",
+  "/api/auth/reset-password",
 ];
 
 export function proxy(req: NextRequest) {
