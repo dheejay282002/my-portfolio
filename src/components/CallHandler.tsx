@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
-import { Phone, PhoneOff, Mic, MicOff, X } from "lucide-react";
+import { Phone, PhoneOff, Mic, MicOff, X, Video, VideoOff } from "lucide-react";
 
 interface CallData {
   id: number;
@@ -26,6 +26,9 @@ export default function CallHandler({ user, activeConv }: CallHandlerProps) {
   const [callStatus, setCallStatus] = useState<"idle" | "calling" | "ringing" | "active" | "ended">("idle");
   const [micMuted, setMicMuted] = useState(false);
   const [lastSignalId, setLastSignalId] = useState<number>(0);
+  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+  const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
+  const [cameraOff, setCameraOff] = useState(false);
 
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const localVideoRef = useRef<HTMLVideoElement>(null);
@@ -34,6 +37,29 @@ export default function CallHandler({ user, activeConv }: CallHandlerProps) {
   const ringtoneRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const signalPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const callStatusRef = useRef(callStatus);
+  useEffect(() => {
+    callStatusRef.current = callStatus;
+  }, [callStatus]);
+
+  const lastSignalIdRef = useRef(lastSignalId);
+  useEffect(() => {
+    lastSignalIdRef.current = lastSignalId;
+  }, [lastSignalId]);
+
+  // Sync media streams to video elements when refs mount
+  useEffect(() => {
+    if (localVideoRef.current && localStream) {
+      localVideoRef.current.srcObject = localStream;
+    }
+  }, [localStream, callStatus]);
+
+  useEffect(() => {
+    if (remoteVideoRef.current && remoteStream) {
+      remoteVideoRef.current.srcObject = remoteStream;
+    }
+  }, [remoteStream, callStatus]);
 
   // Poll for incoming calls
   useEffect(() => {
@@ -55,14 +81,17 @@ export default function CallHandler({ user, activeConv }: CallHandlerProps) {
     return () => { if (pollRef.current) clearInterval(pollRef.current); stopRingtone(); };
   }, [user, incomingCall, callStatus]);
 
-  // When call becomes active, start WebRTC
+  // When call is initiated or active, start signal and status polling
   useEffect(() => {
-    if (callStatus === "active" && activeCall) {
-      startSignalPolling(activeCall.id);
+    if (activeCall) {
+      startSignalAndStatusPolling(activeCall.id);
     } else {
-      if (signalPollRef.current) { clearInterval(signalPollRef.current); signalPollRef.current = null; }
+      if (signalPollRef.current) {
+        clearInterval(signalPollRef.current);
+        signalPollRef.current = null;
+      }
     }
-  }, [callStatus, activeCall]);
+  }, [activeCall]);
 
   function startRingtone() {
     try {
@@ -156,6 +185,9 @@ export default function CallHandler({ user, activeConv }: CallHandlerProps) {
       localStreamRef.current.getTracks().forEach((t) => t.stop());
       localStreamRef.current = null;
     }
+    setLocalStream(null);
+    setRemoteStream(null);
+    setCameraOff(false);
     setActiveCall(null);
     setIncomingCall(null);
     setCallStatus("idle");
@@ -167,7 +199,7 @@ export default function CallHandler({ user, activeConv }: CallHandlerProps) {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       localStreamRef.current = stream;
-      if (localVideoRef.current) localVideoRef.current.srcObject = stream;
+      setLocalStream(stream);
 
       const pc = new RTCPeerConnection(STUN_SERVERS);
       pcRef.current = pc;
@@ -175,8 +207,8 @@ export default function CallHandler({ user, activeConv }: CallHandlerProps) {
       stream.getTracks().forEach((t) => pc.addTrack(t, stream));
 
       pc.ontrack = (event) => {
-        if (remoteVideoRef.current && event.streams[0]) {
-          remoteVideoRef.current.srcObject = event.streams[0];
+        if (event.streams[0]) {
+          setRemoteStream(event.streams[0]);
         }
       };
 
@@ -204,16 +236,37 @@ export default function CallHandler({ user, activeConv }: CallHandlerProps) {
     }
   }
 
-  function startSignalPolling(callId: number) {
+  function startSignalAndStatusPolling(callId: number) {
+    if (signalPollRef.current) clearInterval(signalPollRef.current);
+
     signalPollRef.current = setInterval(async () => {
       try {
-        const res = await fetch(`/api/calls/${callId}/signal?since=${lastSignalId}`);
-        if (!res.ok) return;
-        const d = await res.json();
+        // 1. Fetch Call Status from DB
+        const callRes = await fetch(`/api/calls/${callId}`);
+        if (callRes.ok) {
+          const callData = await callRes.json();
+          const status = callData.call?.status;
+
+          if (status === "ended" || status === "rejected" || status === "missed") {
+            cleanupCall();
+            return;
+          }
+
+          if (status === "active" && callStatusRef.current === "calling") {
+            setCallStatus("active");
+          }
+        }
+
+        // 2. Fetch signals
+        const sigRes = await fetch(`/api/calls/${callId}/signal?since=${lastSignalIdRef.current}`);
+        if (!sigRes.ok) return;
+        const d = await sigRes.json();
         if (!d.signals?.length) return;
 
         for (const sig of d.signals) {
-          if (sig.id > lastSignalId) setLastSignalId(sig.id);
+          if (sig.id > lastSignalIdRef.current) {
+            setLastSignalId(sig.id);
+          }
           const data = typeof sig.data === "string" ? JSON.parse(sig.data) : sig.data;
 
           if (sig.type === "offer" && pcRef.current) {
@@ -231,7 +284,9 @@ export default function CallHandler({ user, activeConv }: CallHandlerProps) {
             await pcRef.current.addIceCandidate(new RTCIceCandidate(data));
           }
         }
-      } catch {}
+      } catch (err) {
+        console.error("Polling error:", err);
+      }
     }, 2000);
   }
 
@@ -241,6 +296,15 @@ export default function CallHandler({ user, activeConv }: CallHandlerProps) {
         t.enabled = micMuted;
       });
       setMicMuted(!micMuted);
+    }
+  };
+
+  const toggleCamera = () => {
+    if (localStreamRef.current) {
+      localStreamRef.current.getVideoTracks().forEach((t) => {
+        t.enabled = cameraOff;
+      });
+      setCameraOff(!cameraOff);
     }
   };
 
@@ -295,6 +359,12 @@ export default function CallHandler({ user, activeConv }: CallHandlerProps) {
               className={`flex h-14 w-14 items-center justify-center rounded-full transition-colors ${micMuted ? "bg-red-500 text-white" : "bg-white/10 text-white hover:bg-white/20"}`}
             >
               {micMuted ? <MicOff className="h-6 w-6" /> : <Mic className="h-6 w-6" />}
+            </button>
+            <button
+              onClick={toggleCamera}
+              className={`flex h-14 w-14 items-center justify-center rounded-full transition-colors ${cameraOff ? "bg-red-500 text-white" : "bg-white/10 text-white hover:bg-white/20"}`}
+            >
+              {cameraOff ? <VideoOff className="h-6 w-6" /> : <Video className="h-6 w-6" />}
             </button>
             <button
               onClick={endCall}

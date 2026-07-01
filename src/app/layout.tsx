@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Header from "@/components/Header";
 import MessengerWidget from "@/components/MessengerWidget";
+import ThemeProvider from "@/components/ThemeProvider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -30,10 +31,12 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-background text-foreground">
-        <Header />
-        {children}
-        <MessengerWidget />
+      <body className="min-h-full flex flex-col">
+        <ThemeProvider>
+          <Header />
+          {children}
+          <MessengerWidget />
+        </ThemeProvider>
       </body>
     </html>
   );

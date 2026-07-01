@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { queryOne, execute } from "@/lib/db";
 import { getSession } from "@/lib/auth";
+import { ensureChatTables } from "@/lib/schema";
 
 export async function POST(
   _req: Request,
@@ -10,6 +11,7 @@ export async function POST(
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
+    await ensureChatTables();
     const { id } = await params;
 
     await execute(`
@@ -32,6 +34,7 @@ export async function GET(
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
+    await ensureChatTables();
     const { id } = await params;
 
     const typing = await queryOne(

@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
 import { queryAll, queryOne, execute } from "@/lib/db";
 import { getSession } from "@/lib/auth";
+import { ensureChatTables } from "@/lib/schema";
 
 export async function GET() {
   const user = await getSession();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
+    await ensureChatTables();
     let query = `SELECT c.*,
                         u1.id as u1_id, u1.name as u1_name, u1.profile_photo as u1_photo,
                         u2.id as u2_id, u2.name as u2_name, u2.profile_photo as u2_photo
@@ -48,6 +50,7 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
+    await ensureChatTables();
     const { receiver_id } = await req.json();
     if (!receiver_id)
       return NextResponse.json({ error: "receiver_id is required" }, { status: 400 });

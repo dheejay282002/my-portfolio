@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
 import { queryOne, execute } from "@/lib/db";
 import { getSession } from "@/lib/auth";
+import { ensureCallTables } from "@/lib/schema";
 
 export async function POST(req: Request) {
   const user = await getSession();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
+    await ensureCallTables();
     const { callee_id } = await req.json();
     if (!callee_id) return NextResponse.json({ error: "callee_id required" }, { status: 400 });
 

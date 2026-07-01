@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import LoadingOverlay from "@/components/LoadingOverlay";
 import {
   Users,
   FolderKanban,
@@ -14,6 +15,7 @@ import {
   LogOut,
   Menu,
   Mail,
+  Globe,
 } from "lucide-react";
 
 const navItems = [
@@ -23,6 +25,7 @@ const navItems = [
   { label: "Skills", href: "/dashboard/admin/skills", icon: BarChart3 },
   { label: "Project Requests", href: "/dashboard/admin/project-requests", icon: ClipboardList },
   { label: "Email Config", href: "/dashboard/admin/email-config", icon: Mail },
+  { label: "Web Settings", href: "/dashboard/admin/web-settings", icon: Globe },
   { label: "Profile Settings", href: "/dashboard/admin/profile", icon: Settings },
 ];
 
@@ -37,6 +40,7 @@ export default function AdminLayout({
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -80,6 +84,7 @@ export default function AdminLayout({
 
   return (
     <div className="flex min-h-screen pt-16">
+      <LoadingOverlay show={loggingOut} message="Signing out securely..." />
       {mobileOpen && (
         <div
           className="fixed inset-0 z-30 bg-black/50 md:hidden"
@@ -137,6 +142,7 @@ export default function AdminLayout({
                 </div>
                 <button
                   onClick={async () => {
+                    setLoggingOut(true);
                     await fetch("/api/auth/logout", { method: "POST" });
                     router.push("/");
                     router.refresh();
@@ -150,6 +156,7 @@ export default function AdminLayout({
               <div className="flex justify-center">
                 <button
                   onClick={async () => {
+                    setLoggingOut(true);
                     await fetch("/api/auth/logout", { method: "POST" });
                     router.push("/");
                     router.refresh();

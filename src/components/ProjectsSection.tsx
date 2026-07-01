@@ -1,7 +1,54 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { ExternalLink, ChevronLeft, ChevronRight, X } from "lucide-react";
+
+function MarkdownContent({ fallback }: { fallback: string }) {
+  return (
+    <div className="prose prose-invert max-w-none">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          table({ children }) {
+            return (
+              <div className="overflow-x-auto my-4">
+                <table className="w-full text-sm text-left border-collapse">{children}</table>
+              </div>
+            );
+          },
+          th({ children }) {
+            return <th className="px-4 py-2.5 font-semibold text-cyan-400 whitespace-nowrap border-b border-white/10">{children}</th>;
+          },
+          td({ children }) {
+            return <td className="px-4 py-2.5 text-zinc-300 border-b border-white/5">{children}</td>;
+          },
+          a({ href, children }) {
+            return (
+              <a href={href} target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:text-cyan-300 underline">
+                {children}
+              </a>
+            );
+          },
+          code({ className, children, ...props }) {
+            const isInline = !className;
+            if (isInline) {
+              return <code className="rounded bg-zinc-800 px-1.5 py-0.5 text-sm text-cyan-300" {...props}>{children}</code>;
+            }
+            return (
+              <pre className="overflow-x-auto rounded-xl bg-zinc-900 p-4 text-sm">
+                <code className={className} {...props}>{children}</code>
+              </pre>
+            );
+          },
+        }}
+      >
+        {fallback}
+      </ReactMarkdown>
+    </div>
+  );
+}
 
 interface ProjectImage {
   id: number;
@@ -42,7 +89,7 @@ function ImageGallery({
             <img
               src={img.url}
               alt={`${title} ${i + 1}`}
-              className="h-full w-full object-cover"
+              className="h-full w-full object-contain"
             />
           </div>
         ))}
@@ -89,44 +136,172 @@ function ImageGallery({
   );
 }
 
-function useIntersectionObserver() {
-  const [isIntersecting, setIsIntersecting] = useState(false);
-  const [ref, setRef] = useState<HTMLElement | null>(null);
-
-  useEffect(() => {
-    if (!ref) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsIntersecting(true);
-          observer.unobserve(ref);
-        }
-      },
-      { threshold: 0.1 }
-    );
-    observer.observe(ref);
-    return () => observer.disconnect();
-  }, [ref]);
-
-  return [setRef, isIntersecting] as const;
-}
-
 export default function ProjectsSection() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [modalProject, setModalProject] = useState<Project | null>(null);
-  const [setRef, isVisible] = useIntersectionObserver();
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const autoScrollRef = useRef<number>(0);
+  const pausedRef = useRef(false);
+  const pausedForDrag = useRef(false);
+
+  const REPEAT_COUNT = 6;
+  const repeatedProjects = Array.from({ length: REPEAT_COUNT }, () => projects).flat();
+
+  // Resize cardRefs to fit the repeated projects length
+  cardRefs.current = cardRefs.current.slice(0, repeatedProjects.length);
 
   useEffect(() => {
     fetch("/api/projects")
       .then((r) => r.json())
-      .then((d) => setProjects(d.projects || []));
+      .then((d) => {
+        const list = d.projects || [];
+        for (let i = list.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [list[i], list[j]] = [list[j], list[i]];
+        }
+        setProjects(list);
+      });
+  }, []);
+
+  const updateCardScales = useCallback(() => {
+    const container = scrollRef.current;
+    if (!container || projects.length === 0) return;
+
+    const containerCenter = container.scrollLeft + container.clientWidth / 2;
+    let halfWidth = container.clientWidth / 2;
+    if (halfWidth <= 0) halfWidth = 600;
+
+    cardRefs.current.forEach((card) => {
+      if (!card) return;
+
+      const cardCenter = card.offsetLeft + card.offsetWidth / 2;
+      const distance = Math.abs(containerCenter - cardCenter);
+
+      const x = Math.min(1.2, distance / halfWidth);
+
+      // Continuous scale: 1.2 in center to 0.6 at screen edge
+      const scale = 0.6 + 0.6 * Math.cos((Math.min(1, x) * Math.PI) / 2);
+
+      // Continuous opacity fade: 1.0 in center to 0.25 at screen edge
+      const opacity = 0.25 + 0.75 * (1 - Math.pow(Math.min(1, x), 1.8));
+
+      // Ratio for highlight borders & shadows: 1.0 in center, 0 at screen edge
+      const ratio = Math.max(0, 1 - x);
+
+      const inner = card.querySelector(".glass") as HTMLElement;
+      if (inner) {
+        inner.style.transform = `scale(${scale})`;
+        inner.style.opacity = `${opacity}`;
+
+        // Dynamic border color interpolation
+        const r = Math.round(255 - (255 - 6) * ratio);
+        const g = Math.round(255 - (255 - 182) * ratio);
+        const b = Math.round(255 - (255 - 212) * ratio);
+        const borderAlpha = 0.05 + 0.35 * ratio;
+        inner.style.borderColor = `rgba(${r}, ${g}, ${b}, ${borderAlpha})`;
+
+        // Dynamic glowing shadow
+        inner.style.boxShadow = `0 20px 40px -15px rgba(6, 182, 212, ${0.25 * ratio})`;
+      }
+    });
+  }, [projects.length]);
+
+  const handleScroll = useCallback(() => {
+    const container = scrollRef.current;
+    if (!container || projects.length === 0) return;
+
+    const N = projects.length;
+    if (!cardRefs.current[0] || !cardRefs.current[N]) return;
+
+    const setWidth = cardRefs.current[N].offsetLeft - cardRefs.current[0].offsetLeft;
+    if (setWidth <= 0) return;
+
+    const centerOffset = (container.scrollWidth - container.clientWidth) / 2;
+    const diff = container.scrollLeft - centerOffset;
+
+    if (Math.abs(diff) >= setWidth) {
+      const numShifts = Math.round(diff / setWidth);
+      container.scrollLeft -= numShifts * setWidth;
+    }
+
+    updateCardScales();
+  }, [projects.length, updateCardScales]);
+
+  useEffect(() => {
+    const container = scrollRef.current;
+    if (!container || projects.length === 0) return;
+
+    // Set scroll position to the center of the scroll container
+    const centerOffset = (container.scrollWidth - container.clientWidth) / 2;
+    container.scrollLeft = centerOffset;
+
+    // Compute scales after scroll position is set
+    const id = requestAnimationFrame(() => {
+      updateCardScales();
+    });
+    return () => cancelAnimationFrame(id);
+  }, [projects, updateCardScales]);
+
+  useEffect(() => {
+    if (projects.length === 0) return;
+    let running = true;
+
+    const tick = () => {
+      if (!running) return;
+      const container = scrollRef.current;
+      if (container && !pausedRef.current && !pausedForDrag.current) {
+        container.scrollLeft += 0.8;
+      }
+      updateCardScales();
+      autoScrollRef.current = requestAnimationFrame(tick);
+    };
+
+    autoScrollRef.current = requestAnimationFrame(tick);
+    return () => {
+      running = false;
+      cancelAnimationFrame(autoScrollRef.current);
+    };
+  }, [projects.length, updateCardScales]);
+
+  const dragState = useRef({ isDown: false, startX: 0, scrollLeft: 0, moved: false });
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    const container = scrollRef.current;
+    if (!container) return;
+    pausedForDrag.current = true;
+    dragState.current.isDown = true;
+    dragState.current.startX = e.pageX - container.offsetLeft;
+    dragState.current.scrollLeft = container.scrollLeft;
+    dragState.current.moved = false;
+  }, []);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    const container = scrollRef.current;
+    if (!dragState.current.isDown || !container) return;
+    e.preventDefault();
+    const x = e.pageX - container.offsetLeft;
+    const walk = (x - dragState.current.startX) * 1.5;
+    if (Math.abs(walk) > 5) dragState.current.moved = true;
+    container.scrollLeft = dragState.current.scrollLeft - walk;
+  }, []);
+
+  const handleMouseUp = useCallback(() => {
+    dragState.current.isDown = false;
+    pausedForDrag.current = false;
+  }, []);
+
+  const handleCardClick = useCallback((project: Project) => {
+    if (dragState.current.moved) return;
+    pausedRef.current = true;
+    setModalProject(project);
   }, []);
 
   if (projects.length === 0) return null;
 
   return (
-    <section ref={setRef} id="projects" className="border-t border-white/5 px-6 py-24">
-      <div className="mx-auto max-w-7xl">
+    <section id="projects" className="border-t border-white/5 py-24">
+      <div className="mx-auto max-w-7xl px-6">
         <div className="text-center">
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
             Featured{" "}
@@ -138,99 +313,68 @@ export default function ProjectsSection() {
             A selection of projects I&apos;ve built with passion and precision.
           </p>
         </div>
+      </div>
 
-        <div className={projects.length === 1 ? "mt-16 flex justify-center" : "mt-16 grid gap-6 sm:grid-cols-2"}>
-          {projects.map((project, idx) => {
-            const techList = project.tech_stack
-              ? project.tech_stack.split(",").map((t) => t.trim())
-              : [];
-
-            return (
+      <div className="relative mt-16 w-full overflow-x-hidden">
+        <div
+          ref={scrollRef}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
+          onScroll={handleScroll}
+          className="flex gap-6 items-center overflow-x-auto scrollbar-hide py-12 px-6 select-none"
+        >
+          {repeatedProjects.map((project, idx) => (
+            <div
+              key={`${project.id}-${idx}`}
+              ref={(el) => { cardRefs.current[idx] = el; }}
+              className="shrink-0 w-[400px] max-w-[85vw]"
+            >
               <div
-                key={project.id}
-                style={{
-                  transitionDelay: `${idx * 150}ms`,
-                }}
-                className={`glass rounded-2xl flex flex-col overflow-hidden transition-all duration-700 ease-out glass-hover ${
-                  projects.length === 1 ? "w-full max-w-lg" : ""
-                } ${
-                  isVisible
-                    ? "opacity-100 translate-y-0 scale-100"
-                    : "opacity-0 translate-y-12 scale-95"
-                }`}
+                className="glass rounded-2xl flex flex-col overflow-hidden cursor-grab active:cursor-grabbing"
+                onClick={() => handleCardClick(project)}
               >
                 {project.images && project.images.length > 0 && (
-                  <ImageGallery 
-                    images={project.images} 
-                    title={project.title} 
-                    onImageClick={() => setModalProject(project)}
-                  />
+                  <div className="aspect-video w-full overflow-hidden bg-zinc-800/50">
+                    <img
+                      src={project.images[0].url}
+                      alt={project.title}
+                      className="h-full w-full object-contain"
+                    />
+                  </div>
                 )}
-                <div className="flex flex-1 flex-col p-8 pt-6">
-                  <h3 className="text-xl font-semibold text-white">
+                <div className="flex flex-1 flex-col p-6">
+                  <h3 className="text-xl font-semibold text-white text-center">
                     {project.title}
                   </h3>
-                  <p className="mt-3 flex-1 leading-relaxed text-zinc-400">
-                    {project.description}
-                  </p>
-
-                  {techList.length > 0 && (
-                    <div className="mt-6 flex flex-wrap gap-2">
-                      {techList.map((t) => (
-                        <span
-                          key={t}
-                          className="rounded-full bg-cyan-500/10 px-3 py-1 text-xs font-medium text-cyan-400"
-                        >
-                          {t}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
-                  <div className="mt-6 flex items-center gap-4">
-                    {project.live_url && (
-                      <a
-                        href={project.live_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 text-sm text-zinc-400 transition-colors hover:text-white"
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                        Live Demo
-                      </a>
-                    )}
-                  </div>
                 </div>
               </div>
-            );
-          })}
+            </div>
+          ))}
         </div>
       </div>
 
       {modalProject && (
         <div
           className="fixed inset-0 z-[90] flex items-center justify-center bg-black/70 px-4 py-8"
-          onClick={() => setModalProject(null)}
+          onClick={() => { pausedRef.current = false; setModalProject(null); }}
         >
           <div
-            className="glass-strong w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-2xl"
+            className="glass-strong w-full max-w-2xl max-h-[85vh] overflow-y-auto scrollbar-hide rounded-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
               <h3 className="text-lg font-semibold text-white">{modalProject.title}</h3>
-              <button onClick={() => setModalProject(null)} className="text-zinc-500 transition-colors hover:text-white">
+              <button onClick={() => { pausedRef.current = false; setModalProject(null); }} className="text-zinc-500 transition-colors hover:text-white">
                 <X className="h-5 w-5" />
               </button>
             </div>
+            {modalProject.images && modalProject.images.length > 0 && (
+              <ImageGallery images={modalProject.images} title={modalProject.title} />
+            )}
             <div className="p-6">
-              {modalProject.images && modalProject.images.length > 0 && (
-                <div className="mb-6">
-                  <ImageGallery images={modalProject.images} title={modalProject.title} />
-                </div>
-              )}
-              <p className="leading-relaxed text-zinc-300 whitespace-pre-wrap">
-                {modalProject.description}
-              </p>
+              <MarkdownContent fallback={modalProject.description} />
               {modalProject.tech_stack && (
                 <div className="mt-6 flex flex-wrap gap-2">
                   {modalProject.tech_stack.split(",").map((t) => (

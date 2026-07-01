@@ -5,6 +5,7 @@ import { Menu, X, LogIn } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
+import { useWebSettings } from "@/hooks/useWebSettings";
 
 const navLinks = [
   { label: "Home", href: "/#home" },
@@ -21,6 +22,7 @@ export default function Header() {
   const [mounted, setMounted] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
+  const { settings } = useWebSettings();
 
   useEffect(() => {
     setMounted(true);
@@ -70,8 +72,17 @@ export default function Header() {
                 {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
               </button>
             )}
-            <a href={user ? "/dashboard" : "/#home"} className="text-xl font-bold tracking-tight">
-              Dee Jay.
+            <a href={user ? "/dashboard" : "/#home"} className="text-xl font-bold tracking-tight text-white flex items-center">
+              {settings.logo_type === "image" && settings.logo_image ? (
+                <img src={settings.logo_image} alt={settings.web_name} className="h-7 max-w-[180px] object-contain" />
+              ) : (
+                <span style={{ 
+                  fontFamily: settings.logo_font_file ? 'UploadedCustomFont' : settings.logo_font,
+                  color: settings.logo_color || '#ffffff'
+                }}>
+                  {settings.web_name}
+                </span>
+              )}
             </a>
           </div>
 

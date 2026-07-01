@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { FaGithub, FaLinkedin, FaFacebook } from "react-icons/fa";
+import { useWebSettings } from "@/hooks/useWebSettings";
 
 export default function Footer() {
+  const { settings } = useWebSettings();
   const [links, setLinks] = useState({
     github: "https://github.com/deejay-cristobal",
     linkedin: "https://linkedin.com/in/deejay-cristobal",
@@ -35,8 +37,17 @@ export default function Footer() {
     <footer className="border-t border-white/5 px-6 py-12">
       <div className="mx-auto max-w-7xl">
         <div className="flex flex-col items-center justify-between gap-6 sm:flex-row">
-          <a href="#home" className="text-xl font-bold tracking-tight text-white">
-            Dee Jay.
+          <a href="#home" className="text-xl font-bold tracking-tight text-white flex items-center">
+            {settings.logo_type === "image" && settings.logo_image ? (
+              <img src={settings.logo_image} alt={settings.web_name} className="h-7 max-w-[180px] object-contain" />
+            ) : (
+              <span style={{ 
+                fontFamily: settings.logo_font_file ? 'UploadedCustomFont' : settings.logo_font,
+                color: settings.logo_color || '#ffffff'
+              }}>
+                {settings.web_name}
+              </span>
+            )}
           </a>
 
           <nav className="flex gap-6">
@@ -85,7 +96,7 @@ export default function Footer() {
 
         <div className="mt-8 border-t border-white/5 pt-6 text-center">
           <p className="text-sm text-zinc-600">
-            &copy; {new Date().getFullYear()} Dee Jay. All rights reserved.
+            &copy; {new Date().getFullYear()} {settings.web_name} All rights reserved.
           </p>
         </div>
       </div>

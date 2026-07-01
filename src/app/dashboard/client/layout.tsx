@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import LoadingOverlay from "@/components/LoadingOverlay";
 import { LayoutDashboard, ClipboardList, Settings, LogOut, Menu } from "lucide-react";
 
 const navItems = [
@@ -23,6 +24,7 @@ export default function ClientLayout({
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -66,6 +68,7 @@ export default function ClientLayout({
 
   return (
     <div className="flex min-h-screen pt-16">
+      <LoadingOverlay show={loggingOut} message="Signing out securely..." />
       {mobileOpen && (
         <div
           className="fixed inset-0 z-30 bg-black/50 md:hidden"
@@ -123,6 +126,7 @@ export default function ClientLayout({
                 </div>
                 <button
                   onClick={async () => {
+                    setLoggingOut(true);
                     await fetch("/api/auth/logout", { method: "POST" });
                     router.push("/");
                     router.refresh();
@@ -136,6 +140,7 @@ export default function ClientLayout({
               <div className="flex justify-center">
                 <button
                   onClick={async () => {
+                    setLoggingOut(true);
                     await fetch("/api/auth/logout", { method: "POST" });
                     router.push("/");
                     router.refresh();

@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
 import { queryAll, queryOne, execute } from "@/lib/db";
 import { getSession } from "@/lib/auth";
+import { ensureChatTables } from "@/lib/schema";
 
 export async function GET() {
   const user = await getSession();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
+    await ensureChatTables();
     const messages = await queryAll(
       `SELECT m.*, u.name as sender_name, u.profile_photo as sender_photo,
               rm.content as reply_content, ru.name as reply_sender_name
@@ -33,6 +35,7 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
+    await ensureChatTables();
     const { receiver_id, content, attachment_url, attachment_type, reply_to_id } = await req.json();
     if (!receiver_id || (!content && !attachment_url))
       return NextResponse.json({ error: "Missing fields" }, { status: 400 });

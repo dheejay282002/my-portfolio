@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { MessageSquare, X, Send, Plus, ChevronLeft, User, FileText, Camera, CornerUpLeft, Phone, Video, Mic, MicOff, PhoneOff, X as XIcon } from "lucide-react";
+import { MessageSquare, X, Send, Plus, ChevronLeft, User, FileText, Camera, CornerUpLeft, Phone, Video, VideoOff, Mic, MicOff, PhoneOff, X as XIcon } from "lucide-react";
 import Image from "next/image";
 
 interface OtherUser {
@@ -52,7 +52,7 @@ interface CallData {
 
 function timeAgo(dateStr: string): string {
   const now = Date.now();
-  const date = new Date(dateStr + "Z").getTime();
+  const date = new Date(dateStr).getTime();
   const diff = now - date;
   const mins = Math.floor(diff / 60000);
   if (mins < 1) return "now";
@@ -100,6 +100,8 @@ export default function MessengerWidget() {
   const [activeCall, setActiveCall] = useState<CallData | null>(null);
   const [callStatus, setCallStatus] = useState<"idle" | "calling" | "active" | "ended">("idle");
   const [micMuted, setMicMuted] = useState(false);
+  const [cameraOff, setCameraOff] = useState(false);
+  const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const lastSignalIdRef = useRef(0);
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const localVideoRef = useRef<HTMLVideoElement>(null);
@@ -109,6 +111,18 @@ export default function MessengerWidget() {
   const incomingPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const signalPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const STUN_SERVERS = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+
+  const callStatusRef = useRef(callStatus);
+  useEffect(() => {
+    callStatusRef.current = callStatus;
+  }, [callStatus]);
+
+  // Sync remote stream to video element when ref mounts
+  useEffect(() => {
+    if (remoteVideoRef.current && remoteStream) {
+      remoteVideoRef.current.srcObject = remoteStream;
+    }
+  }, [remoteStream, callStatus]);
   const msgEndRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -125,7 +139,7 @@ export default function MessengerWidget() {
       setConversations(d.conversations);
       if (!open) {
         const count = d.conversations.filter((c: { last_message_at: string }) => {
-          const t = new Date(c.last_message_at + "Z").getTime();
+          const t = new Date(c.last_message_at).getTime();
           return t > lastClosedAtRef.current;
         }).length;
         setUnreadCount(count);
@@ -389,12 +403,11 @@ export default function MessengerWidget() {
       
       const stream = await navigator.mediaDevices.getUserMedia({ video: _isVideo, audio: true });
       localStreamRef.current = stream;
-      if (localVideoRef.current) localVideoRef.current.srcObject = stream;
       
       const pc = new RTCPeerConnection(STUN_SERVERS);
       pcRef.current = pc;
       stream.getTracks().forEach((t) => pc.addTrack(t, stream));
-      pc.ontrack = (event) => { if (remoteVideoRef.current && event.streams[0]) remoteVideoRef.current.srcObject = event.streams[0]; };
+      pc.ontrack = (event) => { if (event.streams[0]) setRemoteStream(event.streams[0]); };
       pc.onicecandidate = (event) => {
         if (event.candidate) fetch(`/api/calls/${d.call.id}/signal`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "ice", data: event.candidate }) }).catch(() => {});
       };
@@ -413,12 +426,11 @@ export default function MessengerWidget() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       localStreamRef.current = stream;
-      if (localVideoRef.current) localVideoRef.current.srcObject = stream;
       
       const pc = new RTCPeerConnection(STUN_SERVERS);
       pcRef.current = pc;
       stream.getTracks().forEach((t) => pc.addTrack(t, stream));
-      pc.ontrack = (event) => { if (remoteVideoRef.current && event.streams[0]) remoteVideoRef.current.srcObject = event.streams[0]; };
+      pc.ontrack = (event) => { if (event.streams[0]) setRemoteStream(event.streams[0]); };
       pc.onicecandidate = (event) => {
         if (event.candidate) fetch(`/api/calls/${incomingCall.id}/signal`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "ice", data: event.candidate }) }).catch(() => {});
       };
@@ -447,25 +459,30 @@ export default function MessengerWidget() {
     if (incomingPollRef.current) { clearInterval(incomingPollRef.current); incomingPollRef.current = null; }
     if (pcRef.current) { pcRef.current.close(); pcRef.current = null; }
     if (localStreamRef.current) { localStreamRef.current.getTracks().forEach((t) => t.stop()); localStreamRef.current = null; }
+    setRemoteStream(null);
+    setCameraOff(false);
     setActiveCall(null); setIncomingCall(null); setCallStatus("idle"); lastSignalIdRef.current = 0; setMicMuted(false);
   }
 
   function startSignalPolling(callId: number) {
     signalPollRef.current = setInterval(async () => {
       try {
-        if (callStatus === "calling") {
-          const statusRes = await fetch(`/api/calls/${callId}`);
-          if (statusRes.ok) {
-            const statusData = await statusRes.json();
-            if (statusData.call?.status === "active") {
-              setCallStatus("active");
-              return;
-            } else if (statusData.call?.status === "rejected" || statusData.call?.status === "ended") {
-              cleanupCall();
-              return;
-            }
+        // Poll Call Status continuously from DB
+        const statusRes = await fetch(`/api/calls/${callId}`);
+        if (statusRes.ok) {
+          const statusData = await statusRes.json();
+          const status = statusData.call?.status;
+
+          if (status === "rejected" || status === "ended" || status === "missed") {
+            cleanupCall();
+            return;
+          }
+
+          if (status === "active" && callStatusRef.current === "calling") {
+            setCallStatus("active");
           }
         }
+
         const res = await fetch(`/api/calls/${callId}/signal?since=${lastSignalIdRef.current}`);
         if (!res.ok) return;
         const d = await res.json();
@@ -542,6 +559,15 @@ export default function MessengerWidget() {
 
   function toggleMute() {
     if (localStreamRef.current) { localStreamRef.current.getAudioTracks().forEach((t) => { t.enabled = micMuted; }); setMicMuted(!micMuted); }
+  }
+
+  function toggleCamera() {
+    if (localStreamRef.current) {
+      localStreamRef.current.getVideoTracks().forEach((t) => {
+        t.enabled = cameraOff;
+      });
+      setCameraOff(!cameraOff);
+    }
   }
 
   if (!user) return null;
@@ -781,7 +807,7 @@ export default function MessengerWidget() {
                                     </div>
                                   )}
                                   <p className="text-[10px] text-zinc-500 shrink-0">
-                                    {new Date(msg.created_at + "Z").toLocaleTimeString([], {
+                                    {new Date(msg.created_at).toLocaleTimeString([], {
                                       hour: "2-digit",
                                       minute: "2-digit",
                                     })}
@@ -813,7 +839,7 @@ export default function MessengerWidget() {
                                     isMine ? "text-white/60" : "text-zinc-600"
                                   }`}
                                 >
-                                  {new Date(msg.created_at + "Z").toLocaleTimeString([], {
+                                  {new Date(msg.created_at).toLocaleTimeString([], {
                                     hour: "2-digit",
                                     minute: "2-digit",
                                   })}
@@ -1145,13 +1171,13 @@ export default function MessengerWidget() {
       <div className="fixed inset-0 z-[300] flex flex-col bg-black">
         <div className="relative flex-1 bg-zinc-900">
           <video ref={remoteVideoRef} autoPlay playsInline className="h-full w-full object-contain" />
-          <div className="absolute bottom-6 right-6 h-48 w-36 overflow-hidden rounded-2xl border-2 border-white/20 bg-zinc-800 shadow-xl">
-            <video ref={localVideoRef} autoPlay playsInline muted className="h-full w-full object-cover" />
-          </div>
         </div>
         <div className="flex items-center justify-center gap-8 bg-zinc-900 px-6 py-6">
           <button onClick={toggleMute} className={`flex h-14 w-14 items-center justify-center rounded-full transition-colors ${micMuted ? "bg-red-500 text-white" : "bg-white/10 text-white hover:bg-white/20"}`}>
             {micMuted ? <MicOff className="h-6 w-6" /> : <Mic className="h-6 w-6" />}
+          </button>
+          <button onClick={toggleCamera} className={`flex h-14 w-14 items-center justify-center rounded-full transition-colors ${cameraOff ? "bg-red-500 text-white" : "bg-white/10 text-white hover:bg-white/20"}`}>
+            {cameraOff ? <VideoOff className="h-6 w-6" /> : <Video className="h-6 w-6" />}
           </button>
           <button onClick={endCall} className="flex h-14 w-14 items-center justify-center rounded-full bg-red-500 text-white transition-transform hover:scale-105">
             <PhoneOff className="h-6 w-6" />

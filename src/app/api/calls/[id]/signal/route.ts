@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { queryAll, queryOne, execute } from "@/lib/db";
 import { getSession } from "@/lib/auth";
+import { ensureCallTables } from "@/lib/schema";
 
 export async function POST(
   req: Request,
@@ -10,13 +11,14 @@ export async function POST(
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
+    await ensureCallTables();
     const { id } = await params;
     const { type, data } = await req.json();
 
     if (!type || !data) return NextResponse.json({ error: "type and data required" }, { status: 400 });
 
     const call = await queryOne(
-      "SELECT id FROM calls WHERE id = $1 AND (caller_id = $2 OR callee_id = $3) AND status = 'active'",
+      "SELECT id FROM calls WHERE id = $1 AND (caller_id = $2 OR callee_id = $3) AND status IN ('ringing', 'active')",
       [id, user.id, user.id]
     );
     if (!call) return NextResponse.json({ error: "Call not active" }, { status: 400 });
@@ -40,6 +42,7 @@ export async function GET(
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
+    await ensureCallTables();
     const { id } = await params;
     const url = new URL(req.url);
     const since = url.searchParams.get("since");

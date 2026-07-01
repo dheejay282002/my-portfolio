@@ -1,13 +1,19 @@
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useState, FormEvent, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useWebSettings } from "@/hooks/useWebSettings";
+import LoadingOverlay from "@/components/LoadingOverlay";
+
+const TURNSTILE_SITEKEY = "0x4AAAAAADttdgqZSQtYuEx8";
+const SITEVERIFY_URL = "https://turnstile-siteverify-portfolio.deejay-portfolio.workers.dev";
 
 type Mode = "login" | "signup" | "forgot" | "forgot-otp" | "reset-success";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { settings } = useWebSettings();
   const [tab, setTab] = useState<"login" | "signup">("login");
   const [mode, setMode] = useState<Mode>("login");
 
@@ -36,39 +42,114 @@ export default function LoginPage() {
   const [forgotError, setForgotError] = useState("");
   const [forgotLoading, setForgotLoading] = useState(false);
 
+  // Turnstile — shared across login, signup, forgot
+  const [captchaContext, setCaptchaContext] = useState<"login" | "signup" | "forgot" | null>(null);
+  const [captchaVerifying, setCaptchaVerifying] = useState(false);
+  const turnstileContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (document.getElementById("cf-turnstile-script")) return;
+    const script = document.createElement("script");
+    script.id = "cf-turnstile-script";
+    script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js";
+    script.async = true;
+    script.defer = true;
+    document.head.appendChild(script);
+  }, []);
+
+  const runAfterCaptcha = useCallback(async (token: string) => {
+    setCaptchaVerifying(true);
+    try {
+      const verifyRes = await fetch(SITEVERIFY_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token }),
+      });
+      const verifyData = await verifyRes.json();
+      if (!verifyData.success) {
+        const err = "CAPTCHA verification failed. Please try again.";
+        if (captchaContext === "login") setLoginError(err);
+        else if (captchaContext === "forgot") setForgotError(err);
+        else setSignupError(err);
+        if ((window as any).turnstile) (window as any).turnstile.reset(turnstileContainerRef.current);
+        setCaptchaVerifying(false);
+        return;
+      }
+
+      if (captchaContext === "login") {
+        const res = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: loginEmail, password: loginPassword }),
+        });
+        const data = await res.json();
+        if (!res.ok) { setLoginError(data.error || "Login failed"); setCaptchaVerifying(false); return; }
+        router.push(data.user.role === "admin" ? "/dashboard/admin" : "/dashboard/client");
+        router.refresh();
+      } else if (captchaContext === "signup") {
+        const res = await fetch("/api/auth/signup/request-otp", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: signupName, email: signupEmail }),
+        });
+        const data = await res.json();
+        if (!res.ok) { setSignupError(data.error || "Signup failed"); setCaptchaVerifying(false); return; }
+        setShowOtp(true);
+      } else if (captchaContext === "forgot") {
+        const res = await fetch("/api/auth/forgot-password", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: forgotEmail }),
+        });
+        const data = await res.json();
+        if (!res.ok) { setForgotError(data.error || "Failed"); setCaptchaVerifying(false); return; }
+        setMode("forgot-otp");
+      }
+    } catch {
+      const err = "Something went wrong";
+      if (captchaContext === "login") setLoginError(err);
+      else if (captchaContext === "forgot") setForgotError(err);
+      else setSignupError(err);
+    }
+    finally { setCaptchaVerifying(false); }
+  }, [captchaContext, loginEmail, loginPassword, signupName, signupEmail, forgotEmail, router]);
+
+  // Render Turnstile widget when the captcha step is shown
+  useEffect(() => {
+    if (!captchaContext || !turnstileContainerRef.current) return;
+    (window as any).turnstile.render(turnstileContainerRef.current, {
+      sitekey: TURNSTILE_SITEKEY,
+      callback: (token: string) => runAfterCaptcha(token),
+      "expired-callback": () => { if ((window as any).turnstile) (window as any).turnstile.reset(turnstileContainerRef.current); },
+      "error-callback": () => {
+        const err = "CAPTCHA error. Please try again.";
+        if (captchaContext === "login") setLoginError(err);
+        else if (captchaContext === "forgot") setForgotError(err);
+        else setSignupError(err);
+      },
+      "data-action": "turnstile-spin-v1",
+    });
+  }, [captchaContext]);
+
+
+
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
     setLoginError("");
-    setLoginLoading(true);
-    try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: loginEmail, password: loginPassword }),
-      });
-      const data = await res.json();
-      if (!res.ok) { setLoginError(data.error || "Login failed"); return; }
-      router.push(data.user.role === "admin" ? "/dashboard/admin" : "/dashboard/client");
-      router.refresh();
-    } catch { setLoginError("Something went wrong"); }
-    finally { setLoginLoading(false); }
+    setCaptchaContext("login");
   };
 
   const handleSignup = async (e: FormEvent) => {
     e.preventDefault();
     setSignupError("");
-    setSignupLoading(true);
-    try {
-      const res = await fetch("/api/auth/signup/request-otp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: signupName, email: signupEmail }),
-      });
-      const data = await res.json();
-      if (!res.ok) { setSignupError(data.error || "Signup failed"); return; }
-      setShowOtp(true);
-    } catch { setSignupError("Something went wrong"); }
-    finally { setSignupLoading(false); }
+    setCaptchaContext("signup");
+  };
+
+  const handleForgotRequest = async (e: FormEvent) => {
+    e.preventDefault();
+    setForgotError("");
+    setCaptchaContext("forgot");
   };
 
   const handleVerifyOtp = async (e: FormEvent) => {
@@ -100,23 +181,6 @@ export default function LoginPage() {
     } finally { setResending(false); }
   };
 
-  // ── Forgot password ──
-  const handleForgotRequest = async (e: FormEvent) => {
-    e.preventDefault();
-    setForgotError("");
-    setForgotLoading(true);
-    try {
-      const res = await fetch("/api/auth/forgot-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: forgotEmail }),
-      });
-      const data = await res.json();
-      if (!res.ok) { setForgotError(data.error || "Failed"); return; }
-      setMode("forgot-otp");
-    } catch { setForgotError("Something went wrong"); }
-    finally { setForgotLoading(false); }
-  };
 
   const handleResetPassword = async (e: FormEvent) => {
     e.preventDefault();
@@ -142,6 +206,7 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center px-6">
+      <LoadingOverlay show={loginLoading || otpLoading} message="Preparing your dashboard..." />
       <div className="glass w-full max-w-md rounded-2xl p-8">
 
         {/* ── Reset Success ── */}
@@ -158,7 +223,18 @@ export default function LoginPage() {
         {mode === "forgot-otp" && (
           <>
             <div className="text-center mb-8">
-              <Link href="/" className="text-xl font-bold tracking-tight text-white">Dee Jay</Link>
+              <Link href="/" className="text-xl font-bold tracking-tight text-white flex items-center justify-center">
+                {settings.logo_type === "image" && settings.logo_image ? (
+                  <img src={settings.logo_image} alt={settings.web_name} className="h-8 max-w-[200px] object-contain" />
+                ) : (
+                  <span style={{ 
+                    fontFamily: settings.logo_font_file ? 'UploadedCustomFont' : settings.logo_font,
+                    color: settings.logo_color || '#ffffff'
+                  }}>
+                    {settings.web_name}
+                  </span>
+                )}
+              </Link>
               <h2 className="mt-6 text-2xl font-bold text-white">Set New Password</h2>
               <p className="mt-2 text-sm text-zinc-400">Enter the OTP sent to <strong className="text-zinc-200">{forgotEmail}</strong></p>
             </div>
@@ -192,10 +268,21 @@ export default function LoginPage() {
         )}
 
         {/* ── Forgot Email Entry ── */}
-        {mode === "forgot" && (
+        {mode === "forgot" && !captchaContext && (
           <>
             <div className="text-center mb-8">
-              <Link href="/" className="text-xl font-bold tracking-tight text-white">Dee Jay</Link>
+              <Link href="/" className="text-xl font-bold tracking-tight text-white flex items-center justify-center">
+                {settings.logo_type === "image" && settings.logo_image ? (
+                  <img src={settings.logo_image} alt={settings.web_name} className="h-8 max-w-[200px] object-contain" />
+                ) : (
+                  <span style={{ 
+                    fontFamily: settings.logo_font_file ? 'UploadedCustomFont' : settings.logo_font,
+                    color: settings.logo_color || '#ffffff'
+                  }}>
+                    {settings.web_name}
+                  </span>
+                )}
+              </Link>
               <h2 className="mt-6 text-2xl font-bold text-white">Forgot Password</h2>
               <p className="mt-2 text-sm text-zinc-400">Enter your email and we'll send you an OTP to reset your password.</p>
             </div>
@@ -214,11 +301,36 @@ export default function LoginPage() {
           </>
         )}
 
+        {/* ── Forgot Email CAPTCHA ── */}
+        {mode === "forgot" && captchaContext === "forgot" && (
+          <div className="mt-8 space-y-5">
+            <p className="text-center text-sm text-zinc-400">Please complete the CAPTCHA to continue.</p>
+            <div className="flex justify-center">
+              <div ref={turnstileContainerRef} />
+            </div>
+            {captchaVerifying && (
+              <p className="text-center text-sm text-cyan-400">Verifying CAPTCHA...</p>
+            )}
+            {forgotError && <p className="text-sm text-red-400 text-center">{forgotError}</p>}
+          </div>
+        )}
+
         {/* ── Login / Signup / OTP ── */}
         {(mode === "login") && (
           <>
             <div className="text-center">
-              <Link href="/" className="text-xl font-bold tracking-tight text-white">Dee Jay</Link>
+              <Link href="/" className="text-xl font-bold tracking-tight text-white flex items-center justify-center">
+                {settings.logo_type === "image" && settings.logo_image ? (
+                  <img src={settings.logo_image} alt={settings.web_name} className="h-8 max-w-[200px] object-contain" />
+                ) : (
+                  <span style={{ 
+                    fontFamily: settings.logo_font_file ? 'UploadedCustomFont' : settings.logo_font,
+                    color: settings.logo_color || '#ffffff'
+                  }}>
+                    {settings.web_name}
+                  </span>
+                )}
+              </Link>
               <h2 className="mt-6 text-2xl font-bold text-white">
                 {showOtp ? "Email Verification" : tab === "login" ? "Welcome Back" : "Create Account"}
               </h2>
@@ -227,10 +339,10 @@ export default function LoginPage() {
               </p>
             </div>
 
-            {!showOtp && (
+            {!showOtp && !captchaContext && (
               <div className="mt-8 flex rounded-xl border border-white/10 p-1">
                 {(["login", "signup"] as const).map((t) => (
-                  <button key={t} onClick={() => setTab(t)}
+                  <button key={t} onClick={() => { setTab(t); setSignupError(""); setCaptchaContext(null); }}
                     className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-all ${
                       tab === t ? "bg-gradient-to-r from-cyan-500 to-blue-600 text-white" : "text-zinc-400 hover:text-white"
                     }`}>
@@ -258,14 +370,14 @@ export default function LoginPage() {
                     className="text-cyan-400 hover:text-cyan-300 disabled:opacity-50 transition-colors">
                     {resending ? "Resending..." : "Resend Code"}
                   </button>
-                  <button type="button" onClick={() => { setShowOtp(false); setSignupError(""); }}
+                  <button type="button" onClick={() => { setShowOtp(false); setCaptchaContext(null); setSignupError(""); }}
                     className="text-zinc-500 hover:text-zinc-300 transition-colors">Back to Edit Info</button>
                 </div>
               </form>
             )}
 
             {/* Login Form */}
-            {!showOtp && tab === "login" && (
+            {!showOtp && !captchaContext && tab === "login" && (
               <form onSubmit={handleLogin} className="mt-8 space-y-5">
                 <input type="email" placeholder="Email" value={loginEmail}
                   onChange={(e) => setLoginEmail(e.target.value)} required className={inputCls} />
@@ -285,7 +397,7 @@ export default function LoginPage() {
             )}
 
             {/* Signup Form */}
-            {!showOtp && tab === "signup" && (
+            {!showOtp && !captchaContext && tab === "signup" && (
               <form onSubmit={handleSignup} className="mt-8 space-y-5">
                 <input type="text" placeholder="Full Name" value={signupName}
                   onChange={(e) => setSignupName(e.target.value)} required className={inputCls} />
@@ -294,10 +406,30 @@ export default function LoginPage() {
                 <input type="password" placeholder="Password (min 6 characters)" value={signupPassword}
                   onChange={(e) => setSignupPassword(e.target.value)} required minLength={6} className={inputCls} />
                 {signupError && <p className="text-sm text-red-400">{signupError}</p>}
-                <button type="submit" disabled={signupLoading} className={btnCls}>
-                  {signupLoading ? "Sending Code..." : "Create Account"}
+                <button type="submit" className={btnCls}>
+                  Create Account
                 </button>
               </form>
+            )}
+
+            {/* CAPTCHA Step — shown after any form submission */}
+            {captchaContext && (
+              <div className="mt-8 space-y-5">
+                <p className="text-center text-sm text-zinc-400">Please complete the CAPTCHA to continue.</p>
+                <div className="flex justify-center">
+                  <div ref={turnstileContainerRef} />
+                </div>
+                {captchaVerifying && (
+                  <p className="text-center text-sm text-cyan-400">Verifying CAPTCHA...</p>
+                )}
+                {(captchaContext === "login" && loginError) ||
+                 (captchaContext === "forgot" && forgotError) ||
+                 (captchaContext === "signup" && signupError) ? (
+                  <p className="text-sm text-red-400 text-center">
+                    {captchaContext === "login" ? loginError : captchaContext === "forgot" ? forgotError : signupError}
+                  </p>
+                ) : null}
+              </div>
             )}
           </>
         )}

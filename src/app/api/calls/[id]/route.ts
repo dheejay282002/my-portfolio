@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { queryOne, execute } from "@/lib/db";
 import { getSession } from "@/lib/auth";
+import { ensureCallTables } from "@/lib/schema";
 
 export async function GET(
   _req: Request,
@@ -10,6 +11,7 @@ export async function GET(
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
+    await ensureCallTables();
     const { id } = await params;
 
     const call = await queryOne(
@@ -33,6 +35,7 @@ export async function PATCH(
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
+    await ensureCallTables();
     const { id } = await params;
     const { status } = await req.json();
 
