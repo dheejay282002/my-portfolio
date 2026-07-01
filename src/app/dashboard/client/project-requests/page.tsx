@@ -14,6 +14,8 @@ interface ProjectRequest {
   created_at: string;
   rating?: number | null;
   review_content?: string | null;
+  client_name?: string;
+  client_email?: string;
   package_tier?: string;
   project_baseline?: string;
   est_timeline?: string;
@@ -626,83 +628,119 @@ function ContractModal({ request, onClose, onSuccess }: ContractModalProps) {
     const w = window.open("", "_blank");
     if (!w) return;
     const deliverablesHtml = request.deliverables
-      ? request.deliverables.split("\n").map((d: string) => `<li>${d}</li>`).join("")
+      ? request.deliverables.split("\n").map((d: string) => `<li>${d.replace(/^-\s*/, "").trim()}</li>`).join("")
       : "<li>Custom project specification deliverables</li>";
+    
+    const formatApprovalDate = (dateVal: any) => {
+      const d = dateVal ? new Date(dateVal) : new Date();
+      const day = d.getDate();
+      const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+      const month = monthNames[d.getMonth()];
+      const year = d.getFullYear();
+
+      let suffix = "th";
+      if (day === 1 || day === 21 || day === 31) suffix = "st";
+      else if (day === 2 || day === 22) suffix = "nd";
+      else if (day === 3 || day === 23) suffix = "rd";
+
+      return `${day}${suffix} day of ${month}, ${year}`;
+    };
+
+    const currentYear = request.created_at ? new Date(request.created_at).getFullYear() : 2026;
+    const approvalDateFormatted = formatApprovalDate(request.contract_signed_at);
     
     w.document.write(`
       <html>
         <head>
-          <title>Project Contract - ${request.project_name}</title>
+          <title>Agreement Contract - ${request.project_name}</title>
           <style>
-            body { font-family: system-ui, -apple-system, sans-serif; padding: 40px; color: #111; line-height: 1.6; max-width: 800px; margin: 0 auto; }
-            h1 { border-bottom: 2px solid #333; padding-bottom: 10px; font-size: 24px; text-transform: uppercase; margin-bottom: 5px; }
-            .subtitle { font-size: 14px; color: #666; margin-bottom: 30px; }
-            h2 { font-size: 16px; margin-top: 30px; border-bottom: 1px solid #ddd; padding-bottom: 5px; text-transform: uppercase; }
-            .meta { margin: 20px 0; background: #f9f9f9; padding: 15px; border-radius: 8px; border: 1px solid #eee; }
-            .meta p { margin: 5px 0; font-size: 14px; }
-            .signatures { display: flex; justify-content: space-between; margin-top: 50px; }
-            .sig-box { width: 45%; border-top: 1px solid #333; padding-top: 10px; }
-            .sig-box p { margin: 3px 0; font-size: 13px; }
-            .sig-box .font-sig { font-family: cursive, serif; font-size: 20px; font-style: italic; color: #111; margin-bottom: 10px; height: 30px; }
+            body { font-family: 'Georgia', serif; padding: 60px 50px; color: #111; line-height: 1.6; max-width: 800px; margin: 0 auto; background: #fff; }
+            .logo-header { font-size: 11px; font-style: italic; color: #666; margin-bottom: 30px; text-align: center; }
+            .logo-bold { font-weight: bold; font-style: normal; color: #111; font-size: 15px; }
+            h1.agreement-title { text-align: center; font-size: 18px; font-weight: bold; text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.5px; }
+            .series-subtitle { text-align: center; font-weight: bold; font-size: 13px; margin-bottom: 30px; text-transform: uppercase; }
+            .legal-statement { font-weight: bold; text-align: justify; font-size: 12px; line-height: 1.6; margin-bottom: 25px; text-transform: uppercase; border-bottom: 1.5px solid #111; border-top: 1.5px solid #111; padding: 15px 0; }
+            p.whereas-clause { text-align: justify; font-size: 12.5px; text-indent: 30px; margin-bottom: 15px; }
+            p.whereas-clause span.whereas-bold { font-weight: bold; }
+            .whereas-list { list-style-type: disc; margin-left: 55px; margin-bottom: 20px; font-size: 12.5px; }
+            .whereas-list li { margin-bottom: 6px; }
+            .resolving-clause { font-size: 12.5px; margin-bottom: 20px; text-align: justify; }
+            .resolving-clause span.bold { font-weight: bold; }
+            ol.deliverables-list { margin-left: 55px; margin-bottom: 25px; font-size: 12.5px; }
+            ol.deliverables-list li { margin-bottom: 8px; line-height: 1.5; }
+            .approved-statement { font-size: 12.5px; font-weight: bold; margin-top: 40px; margin-bottom: 60px; text-transform: uppercase; }
+            .signatures-row { display: flex; justify-content: space-between; margin-top: 70px; }
+            .sig-line-container { width: 42%; text-align: center; }
+            .sig-underline { border-bottom: 1.5px solid #111; margin-bottom: 8px; height: 35px; font-style: italic; font-size: 17px; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 2px; }
+            .sig-label-title { font-weight: bold; font-size: 12px; }
+            .sig-sub-label { font-size: 11px; color: #555; margin-top: 2px; }
             .actions-bar { margin-top: 40px; text-align: center; border-top: 1px solid #eee; padding-top: 20px; }
             @media print {
               .actions-bar { display: none; }
+              body { padding: 30px 10px; }
             }
           </style>
         </head>
         <body>
-          <h1>Project Development Agreement</h1>
-          <div class="subtitle">This document outlines the scope, deliverables, and terms agreed upon for project commencement.</div>
+          <div class="logo-header">(this must be my logo, which is the website logo, like <span class="logo-bold">Dee Jay.</span>)</div>
           
-          <p>This Project Development Agreement (the "Agreement") is executed on this date by and between the Client (specified below) and Dee Jay Cristobal (the "Developer").</p>
-
-          <div class="meta">
-            <p><strong>Project Specification:</strong> ${request.project_name}</p>
-            <p><strong>Client Name:</strong> Harry James</p>
-            <p><strong>Project Package:</strong> ${request.package_tier || "Custom Design & Build"}</p>
-            <p><strong>Baseline Budget / Price Range:</strong> ${request.project_baseline || "Custom Baseline Quote"}</p>
-            <p><strong>Estimated Timeline:</strong> ${request.est_timeline || "Custom Estimate"}</p>
+          <h1 class="agreement-title">Project Development Agreement</h1>
+          <div class="series-subtitle">Series of ${currentYear}</div>
+          
+          <div class="legal-statement">
+            A TERMS AUTHORIZING THE COMMENCEMENT AND EXECUTION OF THE PROJECT DEVELOPMENT AGREEMENT FOR THE APPLICATION "${request.project_name.toUpperCase()}" BETWEEN THE CLIENT, MR/MS. ${request.client_name?.toUpperCase() || "CLIENT"}, AND THE DEVELOPER, MR. DEE JAY CRISTOBAL, OUTLINING THE SCOPE, DELIVERABLES, AND FINANCES UNDER THE ${request.package_tier?.toUpperCase() || "STANDARD PACK"} ARRANGEMENT.
           </div>
 
-          <h2>1. Key Deliverables & Scope</h2>
-          <p>The Developer agrees to design, develop, and deploy the project deliverables according to the package parameters and standard specifications detailed below. Any revisions, features, or page additions requested beyond the designated boundaries will be treated as out-of-scope and billed at a mutual freelance rate of $50/hour.</p>
-          <ul>
-            ${deliverablesHtml}
+          <p class="whereas-clause"><span class="whereas-bold">WHEREAS</span>, the Client, ${request.client_name || "Client Name"}, requires high-level professional technical software development services for the implementation and execution of the digital project specified as "${request.project_name}";</p>
+          
+          <p class="whereas-clause"><span class="whereas-bold">WHEREAS</span>, the Developer, Dee Jay Cristobal, possesses the requisite full-stack engineering expertise to deliver the comprehensive technical scope required by the Client;</p>
+          
+          <p class="whereas-clause"><span class="whereas-bold">WHEREAS</span>, both parties have mutually established and finalized the key technical parameters, project specifications, and milestones required for a successful launch;</p>
+          
+          <p class="whereas-clause"><span class="whereas-bold">WHEREAS</span>, the parameters, finances, and execution terms agreed upon under the "${request.package_tier || "Standard Pack"}" are designated as follows:</p>
+          
+          <ul class="whereas-list">
+            <li><strong>Project Specification:</strong> ${request.project_name}</li>
+            <li><strong>Project Package:</strong> ${request.package_tier || "Custom Services"}</li>
+            <li><strong>Baseline Budget / Price Range:</strong> ${request.project_baseline || "Custom baseline"}</li>
+            <li><strong>Estimated Timeline:</strong> ${request.est_timeline || "3 – 5 Weeks"}</li>
           </ul>
 
-          <h2>2. Payment Terms & Milestones</h2>
-          <p><strong>A. Downpayment Commitment:</strong> A non-refundable deposit equal to fifty percent (50%) of the project price range baseline must be paid and receipt-verified by the Developer prior to work kickoff or timeline commencement.</p>
-          <p><strong>B. Final Payment Balance:</strong> The remaining fifty percent (50%) balance of the project baseline budget becomes due immediately upon project completion and staging review, prior to release of the final build, codebase, or hosting deployment details.</p>
+          <p class="resolving-clause">
+            <span class="bold">NOW, THEREFORE</span>, upon the mutual understanding, consent, and execution of the terms detailed herein,
+          </p>
+          
+          <p class="resolving-clause">
+            <span class="bold">BE IT RESOLVED, AS IT IS HEREBY RESOLVED</span>, that the Developer shall execute and deliver the following Key Deliverables & Included Features:
+          </p>
 
-          <h2>3. Intellectual Property Transfer</h2>
-          <p>Upon final receipt and clearance of all outstanding project balance amounts due, all title, copyrights, and intellectual property ownership rights to the custom source code, design assets, databases, and builds transfer exclusively to the Client. The Developer retains the right to display design screenshots and mockups in their professional portfolio and marketing materials.</p>
+          <ol class="deliverables-list">
+            ${deliverablesHtml}
+          </ol>
 
-          <h2>4. Timelines & Revisions</h2>
-          <p><strong>A. Estimated Timeline:</strong> Timelines are calculated from receipt of all initial assets and signed agreement. The Developer will exert reasonable efforts to meet the deadlines but is not liable for delay caused by client feedback lags, raw content delivery delays, or technical dependencies.</p>
-          <p><strong>B. Revision Rounds:</strong> The package includes up to three (3) rounds of revisions. Extra feedback cycles will incur hourly design fees.</p>
+          <p class="resolving-clause">
+            <span class="bold">RESOLVED FURTHER</span>, that upon receipt of the full payment balance due for the development services, all title, copyrights, and intellectual property ownership rights to the final code, assets, and builds shall transfer exclusively to the Client.
+          </p>
 
-          <h2>5. Warranties & Ongoing Maintenance</h2>
-          <p>The Developer warrants the delivered project will function materially according to specifications. The Developer provides a free support warranty window according to the package tier (1-6 months post-delivery) to fix bugs and layout glitches. Ongoing server maintenance, domain fees, and third-party hosting costs are the sole responsibility of the Client.</p>
+          <div class="approved-statement">
+            APPROVED on this ${approvalDateFormatted}.
+          </div>
 
-          <h2>6. Execution & Agreement to Terms</h2>
-          <p>Both parties acknowledge their mutual understanding of the scope details, pricing brackets, and timelines defined herein. By executing their signatures below, the parties establish a binding commitment to these terms.</p>
-
-          <div class="signatures">
-            <div class="sig-box">
-              <div class="font-sig">Dee Jay Cristobal</div>
-              <p><strong>Developer Signature</strong></p>
-              <p>DEE JAY PORTFOLIO DEV</p>
+          <div class="signatures-row">
+            <div class="sig-line-container">
+              <div class="sig-underline">Dee Jay Cristobal</div>
+              <div class="sig-label-title">Dee Jay Cristobal</div>
+              <div class="sig-sub-label">Developer Signature</div>
             </div>
-            <div class="sig-box">
-              <div class="font-sig">${signatureName || request.contract_signed_name || "(Pending Client Signature)"}</div>
-              <p><strong>Client Signature</strong></p>
-              <p>Harry James</p>
-              <p>Date: ${request.contract_signed_at ? new Date(request.contract_signed_at).toLocaleDateString() : new Date().toLocaleDateString()}</p>
+            <div class="sig-line-container">
+              <div class="sig-underline">${request.contract_signed ? (request.contract_signed_name || "Signed") : ""}</div>
+              <div class="sig-label-title">${request.contract_signed ? (request.contract_signed_name || "Client") : "(Unsigned)"}</div>
+              <div class="sig-sub-label">Client Signature</div>
             </div>
           </div>
           
           <div class="actions-bar">
-            <button onclick="window.print()" style="padding: 12px 24px; font-weight: bold; background: #06b6d4; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; box-shadow: 0 4px 12px rgba(6,182,212,0.2);">Print Contract / Download PDF</button>
+            <button onclick="window.print()" style="padding: 12px 24px; font-weight: bold; background: #111; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 14px;">Print Contract / Save PDF</button>
           </div>
         </body>
       </html>
@@ -730,34 +768,45 @@ function ContractModal({ request, onClose, onSuccess }: ContractModalProps) {
             </div>
           )}
 
-          <div className="space-y-4 text-xs text-zinc-300 bg-white/2 border border-white/5 rounded-2xl p-6 h-[300px] overflow-y-auto leading-relaxed text-left">
-            <p className="font-bold text-white text-sm text-center uppercase tracking-wider mb-4 border-b border-white/5 pb-2">Terms & Conditions of Service</p>
-            <p>This Project Development Agreement outlines the terms, timeline, and scope of work established for the execution of <strong>{request.project_name}</strong>.</p>
+          <div className="space-y-4 text-[13px] text-zinc-300 bg-white/2 border border-white/5 rounded-2xl p-6 h-[340px] overflow-y-auto leading-relaxed text-left font-serif">
+            <div className="text-[10px] italic text-zinc-500 text-center mb-4">(this must be my logo, which is the website logo, like <span className="font-bold text-white font-sans text-xs">Dee Jay.</span>)</div>
             
-            <div className="my-4 bg-zinc-950/40 p-4 rounded-xl border border-white/5 space-y-1.5 font-medium">
-              <p><span className="text-zinc-500 font-normal">Package Tier:</span> <span className="text-cyan-400">{request.package_tier || "Custom Request"}</span></p>
-              <p><span className="text-zinc-500 font-normal">Baseline Quote:</span> <span className="text-cyan-400 font-semibold">{request.project_baseline || "Custom Baseline Quote"}</span></p>
-              <p><span className="text-zinc-500 font-normal">Timeline:</span> <span className="text-cyan-400">{request.est_timeline || "Custom Estimate"}</span></p>
+            <p className="font-bold text-white text-base text-center uppercase tracking-wider mb-1">Project Development Agreement</p>
+            <p className="text-zinc-400 text-[11px] font-bold text-center mb-4 uppercase">Series of {request.created_at ? new Date(request.created_at).getFullYear() : 2026}</p>
+            
+            <div className="font-bold text-zinc-200 text-xs text-justify border-y border-white/10 py-3 uppercase tracking-wide my-4 leading-normal">
+              A TERMS AUTHORIZING THE COMMENCEMENT AND EXECUTION OF THE PROJECT DEVELOPMENT AGREEMENT FOR THE APPLICATION "{request.project_name.toUpperCase()}" BETWEEN THE CLIENT, MR/MS. {request.client_name?.toUpperCase() || "CLIENT"}, AND THE DEVELOPER, MR. DEE JAY CRISTOBAL, OUTLINING THE SCOPE, DELIVERABLES, AND FINANCES UNDER THE {request.package_tier?.toUpperCase() || "STANDARD PACK"} ARRANGEMENT.
             </div>
 
-            <p className="font-semibold text-white">1. Deliverables Scope & Modifications</p>
-            <p>Work is limited to the items configured under this package. Any additional revisions or custom additions requested after this signature will be treated as out-of-scope and invoiced separately at $50/hour.</p>
+            <p><span className="font-bold text-white">WHEREAS</span>, the Client, {request.client_name || "Client Name"}, requires high-level professional technical software development services for the implementation and execution of the digital project specified as "{request.project_name}";</p>
+            
+            <p><span className="font-bold text-white">WHEREAS</span>, the Developer, Dee Jay Cristobal, possesses the requisite full-stack engineering expertise to deliver the comprehensive technical scope required by the Client;</p>
+            
+            <p><span className="font-bold text-white">WHEREAS</span>, both parties have mutually established and finalized the key technical parameters, project specifications, and milestones required for a successful launch;</p>
+            
+            <p><span className="font-bold text-white">WHEREAS</span>, the parameters, finances, and execution terms agreed upon under the "{request.package_tier || "Standard Pack"}" are designated as follows:</p>
+            
+            <ul className="list-disc list-inside pl-4 space-y-1 my-3 text-zinc-400">
+              <li><strong>Project Specification:</strong> {request.project_name}</li>
+              <li><strong>Project Package:</strong> {request.package_tier || "Custom Services"}</li>
+              <li><strong>Baseline Budget / Price Range:</strong> {request.project_baseline || "Custom baseline"}</li>
+              <li><strong>Estimated Timeline:</strong> {request.est_timeline || "3 – 5 Weeks"}</li>
+            </ul>
 
-            <p className="font-semibold text-white">2. Payment Milestones (Downpayment & Final)</p>
-            <p><strong>A. 50% Downpayment:</strong> A non-refundable deposit equal to fifty percent (50%) of the baseline is required and receipt-verified before commencement of coding.</p>
-            <p><strong>B. 50% Final Payment:</strong> The remaining balance becomes due upon project staging completion prior to final handover or codebase delivery.</p>
+            <p className="font-bold text-white">NOW, THEREFORE, upon the mutual understanding, consent, and execution of the terms detailed herein,</p>
+            
+            <p className="font-bold text-white">BE IT RESOLVED, AS IT IS HEREBY RESOLVED, that the Developer shall execute and deliver the following Key Deliverables & Included Features:</p>
 
-            <p className="font-semibold text-white">3. Intellectual Property Transfer</p>
-            <p>Full intellectual property ownership rights are transferred to the Client immediately upon receiving and verifying the final payment balance due for the development services.</p>
+            <ol className="list-decimal list-inside pl-4 space-y-2 my-3 text-zinc-300">
+              {request.deliverables
+                ? request.deliverables.split("\n").map((d: string, index: number) => (
+                    <li key={index}>{d.replace(/^-\s*/, "").trim()}</li>
+                  ))
+                : <li>Custom project specification deliverables</li>
+              }
+            </ol>
 
-            <p className="font-semibold text-white">4. Timelines & Feedbacks</p>
-            <p>Timelines depend on client review response latency. The package includes up to three (3) rounds of revisions; additional cycles incur standard hourly fees.</p>
-
-            <p className="font-semibold text-white">5. Warranty & Maintenance</p>
-            <p>Includes free support post-delivery (1-6 months based on tier) to fix bugs. Ongoing hosting, domain fees, and third-party API configurations remain client responsibilities.</p>
-
-            <p className="font-semibold text-white">6. Client Signature & Acceptance</p>
-            <p>By typing your name and signing, you verify your approval of all terms, scopes, timelines, and payment structures detailed in this contract document.</p>
+            <p className="font-bold text-white">RESOLVED FURTHER, that upon receipt of the full payment balance due for the development services, all title, copyrights, and intellectual property ownership rights to the final code, assets, and builds shall transfer exclusively to the Client.</p>
           </div>
         </div>
 

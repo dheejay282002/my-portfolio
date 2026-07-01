@@ -23,8 +23,10 @@ export async function GET() {
     } else {
       requests = await queryAll(
         `SELECT r.*, rev.rating, rev.content as review_content, 
+                u.name as client_name, u.email as client_email,
                 p.package_tier, p.project_baseline, p.est_timeline, p.deliverables
          FROM project_requests r
+         JOIN users u ON r.client_id = u.id
          LEFT JOIN reviews rev ON r.id = rev.project_request_id
          LEFT JOIN products p ON r.product_id = p.id
          WHERE r.client_id = $1

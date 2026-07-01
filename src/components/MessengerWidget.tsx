@@ -113,6 +113,7 @@ export default function MessengerWidget() {
   const [paymentReferenceNo, setPaymentReferenceNo] = useState("");
   const [uploadingReceipt, setUploadingReceipt] = useState(false);
   const [showQRId, setShowQRId] = useState<number | null>(null);
+  const [receiptValidated, setReceiptValidated] = useState(false);
 
   const formatPrice = (baseline: string) => {
     if (currency === "USD" || rate === 1) return baseline;
@@ -212,6 +213,48 @@ export default function MessengerWidget() {
         }
       });
   }, []);
+
+  useEffect(() => {
+    if (!paymentReceiptUrl && !paymentReferenceNo.trim()) {
+      setReceiptValidated(false);
+      setErrorMsg("");
+      return;
+    }
+
+    if (!paymentReceiptUrl) {
+      setReceiptValidated(false);
+      setErrorMsg("A downpayment receipt screenshot is required to submit a project request.");
+      return;
+    }
+
+    if (!paymentReferenceNo.trim()) {
+      setReceiptValidated(false);
+      setErrorMsg("A transaction reference number is required to submit a project request.");
+      return;
+    }
+
+    const invalidKeywords = ["fake", "dummy", "test", "mock", "sample", "fabricated", "screenshot_123", "placeholder"];
+    const fileLower = paymentReceiptUrl.toLowerCase();
+    const refLower = paymentReferenceNo.toLowerCase();
+
+    const containsFakeKeyword = invalidKeywords.some(
+      (kw) => fileLower.includes(kw) || refLower.includes(kw)
+    );
+
+    const refClean = paymentReferenceNo.trim();
+    const isValidRefFormat = /^[a-zA-Z0-9-]{8,24}$/.test(refClean);
+
+    if (containsFakeKeyword) {
+      setReceiptValidated(false);
+      setErrorMsg("Receipt verification error: automated payment scanner flagged this receipt file or transaction reference word as fabricated.");
+    } else if (!isValidRefFormat) {
+      setReceiptValidated(false);
+      setErrorMsg("Receipt verification error: transaction reference number must be alphanumeric and between 8 to 24 characters.");
+    } else {
+      setReceiptValidated(true);
+      setErrorMsg("");
+    }
+  }, [paymentReceiptUrl, paymentReferenceNo]);
 
   useEffect(() => {
     const handleOpenRequest = (e: Event) => {
@@ -1175,8 +1218,8 @@ export default function MessengerWidget() {
                         </button>
                         <button
                           type="submit"
-                          disabled={submittingProject || uploadingReceipt}
-                          className="flex-1 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2.5 text-xs font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                          disabled={submittingProject || uploadingReceipt || !receiptValidated}
+                          className="flex-1 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2.5 text-xs font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                           {submittingProject ? "Analyzing..." : "Submit Request"}
                         </button>
