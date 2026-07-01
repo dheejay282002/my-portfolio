@@ -16,6 +16,12 @@ interface ProjectRequest {
   client_name: string;
   client_email: string;
   package_tier?: string;
+  project_baseline?: string;
+  est_timeline?: string;
+  deliverables?: string;
+  contract_signed?: boolean;
+  contract_signed_name?: string | null;
+  contract_signed_at?: string | null;
 }
 
 const statusColors: Record<string, string> = {
@@ -35,6 +41,82 @@ export default function ProjectRequestsPage() {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<ProjectRequest | null>(null);
   const [openDropdown, setOpenDropdown] = useState<number | null>(null);
+
+  const printContract = (request: ProjectRequest) => {
+    const w = window.open("", "_blank");
+    if (!w) return;
+    const deliverablesHtml = request.deliverables
+      ? request.deliverables.split("\n").map((d: string) => `<li>${d}</li>`).join("")
+      : "<li>Custom project specification deliverables</li>";
+    
+    w.document.write(`
+      <html>
+        <head>
+          <title>Project Contract - ${request.project_name}</title>
+          <style>
+            body { font-family: system-ui, -apple-system, sans-serif; padding: 40px; color: #111; line-height: 1.6; max-width: 800px; margin: 0 auto; }
+            h1 { border-bottom: 2px solid #333; padding-bottom: 10px; font-size: 24px; text-transform: uppercase; margin-bottom: 5px; }
+            .subtitle { font-size: 14px; color: #666; margin-bottom: 30px; }
+            h2 { font-size: 16px; margin-top: 30px; border-bottom: 1px solid #ddd; padding-bottom: 5px; text-transform: uppercase; }
+            .meta { margin: 20px 0; background: #f9f9f9; padding: 15px; border-radius: 8px; border: 1px solid #eee; }
+            .meta p { margin: 5px 0; font-size: 14px; }
+            .signatures { display: flex; justify-content: space-between; margin-top: 50px; }
+            .sig-box { width: 45%; border-top: 1px solid #333; padding-top: 10px; }
+            .sig-box p { margin: 3px 0; font-size: 13px; }
+            .sig-box .font-sig { font-family: cursive, serif; font-size: 20px; font-style: italic; color: #111; margin-bottom: 10px; height: 30px; }
+            .actions-bar { margin-top: 40px; text-align: center; border-top: 1px solid #eee; padding-top: 20px; }
+            @media print {
+              .actions-bar { display: none; }
+            }
+          </style>
+        </head>
+        <body>
+          <h1>Project Development Agreement</h1>
+          <div class="subtitle">This document outlines the scope, deliverables, and terms agreed upon for project commencement.</div>
+          
+          <p>This Project Development Agreement (the "Agreement") is executed on this date by and between the Client (specified below) and Dee Jay Cristobal (the "Developer").</p>
+
+          <div class="meta">
+            <p><strong>Project Specification:</strong> ${request.project_name}</p>
+            <p><strong>Client Name:</strong> ${request.client_name}</p>
+            <p><strong>Project Package:</strong> ${request.package_tier || "Custom Design & Build"}</p>
+            <p><strong>Baseline Budget / Price Range:</strong> ${request.project_baseline || "Custom Baseline Quote"}</p>
+            <p><strong>Estimated Timeline:</strong> ${request.est_timeline || "Custom Estimate"}</p>
+          </div>
+
+          <h2>1. Key Deliverables & Included Features</h2>
+          <ul>
+            ${deliverablesHtml}
+          </ul>
+
+          <h2>2. Intellectual Property Rights</h2>
+          <p>The Developer transfers all ownership rights of the final build deliverables to the Client upon receiving the full contract payment balance due for the development services.</p>
+
+          <h2>3. Execution & Agreement to Terms</h2>
+          <p>Both parties acknowledge their mutual understanding of the scope details, pricing brackets, and timelines defined herein. By executing their signatures below, the parties establish a commitment to these terms.</p>
+
+          <div class="signatures">
+            <div class="sig-box">
+              <div class="font-sig">Dee Jay Cristobal</div>
+              <p><strong>Developer Signature</strong></p>
+              <p>DEE JAY PORTFOLIO DEV</p>
+            </div>
+            <div class="sig-box">
+              <div class="font-sig">${request.contract_signed_name || "(Pending Client Signature)"}</div>
+              <p><strong>Client Signature</strong></p>
+              <p>${request.client_name}</p>
+              <p>Date: ${request.contract_signed_at ? new Date(request.contract_signed_at).toLocaleDateString() : new Date().toLocaleDateString()}</p>
+            </div>
+          </div>
+          
+          <div class="actions-bar">
+            <button onclick="window.print()" style="padding: 12px 24px; font-weight: bold; background: #06b6d4; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; box-shadow: 0 4px 12px rgba(6,182,212,0.2);">Print Contract / Download PDF</button>
+          </div>
+        </body>
+      </html>
+    `);
+    w.document.close();
+  };
 
   useEffect(() => {
     fetch("/api/project-requests")
@@ -163,9 +245,16 @@ export default function ProjectRequestsPage() {
                         {new Date(req.created_at + "Z").toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium ${statusColors[req.status] || "bg-zinc-500/10 text-zinc-400"}`}>
-                          {req.status.replace("_", " ")}
-                        </span>
+                        <div className="flex flex-col gap-1 items-start">
+                          <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium ${statusColors[req.status] || "bg-zinc-500/10 text-zinc-400"}`}>
+                            {req.status.replace("_", " ")}
+                          </span>
+                          {req.status === "accepted" && (
+                            <span className={`text-[9px] font-semibold ${req.contract_signed ? "text-green-400" : "text-yellow-500 animate-pulse"}`}>
+                              {req.contract_signed ? "Signed ✓" : "Unsigned ✍️"}
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-6 py-4 text-right">
                         <button
@@ -238,6 +327,26 @@ export default function ProjectRequestsPage() {
                   {selected.status.replace("_", " ")}
                 </span>
               </div>
+              {selected.status === "accepted" && (
+                <div>
+                  <p className="text-xs text-zinc-500">Contract Agreement Status</p>
+                  {selected.contract_signed ? (
+                    <div className="mt-1.5 space-y-2 text-left">
+                      <p className="text-xs text-green-400 font-semibold">
+                        ✓ Signed by <span className="underline font-bold text-white">{selected.contract_signed_name}</span> on {new Date(selected.contract_signed_at || "").toLocaleDateString()}
+                      </p>
+                      <button
+                        onClick={() => printContract(selected)}
+                        className="rounded-lg border border-white/10 px-3 py-1.5 text-[10px] font-bold text-zinc-300 transition-colors hover:border-white/20 hover:text-white"
+                      >
+                        Print / Download Signed Contract
+                      </button>
+                    </div>
+                  ) : (
+                    <p className="mt-1 text-xs text-yellow-500 italic">Pending Client Signature</p>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="mt-6 flex flex-wrap items-center gap-3 border-t border-white/10 pt-4">

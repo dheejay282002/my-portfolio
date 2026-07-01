@@ -99,6 +99,18 @@ export async function ensureProductsTable() {
   await execute(`
     ALTER TABLE project_requests ADD COLUMN IF NOT EXISTS product_id INTEGER REFERENCES products(id) ON DELETE SET NULL
   `);
+  await execute(`
+    ALTER TABLE project_requests ADD COLUMN IF NOT EXISTS contract_signed BOOLEAN DEFAULT FALSE
+  `);
+  await execute(`
+    ALTER TABLE project_requests ADD COLUMN IF NOT EXISTS contract_signed_name VARCHAR(255)
+  `);
+  await execute(`
+    ALTER TABLE project_requests ADD COLUMN IF NOT EXISTS contract_signed_at TIMESTAMP
+  `);
+  await execute(`
+    ALTER TABLE project_requests ADD COLUMN IF NOT EXISTS contract_signed_acknowledged BOOLEAN DEFAULT FALSE
+  `);
 
   const countRes = await queryOne("SELECT COUNT(*) as count FROM products");
   if (countRes && Number((countRes as any).count) === 0) {

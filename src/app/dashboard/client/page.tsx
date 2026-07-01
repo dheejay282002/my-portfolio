@@ -14,6 +14,7 @@ interface ProjectRequest {
   created_at: string;
   rating?: number | null;
   review_content?: string | null;
+  contract_signed?: boolean;
 }
 
 interface User {
@@ -188,6 +189,8 @@ export default function ClientDashboard() {
     );
   }
 
+  const unsignedContracts = requests.filter(r => r.status === "accepted" && !r.contract_signed);
+
   return (
     <div className="px-6 py-24 space-y-10">
       {/* Welcome */}
@@ -199,6 +202,28 @@ export default function ClientDashboard() {
           Here&apos;s an overview of your project requests and account.
         </p>
       </div>
+
+      {unsignedContracts.length > 0 && (
+        <div className="rounded-2xl border border-yellow-500/25 bg-yellow-500/5 p-5 shadow-lg shadow-yellow-500/5 flex flex-col sm:flex-row items-center justify-between gap-4 animate-pulse">
+          <div className="flex items-center gap-3.5">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-yellow-500/10 text-yellow-400">
+              <FileText className="h-5.5 w-5.5" />
+            </div>
+            <div className="text-left">
+              <p className="text-sm font-bold text-white">Action Required: Review & Sign Contract</p>
+              <p className="text-xs text-zinc-400 mt-0.5">
+                You have {unsignedContracts.length} accepted project request(s) waiting for contract signatures.
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/dashboard/client/project-requests"
+            className="rounded-xl bg-gradient-to-r from-yellow-500 to-orange-600 px-5 py-2.5 text-xs font-semibold text-white transition-opacity hover:opacity-90 shrink-0"
+          >
+            Sign Contract Agreement
+          </Link>
+        </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">

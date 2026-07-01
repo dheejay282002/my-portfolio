@@ -49,6 +49,7 @@ export default function AdminLayout({
     id: number;
     project_name: string;
     client_name: string;
+    type: "new_request" | "contract_signed";
   }
   const [activeToast, setActiveToast] = useState<ToastAlert | null>(null);
   const prevRequestsCountRef = useRef<number>(-1);
@@ -75,6 +76,18 @@ export default function AdminLayout({
     } catch {}
   };
 
+  const handleAcknowledge = async () => {
+    if (!activeToast) return;
+    if (activeToast.type === "contract_signed") {
+      await fetch(`/api/project-requests/${activeToast.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contract_signed_acknowledged: true }),
+      });
+    }
+    setActiveToast(null);
+  };
+
   useEffect(() => {
     fetch("/api/auth/me")
       .then((r) => (r.ok ? r.json() : null))
@@ -96,7 +109,20 @@ export default function AdminLayout({
           const requestsList = data.requests || [];
           const currentCount = requestsList.length;
 
-          if (prevRequestsCountRef.current !== -1 && currentCount > prevRequestsCountRef.current) {
+          // 1. Check for newly signed contracts
+          const unacknowledgedSigned = requestsList.find(
+            (r: any) => r.contract_signed && !r.contract_signed_acknowledged
+          );
+          if (unacknowledgedSigned) {
+            setActiveToast({
+              id: unacknowledgedSigned.id,
+              project_name: unacknowledgedSigned.project_name,
+              client_name: unacknowledgedSigned.client_name || "A client",
+              type: "contract_signed",
+            });
+            playNotificationSound();
+          } else if (prevRequestsCountRef.current !== -1 && currentCount > prevRequestsCountRef.current) {
+            // 2. Check for new project requests (only if no active signature alerts are shown)
             const newRequests = requestsList.slice(0, currentCount - prevRequestsCountRef.current);
             const latest = newRequests[0];
             if (latest && latest.status === "pending") {
@@ -104,6 +130,7 @@ export default function AdminLayout({
                 id: latest.id,
                 project_name: latest.project_name,
                 client_name: latest.client_name || "A client",
+                type: "new_request",
               });
               playNotificationSound();
             }
@@ -120,7 +147,9 @@ export default function AdminLayout({
 
   useEffect(() => {
     if (!activeToast) return;
-    const timer = setTimeout(() => setActiveToast(null), 6000);
+    const timer = setTimeout(() => {
+      handleAcknowledge();
+    }, 6000);
     return () => clearTimeout(timer);
   }, [activeToast]);
 
@@ -274,21 +303,24 @@ export default function AdminLayout({
               <ClipboardList className="h-5 w-5 animate-pulse" />
             </div>
             <div className="flex-1 min-w-0 text-left">
-              <p className="text-sm font-bold text-white">New Project Request!</p>
+              <p className="text-sm font-bold text-white">
+                {activeToast.type === "contract_signed" ? "Contract Signed! ✍️" : "New Project Request! 📋"}
+              </p>
               <p className="mt-1 text-xs text-zinc-400 leading-normal">
-                <span className="font-semibold text-white">{activeToast.client_name}</span> submitted a request:
+                <span className="font-semibold text-white">{activeToast.client_name}</span>{" "}
+                {activeToast.type === "contract_signed" ? "signed the project contract:" : "submitted a project request:"}
                 <span className="italic block mt-0.5 text-cyan-400 truncate">{activeToast.project_name}</span>
               </p>
               <div className="mt-3 flex gap-2">
                 <Link
                   href="/dashboard/admin/project-requests"
-                  onClick={() => setActiveToast(null)}
+                  onClick={handleAcknowledge}
                   className="rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-[10px] font-semibold text-white transition-opacity hover:opacity-90"
                 >
-                  View Request
+                  View Requests
                 </Link>
                 <button
-                  onClick={() => setActiveToast(null)}
+                  onClick={handleAcknowledge}
                   className="rounded-lg border border-white/10 px-3 py-1.5 text-[10px] font-semibold text-zinc-400 transition-colors hover:border-white/20 hover:text-white"
                 >
                   Dismiss

@@ -14,6 +14,12 @@ interface ProjectRequest {
   rating?: number | null;
   review_content?: string | null;
   package_tier?: string;
+  project_baseline?: string;
+  est_timeline?: string;
+  deliverables?: string;
+  contract_signed?: boolean;
+  contract_signed_name?: string | null;
+  contract_signed_at?: string | null;
 }
 
 const statusColors: Record<string, string> = {
@@ -314,11 +320,240 @@ function DetailsModal({ request, onClose }: DetailsModalProps) {
   );
 }
 
+interface ContractModalProps {
+  request: ProjectRequest;
+  onClose: () => void;
+  onSuccess: (id: number, name: string, at: string) => void;
+}
+
+function ContractModal({ request, onClose, onSuccess }: ContractModalProps) {
+  const [agreed, setAgreed] = useState(false);
+  const [signatureName, setSignatureName] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSign = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!agreed) {
+      setError("You must agree to all terms and conditions.");
+      return;
+    }
+    if (!signatureName.trim()) {
+      setError("Please type your full name to sign the contract.");
+      return;
+    }
+    setSubmitting(true);
+    setError("");
+
+    try {
+      const res = await fetch(`/api/project-requests/${request.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contract_signed: true,
+          contract_signed_name: signatureName.trim(),
+        }),
+      });
+      if (res.ok) {
+        const nowStr = new Date().toISOString();
+        onSuccess(request.id, signatureName.trim(), nowStr);
+        onClose();
+      } else {
+        const data = await res.json();
+        setError(data.error || "Failed to sign contract.");
+      }
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const printContract = () => {
+    const w = window.open("", "_blank");
+    if (!w) return;
+    const deliverablesHtml = request.deliverables
+      ? request.deliverables.split("\n").map((d: string) => `<li>${d}</li>`).join("")
+      : "<li>Custom project specification deliverables</li>";
+    
+    w.document.write(`
+      <html>
+        <head>
+          <title>Project Contract - ${request.project_name}</title>
+          <style>
+            body { font-family: system-ui, -apple-system, sans-serif; padding: 40px; color: #111; line-height: 1.6; max-width: 800px; margin: 0 auto; }
+            h1 { border-bottom: 2px solid #333; padding-bottom: 10px; font-size: 24px; text-transform: uppercase; margin-bottom: 5px; }
+            .subtitle { font-size: 14px; color: #666; margin-bottom: 30px; }
+            h2 { font-size: 16px; margin-top: 30px; border-bottom: 1px solid #ddd; padding-bottom: 5px; text-transform: uppercase; }
+            .meta { margin: 20px 0; background: #f9f9f9; padding: 15px; border-radius: 8px; border: 1px solid #eee; }
+            .meta p { margin: 5px 0; font-size: 14px; }
+            .signatures { display: flex; justify-content: space-between; margin-top: 50px; }
+            .sig-box { width: 45%; border-top: 1px solid #333; padding-top: 10px; }
+            .sig-box p { margin: 3px 0; font-size: 13px; }
+            .sig-box .font-sig { font-family: cursive, serif; font-size: 20px; font-style: italic; color: #111; margin-bottom: 10px; height: 30px; }
+            .actions-bar { margin-top: 40px; text-align: center; border-top: 1px solid #eee; padding-top: 20px; }
+            @media print {
+              .actions-bar { display: none; }
+            }
+          </style>
+        </head>
+        <body>
+          <h1>Project Development Agreement</h1>
+          <div class="subtitle">This document outlines the scope, deliverables, and terms agreed upon for project commencement.</div>
+          
+          <p>This Project Development Agreement (the "Agreement") is executed on this date by and between the Client (specified below) and Dee Jay Cristobal (the "Developer").</p>
+
+          <div class="meta">
+            <p><strong>Project Specification:</strong> ${request.project_name}</p>
+            <p><strong>Client Name:</strong> Harry James</p>
+            <p><strong>Project Package:</strong> ${request.package_tier || "Custom Design & Build"}</p>
+            <p><strong>Baseline Budget / Price Range:</strong> ${request.project_baseline || "Custom Baseline Quote"}</p>
+            <p><strong>Estimated Timeline:</strong> ${request.est_timeline || "Custom Estimate"}</p>
+          </div>
+
+          <h2>1. Key Deliverables & Included Features</h2>
+          <ul>
+            ${deliverablesHtml}
+          </ul>
+
+          <h2>2. Intellectual Property Rights</h2>
+          <p>Upon receipt of the full payment balance due for the development services, all title, copyrights, and intellectual property ownership rights to the final code, assets, and builds transfer exclusively to the Client.</p>
+
+          <h2>3. Execution & Agreement to Terms</h2>
+          <p>Both parties acknowledge their mutual understanding of the scope details, pricing brackets, and timelines defined herein. By executing their signatures below, the parties establish a binding commitment to these terms.</p>
+
+          <div class="signatures">
+            <div class="sig-box">
+              <div class="font-sig">Dee Jay Cristobal</div>
+              <p><strong>Developer Signature</strong></p>
+              <p>DEE JAY PORTFOLIO DEV</p>
+            </div>
+            <div class="sig-box">
+              <div class="font-sig">${signatureName || request.contract_signed_name || "(Pending Client Signature)"}</div>
+              <p><strong>Client Signature</strong></p>
+              <p>Harry James</p>
+              <p>Date: ${request.contract_signed_at ? new Date(request.contract_signed_at).toLocaleDateString() : new Date().toLocaleDateString()}</p>
+            </div>
+          </div>
+          
+          <div class="actions-bar">
+            <button onclick="window.print()" style="padding: 12px 24px; font-weight: bold; background: #06b6d4; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; box-shadow: 0 4px 12px rgba(6,182,212,0.2);">Print Contract / Download PDF</button>
+          </div>
+        </body>
+      </html>
+    `);
+    w.document.close();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 px-4 overflow-y-auto py-10">
+      <div className="glass w-full max-w-2xl rounded-3xl p-8 relative max-h-[90vh] overflow-y-auto flex flex-col justify-between" onClick={(e) => e.stopPropagation()}>
+        <div>
+          <div className="flex items-center justify-between mb-6 border-b border-white/5 pb-4">
+            <div>
+              <h3 className="text-lg font-bold text-white">Project Agreement Contract</h3>
+              <p className="text-xs text-zinc-500 mt-0.5">{request.project_name}</p>
+            </div>
+            <button onClick={onClose} className="text-zinc-500 transition-colors hover:text-white">
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          {error && (
+            <div className="mb-4 rounded-xl bg-red-500/10 border border-red-500/20 p-3 text-xs text-red-400">
+              {error}
+            </div>
+          )}
+
+          <div className="space-y-4 text-xs text-zinc-300 bg-white/2 border border-white/5 rounded-2xl p-6 h-[300px] overflow-y-auto leading-relaxed text-left">
+            <p className="font-bold text-white text-sm text-center uppercase tracking-wider mb-4 border-b border-white/5 pb-2">Terms & Conditions of Service</p>
+            <p>This Project Development Agreement outlines the terms, timeline, and scope of work established for the execution of <strong>{request.project_name}</strong>.</p>
+            
+            <div className="my-4 bg-zinc-950/40 p-4 rounded-xl border border-white/5 space-y-1.5 font-medium">
+              <p><span className="text-zinc-500 font-normal">Package Tier:</span> <span className="text-cyan-400">{request.package_tier || "Custom Request"}</span></p>
+              <p><span className="text-zinc-500 font-normal">Baseline Quote:</span> <span className="text-cyan-400 font-semibold">{request.project_baseline || "Custom Baseline Quote"}</span></p>
+              <p><span className="text-zinc-500 font-normal">Timeline:</span> <span className="text-cyan-400">{request.est_timeline || "Custom Estimate"}</span></p>
+            </div>
+
+            <p className="font-semibold text-white">1. Deliverables Scope</p>
+            <p>Work is limited to the items configured under this package. Any additional revisions or custom additions requested after this signature may be invoiced separately.</p>
+
+            <p className="font-semibold text-white">2. Ownership & Source Code</p>
+            <p>Full intellectual property ownership rights are transferred to the Client immediately upon receiving the full contract payment balance due for the development services.</p>
+
+            <p className="font-semibold text-white">3. Client Signature & Acceptance</p>
+            <p>By typing your name and signing, you verify your approval of the scope and deliverables detailed in this contract document.</p>
+          </div>
+        </div>
+
+        <form onSubmit={handleSign} className="mt-6 space-y-4 border-t border-white/5 pt-6 text-left">
+          <div className="flex items-start gap-2.5">
+            <input
+              type="checkbox"
+              id="agree-checkbox"
+              checked={agreed}
+              onChange={(e) => setAgreed(e.target.checked)}
+              disabled={!!request.contract_signed}
+              className="mt-0.5 h-4 w-4 rounded border-white/10 bg-zinc-950 text-cyan-500 focus:ring-cyan-500/20"
+            />
+            <label htmlFor="agree-checkbox" className="text-xs text-zinc-400 select-none cursor-pointer">
+              I agree to all the terms, scope deliverables, and conditions outlined in this agreement contract.
+            </label>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 items-end">
+            <div>
+              <label className="mb-1.5 block text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">Client Full Name Signature</label>
+              <input
+                type="text"
+                placeholder="Type your full name to sign"
+                value={signatureName || request.contract_signed_name || ""}
+                onChange={(e) => setSignatureName(e.target.value)}
+                disabled={!!request.contract_signed}
+                required
+                className="glass w-full rounded-xl px-4 py-2.5 text-xs text-white placeholder-zinc-500 outline-none focus:border-cyan-500/50"
+              />
+            </div>
+            
+            <div className="flex gap-2 justify-end">
+              <button
+                type="button"
+                onClick={printContract}
+                className="rounded-xl border border-white/10 px-4 py-2.5 text-xs font-semibold text-zinc-300 transition-colors hover:border-white/20 hover:text-white flex-1 sm:flex-initial"
+              >
+                Print / PDF
+              </button>
+              {!request.contract_signed ? (
+                <button
+                  type="submit"
+                  disabled={submitting || !agreed || !signatureName.trim()}
+                  className="rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-6 py-2.5 text-xs font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-50 flex-1 sm:flex-initial"
+                >
+                  {submitting ? "Signing..." : "Sign Contract"}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  disabled
+                  className="rounded-xl bg-green-500/10 border border-green-500/20 px-6 py-2.5 text-xs font-bold text-green-400 flex-1 sm:flex-initial"
+                >
+                  Contract Signed ✓
+                </button>
+              )}
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export default function ClientProjectRequests() {
   const [requests, setRequests] = useState<ProjectRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeReviewRequest, setActiveReviewRequest] = useState<ProjectRequest | null>(null);
   const [activeDetailsRequest, setActiveDetailsRequest] = useState<ProjectRequest | null>(null);
+  const [activeContractRequest, setActiveContractRequest] = useState<ProjectRequest | null>(null);
 
   useEffect(() => {
     fetch("/api/project-requests")
@@ -432,7 +667,23 @@ export default function ClientProjectRequests() {
                           {statusLabels[req.status] || req.status}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-right">
+                      <td className="px-6 py-4 text-right flex gap-3 justify-end items-center">
+                        {req.status === "accepted" && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveContractRequest(req);
+                            }}
+                            className={`inline-flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-lg transition-all leading-none ${
+                              req.contract_signed
+                                ? "bg-green-500/10 text-green-400 hover:bg-green-500/20"
+                                : "bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30 border border-yellow-500/10 shadow-[0_0_15px_rgba(234,179,8,0.12)]"
+                            }`}
+                          >
+                            {req.contract_signed ? "✍️ View Contract" : "✍️ Sign Contract"}
+                          </button>
+                        )}
+
                         {req.status === "delivered" ? (
                           <button
                             onClick={(e) => {
@@ -485,6 +736,22 @@ export default function ClientProjectRequests() {
         <DetailsModal
           request={activeDetailsRequest}
           onClose={() => setActiveDetailsRequest(null)}
+        />
+      )}
+
+      {activeContractRequest && (
+        <ContractModal
+          request={activeContractRequest}
+          onClose={() => setActiveContractRequest(null)}
+          onSuccess={(id, name, at) => {
+            setRequests((prev) =>
+              prev.map((r) =>
+                r.id === id
+                  ? { ...r, contract_signed: true, contract_signed_name: name, contract_signed_at: at }
+                  : r
+              )
+            );
+          }}
         />
       )}
     </div>
