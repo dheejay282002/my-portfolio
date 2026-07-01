@@ -45,11 +45,6 @@ export default function ServicesSection() {
               }
             });
           }
-          // Fallback to middle package if no selection requests yet
-          if (popId === -1 && prods.length > 0) {
-            const midIndex = Math.floor(prods.length / 2);
-            popId = prods[midIndex].id;
-          }
           setPopularId(popId);
 
           // 2. Calculate Recommended automatically based on average price
@@ -89,7 +84,7 @@ export default function ServicesSection() {
   };
 
   return (
-    <section id="services" className="border-t border-white/5 px-6 py-24">
+    <section id="offers" className="border-t border-white/5 px-6 py-24">
       <ScrollReveal className="mx-auto max-w-7xl">
         <div className="text-center">
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
