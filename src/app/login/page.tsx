@@ -9,7 +9,7 @@ import LoadingOverlay from "@/components/LoadingOverlay";
 const HCAPTCHA_SITEKEY = "8986062e-d2ac-452e-ae48-c66a07e8b462";
 const SITEVERIFY_URL = "/api/verify-captcha";
 
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, X } from "lucide-react";
 
 type Mode = "login" | "signup" | "forgot" | "forgot-otp" | "reset-success";
 
@@ -28,14 +28,14 @@ export default function LoginPage() {
   // Login
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
-  const [loginError, setLoginError] = useState("");
+  const [loginError, _setLoginError] = useState("");
   const [loginLoading, setLoginLoading] = useState(false);
 
   // Signup
   const [signupName, setSignupName] = useState("");
   const [signupEmail, setSignupEmail] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
-  const [signupError, setSignupError] = useState("");
+  const [signupError, _setSignupError] = useState("");
   const [signupLoading, setSignupLoading] = useState(false);
   const [showOtp, setShowOtp] = useState(false);
   const [signupOtp, setSignupOtp] = useState("");
@@ -47,8 +47,25 @@ export default function LoginPage() {
   const [forgotOtp, setForgotOtp] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [forgotError, setForgotError] = useState("");
+  const [forgotError, _setForgotError] = useState("");
   const [forgotLoading, setForgotLoading] = useState(false);
+
+  const [errorModalMsg, setErrorModalMsg] = useState("");
+
+  const setLoginError = (msg: string) => {
+    _setLoginError(msg);
+    if (msg) setErrorModalMsg(msg);
+  };
+
+  const setSignupError = (msg: string) => {
+    _setSignupError(msg);
+    if (msg) setErrorModalMsg(msg);
+  };
+
+  const setForgotError = (msg: string) => {
+    _setForgotError(msg);
+    if (msg) setErrorModalMsg(msg);
+  };
 
   // hCaptcha — shared across login, signup, forgot
   const [captchaContext, setCaptchaContext] = useState<"login" | "signup" | "forgot" | null>(null);
@@ -384,12 +401,29 @@ export default function LoginPage() {
             </div>
 
             {!showOtp && !captchaContext && (
-              <div className="mt-8 flex rounded-xl border border-white/10 p-1">
+              <div className="mt-8 relative flex rounded-xl border border-white/10 p-1 bg-white/[0.02]">
+                {/* Sliding active pill indicator */}
+                <div
+                  className="absolute top-1 bottom-1 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 transition-all duration-300 ease-out"
+                  style={{
+                    left: tab === "login" ? "4px" : "50%",
+                    width: "calc(50% - 4px)",
+                  }}
+                />
                 {(["login", "signup"] as const).map((t) => (
-                  <button key={t} onClick={() => { setTab(t); setSignupError(""); setCaptchaContext(null); }}
-                    className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-all ${
-                      tab === t ? "bg-gradient-to-r from-cyan-500 to-blue-600 text-white" : "text-zinc-400 hover:text-white"
-                    }`}>
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => {
+                      setTab(t);
+                      _setSignupError("");
+                      _setLoginError("");
+                      setCaptchaContext(null);
+                    }}
+                    className={`relative z-10 flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors duration-300 ${
+                      tab === t ? "text-white" : "text-zinc-400 hover:text-white"
+                    }`}
+                  >
                     {t === "login" ? "Sign In" : "Sign Up"}
                   </button>
                 ))}
@@ -405,7 +439,6 @@ export default function LoginPage() {
                 <input type="text" maxLength={6} placeholder="000000" value={signupOtp}
                   onChange={(e) => setSignupOtp(e.target.value.replace(/\D/g, ""))} required
                   className={`${inputCls} text-center text-lg font-bold tracking-widest`} />
-                {signupError && <p className="text-sm text-red-400 text-center">{signupError}</p>}
                 <button type="submit" disabled={otpLoading} className={btnCls}>
                   {otpLoading ? "Verifying..." : "Verify Code & Register"}
                 </button>
@@ -414,64 +447,79 @@ export default function LoginPage() {
                     className="text-cyan-400 hover:text-cyan-300 disabled:opacity-50 transition-colors">
                     {resending ? "Resending..." : "Resend Code"}
                   </button>
-                  <button type="button" onClick={() => { setShowOtp(false); setCaptchaContext(null); setSignupError(""); }}
+                  <button type="button" onClick={() => { setShowOtp(false); setCaptchaContext(null); _setSignupError(""); }}
                     className="text-zinc-500 hover:text-zinc-300 transition-colors">Back to Edit Info</button>
                 </div>
               </form>
             )}
 
-            {/* Login Form */}
-            {!showOtp && !captchaContext && tab === "login" && (
-              <form onSubmit={handleLogin} className="mt-8 space-y-5">
-                <input type="email" placeholder="Email" value={loginEmail}
-                  onChange={(e) => setLoginEmail(e.target.value)} required className={inputCls} />
-                <div className="relative">
-                  <input type={showLoginPassword ? "text" : "password"} placeholder="Password" value={loginPassword}
-                    onChange={(e) => setLoginPassword(e.target.value)} required className="glass w-full rounded-xl pl-5 pr-11 py-3.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-cyan-500/50 transition-all" />
-                  <button
-                    type="button"
-                    onClick={() => setShowLoginPassword((v) => !v)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-200 transition-colors"
-                  >
-                    {showLoginPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
+            {/* Transition Container for Login / Signup Forms */}
+            {!showOtp && !captchaContext && (
+              <div className="relative mt-8">
+                {/* Login Form wrapper */}
+                <div
+                  className={`transition-all duration-300 transform ${
+                    tab === "login"
+                      ? "opacity-100 translate-x-0 relative"
+                      : "opacity-0 -translate-x-8 absolute pointer-events-none inset-x-0 top-0"
+                  }`}
+                >
+                  <form onSubmit={handleLogin} className="space-y-5">
+                    <input type="email" placeholder="Email" value={loginEmail}
+                      onChange={(e) => setLoginEmail(e.target.value)} required className={inputCls} />
+                    <div className="relative">
+                      <input type={showLoginPassword ? "text" : "password"} placeholder="Password" value={loginPassword}
+                        onChange={(e) => setLoginPassword(e.target.value)} required className="glass w-full rounded-xl pl-5 pr-11 py-3.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-cyan-500/50 transition-all" />
+                      <button
+                        type="button"
+                        onClick={() => setShowLoginPassword((v) => !v)}
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-200 transition-colors"
+                      >
+                        {showLoginPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
+                    <button type="submit" disabled={loginLoading} className={btnCls}>
+                      {loginLoading ? "Signing in..." : "Sign In"}
+                    </button>
+                    <div className="text-center pt-1">
+                      <button type="button" onClick={() => { setMode("forgot"); setForgotEmail(loginEmail); _setForgotError(""); }}
+                        className="text-xs text-cyan-400 hover:text-cyan-300 transition-colors">
+                        Forgot your password?
+                      </button>
+                    </div>
+                  </form>
                 </div>
-                {loginError && <p className="text-sm text-red-400">{loginError}</p>}
-                <button type="submit" disabled={loginLoading} className={btnCls}>
-                  {loginLoading ? "Signing in..." : "Sign In"}
-                </button>
-                <div className="text-center pt-1">
-                  <button type="button" onClick={() => { setMode("forgot"); setForgotEmail(loginEmail); setForgotError(""); }}
-                    className="text-xs text-cyan-400 hover:text-cyan-300 transition-colors">
-                    Forgot your password?
-                  </button>
-                </div>
-              </form>
-            )}
 
-            {/* Signup Form */}
-            {!showOtp && !captchaContext && tab === "signup" && (
-              <form onSubmit={handleSignup} className="mt-8 space-y-5">
-                <input type="text" placeholder="Full Name" value={signupName}
-                  onChange={(e) => setSignupName(e.target.value)} required className={inputCls} />
-                <input type="email" placeholder="Email" value={signupEmail}
-                  onChange={(e) => setSignupEmail(e.target.value)} required className={inputCls} />
-                <div className="relative">
-                  <input type={showSignupPassword ? "text" : "password"} placeholder="Password (min 6 characters)" value={signupPassword}
-                    onChange={(e) => setSignupPassword(e.target.value)} required minLength={6} className="glass w-full rounded-xl pl-5 pr-11 py-3.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-cyan-500/50 transition-all" />
-                  <button
-                    type="button"
-                    onClick={() => setShowSignupPassword((v) => !v)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-200 transition-colors"
-                  >
-                    {showSignupPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
+                {/* Signup Form wrapper */}
+                <div
+                  className={`transition-all duration-300 transform ${
+                    tab === "signup"
+                      ? "opacity-100 translate-x-0 relative"
+                      : "opacity-0 translate-x-8 absolute pointer-events-none inset-x-0 top-0"
+                  }`}
+                >
+                  <form onSubmit={handleSignup} className="space-y-5">
+                    <input type="text" placeholder="Full Name" value={signupName}
+                      onChange={(e) => setSignupName(e.target.value)} required className={inputCls} />
+                    <input type="email" placeholder="Email" value={signupEmail}
+                      onChange={(e) => setSignupEmail(e.target.value)} required className={inputCls} />
+                    <div className="relative">
+                      <input type={showSignupPassword ? "text" : "password"} placeholder="Password (min 6 characters)" value={signupPassword}
+                        onChange={(e) => setSignupPassword(e.target.value)} required minLength={6} className="glass w-full rounded-xl pl-5 pr-11 py-3.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-cyan-500/50 transition-all" />
+                      <button
+                        type="button"
+                        onClick={() => setShowSignupPassword((v) => !v)}
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-200 transition-colors"
+                      >
+                        {showSignupPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
+                    <button type="submit" className={btnCls}>
+                      Create Account
+                    </button>
+                  </form>
                 </div>
-                {signupError && <p className="text-sm text-red-400">{signupError}</p>}
-                <button type="submit" className={btnCls}>
-                  Create Account
-                </button>
-              </form>
+              </div>
             )}
 
             {/* CAPTCHA Step — shown after any form submission */}
@@ -484,18 +532,31 @@ export default function LoginPage() {
                 {captchaVerifying && (
                   <p className="text-center text-sm text-cyan-400">Verifying CAPTCHA...</p>
                 )}
-                {(captchaContext === "login" && loginError) ||
-                 (captchaContext === "forgot" && forgotError) ||
-                 (captchaContext === "signup" && signupError) ? (
-                  <p className="text-sm text-red-400 text-center">
-                    {captchaContext === "login" ? loginError : captchaContext === "forgot" ? forgotError : signupError}
-                  </p>
-                ) : null}
               </div>
             )}
           </>
         )}
       </div>
+
+      {/* Authentication Error Modal Overlay */}
+      {errorModalMsg && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="glass-strong mx-4 w-full max-w-sm rounded-2xl p-6 text-center shadow-2xl animate-in scale-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-500/10 text-red-500">
+              <X className="h-6 w-6" />
+            </div>
+            <h3 className="text-lg font-semibold text-white">Authentication Error</h3>
+            <p className="mt-2 text-sm text-zinc-400 leading-relaxed">{errorModalMsg}</p>
+            <button
+              type="button"
+              onClick={() => setErrorModalMsg("")}
+              className="mt-6 w-full rounded-xl bg-gradient-to-r from-red-500 to-red-600 px-4 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+            >
+              Okay
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Upload, X, Save, Eye, EyeOff } from "lucide-react";
+import { Upload, X, Save, Eye, EyeOff, Lock, CheckCircle, Loader2 } from "lucide-react";
 import Image from "next/image";
 
 export default function ProfileForm() {
@@ -23,9 +23,7 @@ export default function ProfileForm() {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState("");
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
 
   const [form, setForm] = useState({
     name: "",
@@ -36,9 +34,6 @@ export default function ProfileForm() {
     linkedin_url: "",
     twitter_url: "",
     email: "",
-    current_password: "",
-    password: "",
-    confirm_password: "",
   });
 
   useEffect(() => {
@@ -57,9 +52,6 @@ export default function ProfileForm() {
             linkedin_url: d.user.linkedin_url || "",
             twitter_url: d.user.twitter_url || "",
             email: d.user.email || "",
-            current_password: "",
-            password: "",
-            confirm_password: "",
           });
           setLoading(false);
         }
@@ -68,14 +60,6 @@ export default function ProfileForm() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (form.password && form.password !== form.confirm_password) {
-      setMessage("Passwords do not match");
-      return;
-    }
-    if (form.password && !form.current_password) {
-      setMessage("Current password is required to set a new password");
-      return;
-    }
     setSaving(true);
     setMessage("");
     try {
@@ -91,8 +75,6 @@ export default function ProfileForm() {
           linkedin_url: form.linkedin_url,
           twitter_url: form.twitter_url,
           email: user?.role === "admin" ? form.email : undefined,
-          current_password: form.password ? form.current_password : undefined,
-          password: form.password ? form.password : undefined,
         }),
       });
       
@@ -100,13 +82,7 @@ export default function ProfileForm() {
       if (res.ok) {
         if (data.user) {
           setUser(data.user);
-          setForm((f) => ({
-            ...f,
-            email: data.user.email || "",
-            current_password: "",
-            password: "",
-            confirm_password: "",
-          }));
+          setForm((f) => ({ ...f, email: data.user.email || "" }));
           router.refresh();
         }
         setMessage("Profile updated!");
@@ -220,66 +196,20 @@ export default function ProfileForm() {
             )}
           </div>
 
-          <div className="space-y-5 border-t border-white/5 pt-6">
-            <h3 className="text-sm font-semibold text-zinc-300">Change Password</h3>
-            <div className="grid gap-5 sm:grid-cols-3">
+          <div className="border-t border-white/5 pt-6">
+            <div className="flex items-center justify-between">
               <div>
-                <label className="mb-2 block text-xs text-zinc-500">Current Password</label>
-                <div className="relative">
-                  <input
-                    type={showCurrentPassword ? "text" : "password"}
-                    value={form.current_password}
-                    onChange={(e) => setForm({ ...form, current_password: e.target.value })}
-                    placeholder="••••••••"
-                    className="glass w-full rounded-xl pl-4 pr-11 py-3 text-sm text-white placeholder-zinc-600 outline-none focus:border-cyan-500/50"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowCurrentPassword((v) => !v)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-200 transition-colors"
-                  >
-                    {showCurrentPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                </div>
+                <h3 className="text-sm font-semibold text-zinc-300">Password</h3>
+                <p className="mt-0.5 text-xs text-zinc-500">Change your account password</p>
               </div>
-              <div>
-                <label className="mb-2 block text-xs text-zinc-500">New Password</label>
-                <div className="relative">
-                  <input
-                    type={showNewPassword ? "text" : "password"}
-                    value={form.password}
-                    onChange={(e) => setForm({ ...form, password: e.target.value })}
-                    placeholder="••••••••"
-                    className="glass w-full rounded-xl pl-4 pr-11 py-3 text-sm text-white placeholder-zinc-600 outline-none focus:border-cyan-500/50"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowNewPassword((v) => !v)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-200 transition-colors"
-                  >
-                    {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                </div>
-              </div>
-              <div>
-                <label className="mb-2 block text-xs text-zinc-500">Confirm New Password</label>
-                <div className="relative">
-                  <input
-                    type={showConfirmPassword ? "text" : "password"}
-                    value={form.confirm_password}
-                    onChange={(e) => setForm({ ...form, confirm_password: e.target.value })}
-                    placeholder="••••••••"
-                    className="glass w-full rounded-xl pl-4 pr-11 py-3 text-sm text-white placeholder-zinc-600 outline-none focus:border-cyan-500/50"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword((v) => !v)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-200 transition-colors"
-                  >
-                    {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                </div>
-              </div>
+              <button
+                type="button"
+                onClick={() => setShowPasswordModal(true)}
+                className="inline-flex items-center gap-2 rounded-xl bg-white/5 px-4 py-2.5 text-xs font-medium text-zinc-300 transition-colors hover:bg-white/10 hover:text-white"
+              >
+                <Lock className="h-3.5 w-3.5" />
+                Change Password
+              </button>
             </div>
           </div>
 
@@ -347,6 +277,212 @@ export default function ProfileForm() {
             {saving ? "Saving..." : "Save Changes"}
           </button>
         </form>
+
+        {/* ── Change Password Modal ── */}
+        {showPasswordModal && (
+          <ChangePasswordModal
+            onClose={() => setShowPasswordModal(false)}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ChangePasswordModal({ onClose }: { onClose: () => void }) {
+  const [step, setStep] = useState<"verify" | "change">("verify");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [error, setError] = useState("");
+  const [verifying, setVerifying] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const handleVerify = async () => {
+    if (!currentPassword) {
+      setError("Enter your current password");
+      return;
+    }
+    setVerifying(true);
+    setError("");
+    try {
+      const res = await fetch("/api/auth/profile/verify-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ current_password: currentPassword }),
+      });
+      const data = await res.json();
+      if (data.valid) {
+        setStep("change");
+      } else {
+        setError(data.error || "Current password is incorrect");
+      }
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!newPassword) {
+      setError("Enter a new password");
+      return;
+    }
+    if (newPassword.length < 6) {
+      setError("Password must be at least 6 characters");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+    setSaving(true);
+    setError("");
+    try {
+      const res = await fetch("/api/auth/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          current_password: currentPassword,
+          password: newPassword,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        onClose();
+      } else {
+        setError(data.error || "Failed to update password");
+      }
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
+      <div
+        className="glass-strong w-full max-w-md rounded-2xl p-6 relative"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="text-lg font-semibold text-white">
+            {step === "verify" ? "Verify Current Password" : "Set New Password"}
+          </h3>
+          <button
+            onClick={onClose}
+            className="text-zinc-500 transition-colors hover:text-white"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {step === "verify" ? (
+          <div className="space-y-4">
+            <div>
+              <label className="mb-2 block text-xs text-zinc-500">Current Password</label>
+              <div className="relative">
+                <input
+                  type={showCurrent ? "text" : "password"}
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleVerify(); } }}
+                  placeholder="Enter your current password"
+                  className="glass w-full rounded-xl pl-4 pr-11 py-3 text-sm text-white placeholder-zinc-600 outline-none focus:border-cyan-500/50"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowCurrent((v) => !v)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-200 transition-colors"
+                >
+                  {showCurrent ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+            </div>
+            {error && <p className="text-xs text-red-400">{error}</p>}
+            <button
+              type="button"
+              disabled={verifying}
+              onClick={handleVerify}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-8 py-3 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+            >
+              {verifying ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <CheckCircle className="h-4 w-4" />
+              )}
+              {verifying ? "Verifying..." : "Verify"}
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 rounded-xl bg-green-500/10 px-4 py-3">
+              <CheckCircle className="h-4 w-4 text-green-400 shrink-0" />
+              <p className="text-xs text-green-400">Current password verified</p>
+            </div>
+            <div>
+              <label className="mb-2 block text-xs text-zinc-500">New Password</label>
+              <div className="relative">
+                <input
+                  type={showNew ? "text" : "password"}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Min 6 characters"
+                  className="glass w-full rounded-xl pl-4 pr-11 py-3 text-sm text-white placeholder-zinc-600 outline-none focus:border-cyan-500/50"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowNew((v) => !v)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-200 transition-colors"
+                >
+                  {showNew ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+            </div>
+            <div>
+              <label className="mb-2 block text-xs text-zinc-500">Confirm New Password</label>
+              <div className="relative">
+                <input
+                  type={showConfirm ? "text" : "password"}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Re-enter new password"
+                  className="glass w-full rounded-xl pl-4 pr-11 py-3 text-sm text-white placeholder-zinc-600 outline-none focus:border-cyan-500/50"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirm((v) => !v)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-200 transition-colors"
+                >
+                  {showConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+            </div>
+            {error && <p className="text-xs text-red-400">{error}</p>}
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => { setStep("verify"); setError(""); }}
+                className="flex-1 rounded-xl border border-white/10 px-4 py-2.5 text-xs font-medium text-zinc-400 transition-colors hover:border-white/20 hover:text-white"
+              >
+                Back
+              </button>
+              <button
+                type="button"
+                disabled={saving}
+                onClick={handleSave}
+                className="flex-1 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-6 py-2.5 text-xs font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+              >
+                {saving ? "Saving..." : "Save New Password"}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
