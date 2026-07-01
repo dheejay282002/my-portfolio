@@ -74,23 +74,65 @@ const services = [
     description: "What's Included: WebSocket-based messaging, live notifications, video/voice call integration, typing indicators, read receipts, and scalable real-time infrastructure. | Best For: Platforms needing in-app chat, customer support tools, or collaboration features.",
     icon: "GitBranch",
   },
+  {
+    title: "Portfolio & Brand Websites",
+    description: "What's Included: Custom portfolio sites, business landing pages, agency websites, and personal brand pages with CMS integration, SEO optimization, and contact forms. | Best For: Freelancers, creatives, and businesses needing a professional online presence.",
+    icon: "Palette",
+  },
+  {
+    title: "SaaS Product Development",
+    description: "What's Included: Full SaaS architecture — multi-tenant databases, subscription billing (Stripe), user roles & permissions, onboarding flows, usage analytics, and admin dashboards. | Best For: Founders and product teams building subscription-based software platforms.",
+    icon: "Code2",
+  },
+  {
+    title: "Payment & Subscription Systems",
+    description: "What's Included: Stripe/PayPal/Lemon Squeezy integration, recurring billing, invoicing, refund handling, webhook event processing, tax calculation, and subscription management dashboards. | Best For: SaaS products, membership sites, and digital marketplaces.",
+    icon: "Globe",
+  },
+  {
+    title: "Authentication & User Systems",
+    description: "What's Included: OAuth login (Google, GitHub, Facebook), magic link auth, multi-factor authentication, session management, passwordless login, and role-based access control. | Best For: Any platform needing secure, flexible user authentication flows.",
+    icon: "Shield",
+  },
+  {
+    title: "Data Visualization & Dashboards",
+    description: "What's Included: Interactive charts, real-time dashboards, CSV/API data connectors, exportable reports, filterable tables, and key metric displays using Chart.js, Recharts, or D3. | Best For: Analytics platforms, admin panels, and business intelligence tools.",
+    icon: "Braces",
+  },
+  {
+    title: "Content Management Systems",
+    description: "What's Included: Custom CMS integration (Sanity, Contentful, Strapi), headless CMS setup, rich text editing, media libraries, version history, and preview workflows. | Best For: Content-heavy sites, blogs, news platforms, and marketing websites.",
+    icon: "Database",
+  },
+  {
+    title: "Testing & Quality Assurance",
+    description: "What's Included: Unit tests (Jest/Vitest), integration tests, end-to-end testing (Playwright/Cypress), API testing, visual regression testing, CI pipeline integration, and coverage reports. | Best For: Teams wanting reliable code with fewer production bugs.",
+    icon: "GitBranch",
+  },
+  {
+    title: "Search & Discovery Features",
+    description: "What's Included: Full-text search (PostgreSQL/Elasticsearch), filtered search with faceted navigation, autocomplete suggestions, relevance ranking, and search analytics. | Best For: E-commerce stores, directories, and content platforms with large inventories.",
+    icon: "Layers",
+  },
 ];
 
 async function main() {
-  const exists = await pool.query("SELECT COUNT(*)::int AS cnt FROM services");
-  if (exists.rows[0].cnt > 0) {
-    console.log(`Services table already has ${exists.rows[0].cnt} entries — skipping seed.`);
-    await pool.end();
-    return;
-  }
-
+  const existing = await pool.query("SELECT title FROM services");
+  const existingTitles = new Set(existing.rows.map((r) => r.title));
+  let added = 0;
   for (const s of services) {
+    if (existingTitles.has(s.title)) continue;
     await pool.query(
       "INSERT INTO services (title, description, icon) VALUES ($1, $2, $3)",
       [s.title, s.description, s.icon]
     );
+    added++;
   }
-  console.log(`Seeded ${services.length} services successfully.`);
+  if (added === 0) {
+    console.log(`All ${services.length} services already exist — nothing to add.`);
+  } else {
+    console.log(`Added ${added} new service${added > 1 ? "s" : ""}. Total in database: ${existing.rows.length + added}.`);
+  }
   await pool.end();
 }
 

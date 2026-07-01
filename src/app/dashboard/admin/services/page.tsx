@@ -138,15 +138,13 @@ export default function ServicesPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          {services.length === 0 && (
-            <button
-              onClick={handleSeed}
-              disabled={seeding}
-              className="inline-flex items-center gap-2 rounded-xl border border-cyan-500/20 bg-cyan-500/10 px-5 py-2.5 text-sm font-medium text-cyan-400 transition-all hover:bg-cyan-500/20 disabled:opacity-50"
-            >
-              {seeding ? "Restoring..." : "Restore Defaults"}
-            </button>
-          )}
+          <button
+            onClick={handleSeed}
+            disabled={seeding}
+            className="inline-flex items-center gap-2 rounded-xl border border-cyan-500/20 bg-cyan-500/10 px-5 py-2.5 text-sm font-medium text-cyan-400 transition-all hover:bg-cyan-500/20 disabled:opacity-50"
+          >
+            {seeding ? "Adding..." : "Add Default Set"}
+          </button>
           <button
             onClick={openAdd}
             className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-5 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"

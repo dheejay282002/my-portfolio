@@ -1,8 +1,10 @@
 -- Seed services table with realistic default offerings
 -- Run: psql -d portfolio -p 3305 -f scripts/seed-services.sql
+-- Safe to run multiple times — skips titles that already exist.
 
 INSERT INTO services (title, description, icon)
-SELECT * FROM (VALUES
+SELECT v.title, v.description, v.icon
+FROM (VALUES
   ('Full-Stack Web Development', 'What''s Included: Custom web apps built with Next.js, React, TypeScript, and Node.js. Authentication, databases, admin panels, payment integration, and responsive design. | Best For: Startups, small businesses, and founders launching a digital product.', 'Code2'),
   ('API Development & Integration', 'What''s Included: RESTful & GraphQL API design, third-party integrations (Stripe, Twilio, OpenAI, Google), webhook setup, rate limiting, and auto-generated API docs. | Best For: Products that need to connect external services or expose data to partners.', 'Braces'),
   ('E-Commerce Development', 'What''s Included: Custom online stores, payment gateway setup (Stripe, PayPal, GCash), inventory management, shopping cart, order tracking, and checkout optimization. | Best For: Retailers, digital product sellers, and small e-commerce brands.', 'Globe'),
@@ -14,6 +16,16 @@ SELECT * FROM (VALUES
   ('Maintenance & Support', 'What''s Included: Bug fixes, dependency updates, security patches, uptime monitoring, performance checks, and priority email support with same-day response. | Best For: Businesses that need their site running smoothly without hiring a full-time developer.', 'Server'),
   ('Technical Consultation & Code Review', 'What''s Included: Architecture review, security audit, code quality assessment, tech stack recommendations, performance analysis, and a detailed improvement roadmap. | Best For: Teams wanting an expert second opinion before or after a major launch.', 'Shield'),
   ('Cloud Deployment & DevOps', 'What''s Included: Vercel, AWS, or DigitalOcean setup. CI/CD pipelines, Docker containerization, SSL configuration, environment management, and deployment automation. | Best For: Developers and teams wanting reliable, automated deployments.', 'Cloud'),
-  ('Chat & Real-Time Features', 'What''s Included: WebSocket-based messaging, live notifications, video/voice call integration, typing indicators, read receipts, and scalable real-time infrastructure. | Best For: Platforms needing in-app chat, customer support tools, or collaboration features.', 'GitBranch')
+  ('Chat & Real-Time Features', 'What''s Included: WebSocket-based messaging, live notifications, video/voice call integration, typing indicators, read receipts, and scalable real-time infrastructure. | Best For: Platforms needing in-app chat, customer support tools, or collaboration features.', 'GitBranch'),
+  ('Portfolio & Brand Websites', 'What''s Included: Custom portfolio sites, business landing pages, agency websites, and personal brand pages with CMS integration, SEO optimization, and contact forms. | Best For: Freelancers, creatives, and businesses needing a professional online presence.', 'Palette'),
+  ('SaaS Product Development', 'What''s Included: Full SaaS architecture — multi-tenant databases, subscription billing (Stripe), user roles & permissions, onboarding flows, usage analytics, and admin dashboards. | Best For: Founders and product teams building subscription-based software platforms.', 'Code2'),
+  ('Payment & Subscription Systems', 'What''s Included: Stripe/PayPal/Lemon Squeezy integration, recurring billing, invoicing, refund handling, webhook event processing, tax calculation, and subscription management dashboards. | Best For: SaaS products, membership sites, and digital marketplaces.', 'Globe'),
+  ('Authentication & User Systems', 'What''s Included: OAuth login (Google, GitHub, Facebook), magic link auth, multi-factor authentication, session management, passwordless login, and role-based access control. | Best For: Any platform needing secure, flexible user authentication flows.', 'Shield'),
+  ('Data Visualization & Dashboards', 'What''s Included: Interactive charts, real-time dashboards, CSV/API data connectors, exportable reports, filterable tables, and key metric displays using Chart.js, Recharts, or D3. | Best For: Analytics platforms, admin panels, and business intelligence tools.', 'Braces'),
+  ('Content Management Systems', 'What''s Included: Custom CMS integration (Sanity, Contentful, Strapi), headless CMS setup, rich text editing, media libraries, version history, and preview workflows. | Best For: Content-heavy sites, blogs, news platforms, and marketing websites.', 'Database'),
+  ('Testing & Quality Assurance', 'What''s Included: Unit tests (Jest/Vitest), integration tests, end-to-end testing (Playwright/Cypress), API testing, visual regression testing, CI pipeline integration, and coverage reports. | Best For: Teams wanting reliable code with fewer production bugs.', 'GitBranch'),
+  ('Search & Discovery Features', 'What''s Included: Full-text search (PostgreSQL/Elasticsearch), filtered search with faceted navigation, autocomplete suggestions, relevance ranking, and search analytics. | Best For: E-commerce stores, directories, and content platforms with large inventories.', 'Layers')
 ) AS v(title, description, icon)
-WHERE NOT EXISTS (SELECT 1 FROM services LIMIT 1);
+WHERE NOT EXISTS (
+  SELECT 1 FROM services s WHERE s.title = v.title
+);
