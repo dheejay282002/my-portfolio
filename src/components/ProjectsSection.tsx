@@ -146,6 +146,8 @@ export default function ProjectsSection() {
   const pausedForDrag = useRef(false);
   const lastPausedCardIndexRef = useRef<number>(-1);
   const resumeScrollAtRef = useRef<number>(0);
+  const scrollDirectionRef = useRef<number>(1);
+  const touchStartRef = useRef<number>(0);
 
   const REPEAT_COUNT = 6;
   const repeatedProjects = Array.from({ length: REPEAT_COUNT }, () => projects).flat();
@@ -255,7 +257,7 @@ export default function ProjectsSection() {
       if (container && !pausedRef.current && !pausedForDrag.current) {
         const now = Date.now();
         if (now >= resumeScrollAtRef.current) {
-          container.scrollLeft += 0.8;
+          container.scrollLeft += 0.8 * scrollDirectionRef.current;
 
           // Check if any card is now centered
           const containerCenter = container.scrollLeft + container.clientWidth / 2;
@@ -272,6 +274,11 @@ export default function ProjectsSection() {
               closestIndex = idx;
             }
           });
+
+          // Reset lastPausedCardIndexRef when card moves away from center
+          if (closestIndex !== lastPausedCardIndexRef.current && minDistance > 5) {
+            lastPausedCardIndexRef.current = -1;
+          }
 
           // Since scroll step is 0.8px, a threshold of 0.6px guarantees at least one frame lands in the target area
           if (minDistance < 0.6 && closestIndex !== lastPausedCardIndexRef.current) {
@@ -316,7 +323,10 @@ export default function ProjectsSection() {
     e.preventDefault();
     const x = e.pageX - container.offsetLeft;
     const walk = (x - dragState.current.startX) * 1.5;
-    if (Math.abs(walk) > 5) dragState.current.moved = true;
+    if (Math.abs(walk) > 5) {
+      dragState.current.moved = true;
+      scrollDirectionRef.current = walk > 0 ? -1 : 1;
+    }
     container.scrollLeft = dragState.current.scrollLeft - walk;
   }, []);
 
@@ -329,6 +339,27 @@ export default function ProjectsSection() {
     if (dragState.current.moved) return;
     pausedRef.current = true;
     setModalProject(project);
+  }, []);
+
+  const handleWheel = useCallback((e: React.WheelEvent) => {
+    if (Math.abs(e.deltaX) > 0.5) {
+      scrollDirectionRef.current = e.deltaX > 0 ? 1 : -1;
+      lastPausedCardIndexRef.current = -1;
+    }
+  }, []);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartRef.current = e.touches[0].clientX;
+    lastPausedCardIndexRef.current = -1;
+  }, []);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    const currentX = e.touches[0].clientX;
+    const diff = currentX - touchStartRef.current;
+    if (Math.abs(diff) > 5) {
+      scrollDirectionRef.current = diff > 0 ? -1 : 1;
+      touchStartRef.current = currentX;
+    }
   }, []);
 
   if (projects.length === 0) return null;
@@ -357,6 +388,9 @@ export default function ProjectsSection() {
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
           onScroll={handleScroll}
+          onWheel={handleWheel}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
           className="flex gap-6 items-center overflow-x-auto scrollbar-hide py-12 px-6 select-none"
         >
           {repeatedProjects.map((project, idx) => (
