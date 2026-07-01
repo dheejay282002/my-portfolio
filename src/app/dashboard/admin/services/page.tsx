@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Pencil, Trash2, X, Code2, Shield, Server, Globe, Database, GitBranch } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Code2, Shield, Server, Globe, Database, GitBranch, Smartphone, Palette, Cloud, Braces, Layers, Rocket } from "lucide-react";
 import Skeleton from "@/components/Skeleton";
 
-const iconOptions = ["Code2", "Shield", "Server", "Globe", "Database", "GitBranch"];
+const iconOptions = ["Code2", "Shield", "Server", "Globe", "Database", "GitBranch", "Smartphone", "Palette", "Cloud", "Braces", "Layers", "Rocket"];
 
 interface Service {
   id: number;
@@ -74,7 +74,7 @@ export default function ServicesPage() {
   };
 
   const iconMap: Record<string, React.ElementType> = {
-    Code2, Shield, Server, Globe, Database, GitBranch,
+    Code2, Shield, Server, Globe, Database, GitBranch, Smartphone, Palette, Cloud, Braces, Layers, Rocket,
   };
 
   if (loading) {

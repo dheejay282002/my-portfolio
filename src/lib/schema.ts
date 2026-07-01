@@ -56,6 +56,18 @@ export async function ensureCallTables() {
   `);
 }
 
+export async function ensureServicesTable() {
+  await execute(`
+    CREATE TABLE IF NOT EXISTS services (
+      id SERIAL PRIMARY KEY,
+      title TEXT NOT NULL,
+      description TEXT NOT NULL,
+      icon TEXT NOT NULL DEFAULT 'Code2',
+      created_at TIMESTAMP DEFAULT NOW()
+    )
+  `);
+}
+
 export async function ensureSecurityTables() {
   await execute(`
     CREATE TABLE IF NOT EXISTS security_events (

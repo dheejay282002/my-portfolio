@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import { queryAll, queryOne } from "@/lib/db";
 import { getSession } from "@/lib/auth";
+import { ensureServicesTable } from "@/lib/schema";
 
 export async function GET() {
   try {
+    await ensureServicesTable();
     const services = await queryAll("SELECT * FROM services ORDER BY created_at DESC");
     return NextResponse.json({ services });
   } catch (err: any) {

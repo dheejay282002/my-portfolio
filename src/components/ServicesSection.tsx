@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Code2, Shield, Server, Globe, Database, GitBranch } from "lucide-react";
+import { Code2, Shield, Server, Globe, Database, GitBranch, Smartphone, Palette, Cloud, Braces, Layers, Rocket } from "lucide-react";
 import ScrollReveal from "./ScrollReveal";
 
 const iconMap: Record<string, React.ElementType> = {
-  Code2, Shield, Server, Globe, Database, GitBranch,
+  Code2, Shield, Server, Globe, Database, GitBranch, Smartphone, Palette, Cloud, Braces, Layers, Rocket,
 };
 
 interface Service {
