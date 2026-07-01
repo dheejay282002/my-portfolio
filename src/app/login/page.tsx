@@ -9,6 +9,8 @@ import LoadingOverlay from "@/components/LoadingOverlay";
 const HCAPTCHA_SITEKEY = "8986062e-d2ac-452e-ae48-c66a07e8b462";
 const SITEVERIFY_URL = "/api/verify-captcha";
 
+import { Eye, EyeOff } from "lucide-react";
+
 type Mode = "login" | "signup" | "forgot" | "forgot-otp" | "reset-success";
 
 export default function LoginPage() {
@@ -16,6 +18,12 @@ export default function LoginPage() {
   const { settings } = useWebSettings();
   const [tab, setTab] = useState<"login" | "signup">("login");
   const [mode, setMode] = useState<Mode>("login");
+
+  // Show/Hide password toggles
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [showSignupPassword, setShowSignupPassword] = useState(false);
+  const [showResetNewPassword, setShowResetNewPassword] = useState(false);
+  const [showResetConfirmPassword, setShowResetConfirmPassword] = useState(false);
 
   // Login
   const [loginEmail, setLoginEmail] = useState("");
@@ -74,6 +82,7 @@ export default function LoginPage() {
         else setSignupError(err);
         if ((window as any).hcaptcha) (window as any).hcaptcha.reset();
         setCaptchaVerifying(false);
+        setCaptchaContext(null);
         return;
       }
 
@@ -84,7 +93,12 @@ export default function LoginPage() {
           body: JSON.stringify({ email: loginEmail, password: loginPassword }),
         });
         const data = await res.json();
-        if (!res.ok) { setLoginError(data.error || "Login failed"); setCaptchaVerifying(false); return; }
+        if (!res.ok) {
+          setLoginError(data.error || "Login failed");
+          setCaptchaVerifying(false);
+          setCaptchaContext(null);
+          return;
+        }
         router.push(data.user.role === "admin" ? "/dashboard/admin" : "/dashboard/client");
         router.refresh();
       } else if (captchaContext === "signup") {
@@ -94,8 +108,14 @@ export default function LoginPage() {
           body: JSON.stringify({ name: signupName, email: signupEmail }),
         });
         const data = await res.json();
-        if (!res.ok) { setSignupError(data.error || "Signup failed"); setCaptchaVerifying(false); return; }
+        if (!res.ok) {
+          setSignupError(data.error || "Signup failed");
+          setCaptchaVerifying(false);
+          setCaptchaContext(null);
+          return;
+        }
         setShowOtp(true);
+        setCaptchaContext(null);
       } else if (captchaContext === "forgot") {
         const res = await fetch("/api/auth/forgot-password", {
           method: "POST",
@@ -103,14 +123,21 @@ export default function LoginPage() {
           body: JSON.stringify({ email: forgotEmail }),
         });
         const data = await res.json();
-        if (!res.ok) { setForgotError(data.error || "Failed"); setCaptchaVerifying(false); return; }
+        if (!res.ok) {
+          setForgotError(data.error || "Failed");
+          setCaptchaVerifying(false);
+          setCaptchaContext(null);
+          return;
+        }
         setMode("forgot-otp");
+        setCaptchaContext(null);
       }
     } catch {
       const err = "Something went wrong";
       if (captchaContext === "login") setLoginError(err);
       else if (captchaContext === "forgot") setForgotError(err);
       else setSignupError(err);
+      setCaptchaContext(null);
     }
     finally { setCaptchaVerifying(false); }
   }, [captchaContext, loginEmail, loginPassword, signupName, signupEmail, forgotEmail, router]);
@@ -243,10 +270,28 @@ export default function LoginPage() {
                 onChange={(e) => setForgotOtp(e.target.value.replace(/\D/g, ""))}
                 required className={`${inputCls} text-center text-lg font-bold tracking-widest`}
               />
-              <input type="password" placeholder="New Password" value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)} required minLength={6} className={inputCls} />
-              <input type="password" placeholder="Confirm New Password" value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)} required minLength={6} className={inputCls} />
+              <div className="relative">
+                <input type={showResetNewPassword ? "text" : "password"} placeholder="New Password" value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)} required minLength={6} className="glass w-full rounded-xl pl-5 pr-11 py-3.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-cyan-500/50 transition-all" />
+                <button
+                  type="button"
+                  onClick={() => setShowResetNewPassword((v) => !v)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-200 transition-colors"
+                >
+                  {showResetNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+              <div className="relative">
+                <input type={showResetConfirmPassword ? "text" : "password"} placeholder="Confirm New Password" value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)} required minLength={6} className="glass w-full rounded-xl pl-5 pr-11 py-3.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-cyan-500/50 transition-all" />
+                <button
+                  type="button"
+                  onClick={() => setShowResetConfirmPassword((v) => !v)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-200 transition-colors"
+                >
+                  {showResetConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
               {forgotError && <p className="text-sm text-red-400 text-center">{forgotError}</p>}
               <button type="submit" disabled={forgotLoading} className={btnCls}>
                 {forgotLoading ? "Resetting..." : "Reset Password"}
@@ -380,8 +425,17 @@ export default function LoginPage() {
               <form onSubmit={handleLogin} className="mt-8 space-y-5">
                 <input type="email" placeholder="Email" value={loginEmail}
                   onChange={(e) => setLoginEmail(e.target.value)} required className={inputCls} />
-                <input type="password" placeholder="Password" value={loginPassword}
-                  onChange={(e) => setLoginPassword(e.target.value)} required className={inputCls} />
+                <div className="relative">
+                  <input type={showLoginPassword ? "text" : "password"} placeholder="Password" value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)} required className="glass w-full rounded-xl pl-5 pr-11 py-3.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-cyan-500/50 transition-all" />
+                  <button
+                    type="button"
+                    onClick={() => setShowLoginPassword((v) => !v)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-200 transition-colors"
+                  >
+                    {showLoginPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
                 {loginError && <p className="text-sm text-red-400">{loginError}</p>}
                 <button type="submit" disabled={loginLoading} className={btnCls}>
                   {loginLoading ? "Signing in..." : "Sign In"}
@@ -402,8 +456,17 @@ export default function LoginPage() {
                   onChange={(e) => setSignupName(e.target.value)} required className={inputCls} />
                 <input type="email" placeholder="Email" value={signupEmail}
                   onChange={(e) => setSignupEmail(e.target.value)} required className={inputCls} />
-                <input type="password" placeholder="Password (min 6 characters)" value={signupPassword}
-                  onChange={(e) => setSignupPassword(e.target.value)} required minLength={6} className={inputCls} />
+                <div className="relative">
+                  <input type={showSignupPassword ? "text" : "password"} placeholder="Password (min 6 characters)" value={signupPassword}
+                    onChange={(e) => setSignupPassword(e.target.value)} required minLength={6} className="glass w-full rounded-xl pl-5 pr-11 py-3.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-cyan-500/50 transition-all" />
+                  <button
+                    type="button"
+                    onClick={() => setShowSignupPassword((v) => !v)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-200 transition-colors"
+                  >
+                    {showSignupPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
                 {signupError && <p className="text-sm text-red-400">{signupError}</p>}
                 <button type="submit" className={btnCls}>
                   Create Account

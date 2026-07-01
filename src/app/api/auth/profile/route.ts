@@ -17,7 +17,8 @@ export async function PATCH(req: Request) {
       linkedin_url, 
       twitter_url,
       email,
-      password 
+      password,
+      current_password,
     } = await req.json();
 
     if (user.role === "admin") {
@@ -31,11 +32,21 @@ export async function PATCH(req: Request) {
         }
         await execute("UPDATE users SET email = $1 WHERE id = $2", [email, user.id]);
       }
+    }
 
-      if (password) {
-        const hash = bcrypt.hashSync(password, 10);
-        await execute("UPDATE users SET password = $1 WHERE id = $2", [hash, user.id]);
+    if (password) {
+      if (!current_password) {
+        return NextResponse.json({ error: "Current password is required to set a new password" }, { status: 400 });
       }
+      const stored = await queryOne(
+        "SELECT password FROM users WHERE id = $1",
+        [user.id]
+      ) as { password: string } | null;
+      if (!stored || !bcrypt.compareSync(current_password, stored.password)) {
+        return NextResponse.json({ error: "Current password is incorrect" }, { status: 400 });
+      }
+      const hash = bcrypt.hashSync(password, 10);
+      await execute("UPDATE users SET password = $1 WHERE id = $2", [hash, user.id]);
     }
     
     await execute(

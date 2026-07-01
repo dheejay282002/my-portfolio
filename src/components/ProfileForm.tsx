@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Upload, X, Save } from "lucide-react";
+import { Upload, X, Save, Eye, EyeOff } from "lucide-react";
 import Image from "next/image";
 
 export default function ProfileForm() {
@@ -23,6 +23,9 @@ export default function ProfileForm() {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState("");
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [form, setForm] = useState({
     name: "",
@@ -33,6 +36,7 @@ export default function ProfileForm() {
     linkedin_url: "",
     twitter_url: "",
     email: "",
+    current_password: "",
     password: "",
     confirm_password: "",
   });
@@ -53,6 +57,7 @@ export default function ProfileForm() {
             linkedin_url: d.user.linkedin_url || "",
             twitter_url: d.user.twitter_url || "",
             email: d.user.email || "",
+            current_password: "",
             password: "",
             confirm_password: "",
           });
@@ -65,6 +70,10 @@ export default function ProfileForm() {
     e.preventDefault();
     if (form.password && form.password !== form.confirm_password) {
       setMessage("Passwords do not match");
+      return;
+    }
+    if (form.password && !form.current_password) {
+      setMessage("Current password is required to set a new password");
       return;
     }
     setSaving(true);
@@ -82,7 +91,8 @@ export default function ProfileForm() {
           linkedin_url: form.linkedin_url,
           twitter_url: form.twitter_url,
           email: user?.role === "admin" ? form.email : undefined,
-          password: user?.role === "admin" && form.password ? form.password : undefined,
+          current_password: form.password ? form.current_password : undefined,
+          password: form.password ? form.password : undefined,
         }),
       });
       
@@ -93,6 +103,7 @@ export default function ProfileForm() {
           setForm((f) => ({
             ...f,
             email: data.user.email || "",
+            current_password: "",
             password: "",
             confirm_password: "",
           }));
@@ -209,30 +220,68 @@ export default function ProfileForm() {
             )}
           </div>
 
-          {user?.role === "admin" && (
-            <div className="grid gap-6 sm:grid-cols-2">
+          <div className="space-y-5 border-t border-white/5 pt-6">
+            <h3 className="text-sm font-semibold text-zinc-300">Change Password</h3>
+            <div className="grid gap-5 sm:grid-cols-3">
               <div>
-                <label className="mb-2 block text-xs text-zinc-500">New Password (leave blank to keep current)</label>
-                <input
-                  type="password"
-                  value={form.password}
-                  onChange={(e) => setForm({ ...form, password: e.target.value })}
-                  placeholder="••••••••"
-                  className="glass w-full rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-600 outline-none focus:border-cyan-500/50"
-                />
+                <label className="mb-2 block text-xs text-zinc-500">Current Password</label>
+                <div className="relative">
+                  <input
+                    type={showCurrentPassword ? "text" : "password"}
+                    value={form.current_password}
+                    onChange={(e) => setForm({ ...form, current_password: e.target.value })}
+                    placeholder="••••••••"
+                    className="glass w-full rounded-xl pl-4 pr-11 py-3 text-sm text-white placeholder-zinc-600 outline-none focus:border-cyan-500/50"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowCurrentPassword((v) => !v)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-200 transition-colors"
+                  >
+                    {showCurrentPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="mb-2 block text-xs text-zinc-500">New Password</label>
+                <div className="relative">
+                  <input
+                    type={showNewPassword ? "text" : "password"}
+                    value={form.password}
+                    onChange={(e) => setForm({ ...form, password: e.target.value })}
+                    placeholder="••••••••"
+                    className="glass w-full rounded-xl pl-4 pr-11 py-3 text-sm text-white placeholder-zinc-600 outline-none focus:border-cyan-500/50"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword((v) => !v)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-200 transition-colors"
+                  >
+                    {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
               </div>
               <div>
                 <label className="mb-2 block text-xs text-zinc-500">Confirm New Password</label>
-                <input
-                  type="password"
-                  value={form.confirm_password}
-                  onChange={(e) => setForm({ ...form, confirm_password: e.target.value })}
-                  placeholder="••••••••"
-                  className="glass w-full rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-600 outline-none focus:border-cyan-500/50"
-                />
+                <div className="relative">
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    value={form.confirm_password}
+                    onChange={(e) => setForm({ ...form, confirm_password: e.target.value })}
+                    placeholder="••••••••"
+                    className="glass w-full rounded-xl pl-4 pr-11 py-3 text-sm text-white placeholder-zinc-600 outline-none focus:border-cyan-500/50"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword((v) => !v)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-200 transition-colors"
+                  >
+                    {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
               </div>
             </div>
-          )}
+          </div>
 
           <div>
             <label className="mb-2 block text-xs text-zinc-500">About Me</label>
