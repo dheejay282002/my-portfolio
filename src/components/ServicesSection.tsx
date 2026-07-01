@@ -18,10 +18,15 @@ interface Service {
 export default function ServicesSection() {
   const [services, setServices] = useState<Service[]>([]);
 
-  useEffect(() => {
-    fetch("/api/services")
+  const fetchServices = () => {
+    fetch("/api/services", { cache: "no-store" })
       .then((r) => r.json())
-      .then((d) => setServices(d.services || []));
+      .then((d) => { if (d.services) setServices(d.services); })
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    fetchServices();
   }, []);
 
   if (services.length === 0) return null;

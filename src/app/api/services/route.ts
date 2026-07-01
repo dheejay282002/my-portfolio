@@ -3,11 +3,15 @@ import { queryAll, queryOne } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { ensureServicesTable } from "@/lib/schema";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   try {
     await ensureServicesTable();
     const services = await queryAll("SELECT * FROM services ORDER BY created_at DESC");
-    return NextResponse.json({ services });
+    return NextResponse.json({ services }, {
+      headers: { "Cache-Control": "no-cache, no-store, must-revalidate" },
+    });
   } catch (err: any) {
     return NextResponse.json({ error: err.message || "Something went wrong" }, { status: 500 });
   }
@@ -19,6 +23,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
 
   try {
+    await ensureServicesTable();
     const { title, description, icon } = await req.json();
     if (!title || !description)
       return NextResponse.json({ error: "Required fields missing" }, { status: 400 });

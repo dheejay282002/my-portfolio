@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { execute } from "@/lib/db";
 import { getSession } from "@/lib/auth";
+import { ensureServicesTable } from "@/lib/schema";
+
+export const dynamic = "force-dynamic";
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await getSession();
@@ -8,6 +11,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
 
   try {
+    await ensureServicesTable();
     const { id } = await params;
     const { title, description, icon } = await req.json();
     const fields: string[] = [];
@@ -32,6 +36,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
 
   try {
+    await ensureServicesTable();
     const { id } = await params;
     await execute("DELETE FROM services WHERE id = $1", [Number(id)]);
     return NextResponse.json({ success: true });
