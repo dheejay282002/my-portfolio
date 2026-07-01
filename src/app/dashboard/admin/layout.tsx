@@ -17,11 +17,13 @@ import {
   Menu,
   Mail,
   Globe,
+  ShoppingBag,
 } from "lucide-react";
 
 const navItems = [
   { label: "User Management", href: "/dashboard/admin/users", icon: Users },
   { label: "Projects", href: "/dashboard/admin/projects", icon: FolderKanban },
+  { label: "Products", href: "/dashboard/admin/products", icon: ShoppingBag },
   { label: "Services", href: "/dashboard/admin/services", icon: Wrench },
   { label: "Skills", href: "/dashboard/admin/skills", icon: BarChart3 },
   { label: "Project Requests", href: "/dashboard/admin/project-requests", icon: ClipboardList },

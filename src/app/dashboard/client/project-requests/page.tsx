@@ -13,6 +13,7 @@ interface ProjectRequest {
   created_at: string;
   rating?: number | null;
   review_content?: string | null;
+  package_tier?: string;
 }
 
 const statusColors: Record<string, string> = {
@@ -250,6 +251,13 @@ function DetailsModal({ request, onClose }: DetailsModalProps) {
             <p className="mt-1 text-sm font-semibold text-white">{request.project_name}</p>
           </div>
 
+          {request.package_tier && (
+            <div>
+              <p className="text-xs text-zinc-500">Selected Package</p>
+              <p className="mt-1 text-sm font-semibold text-cyan-400">{request.package_tier}</p>
+            </div>
+          )}
+
           <div>
             <p className="text-xs text-zinc-500">Description</p>
             <p className="mt-1.5 text-xs text-zinc-300 whitespace-pre-wrap bg-white/2 rounded-xl p-4 border border-white/5 leading-relaxed">
@@ -390,7 +398,14 @@ export default function ClientProjectRequests() {
                       onClick={() => setActiveDetailsRequest(req)}
                     >
                       <td className="px-6 py-4">
-                        <div className="font-semibold text-white">{req.project_name}</div>
+                        <div className="flex items-center gap-2">
+                          <div className="font-semibold text-white">{req.project_name}</div>
+                          {req.package_tier && (
+                            <span className="rounded-full bg-blue-500/10 px-2 py-0.5 text-[9px] font-medium text-blue-400">
+                              {req.package_tier}
+                            </span>
+                          )}
+                        </div>
                         <div className="text-xs text-zinc-500 line-clamp-1 max-w-xs">{req.description}</div>
                       </td>
                       <td className="px-6 py-4">

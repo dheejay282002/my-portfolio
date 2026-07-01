@@ -18,29 +18,8 @@ export default function ServicesPage() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Service | null>(null);
-  const [form, setForm] = useState({ title: "", description: "", icon: "Code2" });
+  const [form, setForm] = useState({ title: "", description: "", best_for: "", icon: "Code2" });
   const [saving, setSaving] = useState(false);
-  const [seeding, setSeeding] = useState(false);
-  const [seedMessage, setSeedMessage] = useState("");
-
-  const handleSeed = async () => {
-    setSeeding(true);
-    setSeedMessage("");
-    try {
-      const res = await fetch("/api/admin/seed-services", { method: "POST" });
-      const data = await res.json();
-      setSeedMessage(data.message || data.error || "Done");
-      if (res.ok) {
-        const r = await fetch("/api/services");
-        const d = await r.json();
-        setServices(d.services || []);
-      }
-    } catch {
-      setSeedMessage("Failed to seed services");
-    } finally {
-      setSeeding(false);
-    }
-  };
 
   useEffect(() => {
     fetch("/api/services")
@@ -50,37 +29,43 @@ export default function ServicesPage() {
 
   const openAdd = () => {
     setEditing(null);
-    setForm({ title: "", description: "", icon: "Code2" });
+    setForm({ title: "", description: "", best_for: "", icon: "Code2" });
     setShowModal(true);
   };
 
   const openEdit = (s: Service) => {
     setEditing(s);
-    setForm({ title: s.title, description: s.description, icon: s.icon });
+    const parts = s.description.split("|").map((p: string) => p.trim());
+    const desc = parts[0]?.replace("What's Included: ", "") || s.description;
+    const best = parts[1]?.replace("Best For: ", "") || "";
+    setForm({ title: s.title, description: desc, best_for: best, icon: s.icon });
     setShowModal(true);
   };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
+    const fullDesc = form.best_for
+      ? `What's Included: ${form.description} | Best For: ${form.best_for}`
+      : form.description;
     try {
       if (editing) {
         await fetch(`/api/services/${editing.id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(form),
+          body: JSON.stringify({ ...form, description: fullDesc }),
         });
         setServices((p) =>
-          p.map((s) => (s.id === editing.id ? { ...s, ...form } : s))
+          p.map((s) => (s.id === editing.id ? { ...s, ...form, description: fullDesc } : s))
         );
       } else {
         const res = await fetch("/api/services", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(form),
+          body: JSON.stringify({ ...form, description: fullDesc }),
         });
         const data = await res.json();
-        setServices((p) => [...p, { id: data.id, ...form }]);
+        setServices((p) => [...p, { id: data.id, ...form, description: fullDesc }]);
       }
       setShowModal(false);
     } finally {
@@ -139,13 +124,6 @@ export default function ServicesPage() {
         </div>
         <div className="flex items-center gap-3">
           <button
-            onClick={handleSeed}
-            disabled={seeding}
-            className="inline-flex items-center gap-2 rounded-xl border border-cyan-500/20 bg-cyan-500/10 px-5 py-2.5 text-sm font-medium text-cyan-400 transition-all hover:bg-cyan-500/20 disabled:opacity-50"
-          >
-            {seeding ? "Adding..." : "Add Default Set"}
-          </button>
-          <button
             onClick={openAdd}
             className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-5 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
           >
@@ -155,22 +133,17 @@ export default function ServicesPage() {
         </div>
       </div>
 
-      {seedMessage && (
-        <div className="mt-6 text-center">
-          <p className={`text-sm ${seedMessage.includes("successfully") ? "text-green-400" : "text-zinc-400"}`}>
-            {seedMessage}
-          </p>
-        </div>
-      )}
-
       <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {services.length === 0 ? (
           <div className="col-span-full py-16 text-center text-zinc-500">
-            No services yet. Click "Restore Defaults" to populate or add manually.
+            No services yet. Click "Add Service" to add one manually.
           </div>
         ) : (
           services.map((s) => {
             const Icon = iconMap[s.icon] || Code2;
+            const parts = s.description.split("|").map((p: string) => p.trim());
+            const desc = parts[0]?.replace("What's Included: ", "") || s.description;
+            const bestFor = parts[1]?.replace("Best For: ", "") || "";
             return (
               <div key={s.id} className="glass rounded-2xl p-6 transition-all glass-hover">
                 <div className="flex items-start justify-between">
@@ -187,7 +160,13 @@ export default function ServicesPage() {
                   </div>
                 </div>
                 <h3 className="mt-4 font-semibold text-white">{s.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-zinc-400">{s.description}</p>
+                <p className="mt-2 text-sm leading-relaxed text-zinc-400">{desc}</p>
+                {bestFor && (
+                  <div className="mt-4 border-t border-white/5 pt-3">
+                    <h4 className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">Best For</h4>
+                    <p className="mt-1 text-xs text-cyan-400/90">{bestFor}</p>
+                  </div>
+                )}
               </div>
             );
           })
@@ -208,6 +187,7 @@ export default function ServicesPage() {
             <form onSubmit={handleSave} className="mt-6 space-y-4">
               <input type="text" placeholder="Service Title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required className="glass w-full rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-500 outline-none focus:border-cyan-500/50" />
               <textarea rows={3} placeholder="Service Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} required className="glass w-full resize-none rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-500 outline-none focus:border-cyan-500/50" />
+              <input type="text" placeholder="Best For (e.g., Startups, E-commerce, Portfolios)" value={form.best_for} onChange={(e) => setForm({ ...form, best_for: e.target.value })} required className="glass w-full rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-500 outline-none focus:border-cyan-500/50" />
               <div>
                 <label className="mb-2 block text-xs text-zinc-500">Icon</label>
                 <div className="flex flex-wrap gap-2">

@@ -15,6 +15,7 @@ interface ProjectRequest {
   created_at: string;
   client_name: string;
   client_email: string;
+  package_tier?: string;
 }
 
 const statusColors: Record<string, string> = {
@@ -132,7 +133,14 @@ export default function ProjectRequestsPage() {
                         <div className="text-xs text-zinc-500">{req.client_email}</div>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="font-semibold text-white">{req.project_name}</div>
+                        <div className="flex items-center gap-2">
+                          <div className="font-semibold text-white">{req.project_name}</div>
+                          {req.package_tier && (
+                            <span className="rounded-full bg-blue-500/10 px-2 py-0.5 text-[9px] font-medium text-blue-400">
+                              {req.package_tier}
+                            </span>
+                          )}
+                        </div>
                         <div className="text-xs text-zinc-500 line-clamp-1 max-w-xs">{req.description}</div>
                       </td>
                       <td className="px-6 py-4">
@@ -202,6 +210,12 @@ export default function ProjectRequestsPage() {
                 <p className="text-sm text-white">{selected.client_name}</p>
                 <p className="text-xs text-zinc-400">{selected.client_email}</p>
               </div>
+              {selected.package_tier && (
+                <div>
+                  <p className="text-xs text-zinc-500">Selected Package</p>
+                  <p className="text-sm font-semibold text-cyan-400">{selected.package_tier}</p>
+                </div>
+              )}
               <div>
                 <p className="text-xs text-zinc-500">Description</p>
                 <p className="mt-1 text-sm text-zinc-300 whitespace-pre-wrap">{selected.description}</p>

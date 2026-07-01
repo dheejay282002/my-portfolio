@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { MessageSquare, X, Send, Plus, ChevronLeft, User, FileText, Camera, CornerUpLeft, Phone, Video, VideoOff, Mic, MicOff, PhoneOff, X as XIcon } from "lucide-react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 
 interface OtherUser {
@@ -31,6 +32,14 @@ interface Message {
   reply_to_id: number | null;
   reply_content: string | null;
   reply_sender_name: string | null;
+}
+
+interface Product {
+  id: number;
+  package_tier: string;
+  project_baseline: string;
+  est_timeline: string;
+  deliverables: string;
 }
 
 interface Contact {
@@ -66,6 +75,7 @@ function timeAgo(dateStr: string): string {
 const PROJECT_REQUEST_PREFIX = "📋 PROJECT_REQUEST_SUBMIT";
 
 export default function MessengerWidget() {
+  const router = useRouter();
   const [user, setUser] = useState<{ id: number; name: string; role: string } | null>(null);
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<"list" | "chat" | "new">("list");
@@ -76,7 +86,7 @@ export default function MessengerWidget() {
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [showProjectForm, setShowProjectForm] = useState(false);
-  const [projectForm, setProjectForm] = useState({ project_name: "", description: "", tech_stack: "" });
+  const [projectForm, setProjectForm] = useState({ project_name: "", description: "", tech_stack: "", product_id: "" as string | number });
   const [submittingProject, setSubmittingProject] = useState(false);
   const [projectSubmitted, setProjectSubmitted] = useState(false);
   const [showPlusMenu, setShowPlusMenu] = useState(false);
@@ -94,6 +104,7 @@ export default function MessengerWidget() {
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const [attachmentPreview, setAttachmentPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [availableProducts, setAvailableProducts] = useState<Product[]>([]);
 
   const msgEndRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -101,8 +112,64 @@ export default function MessengerWidget() {
   useEffect(() => {
     fetch("/api/auth/me")
       .then((r) => (r.ok ? r.json() : null))
-      .then((d) => setUser(d?.user ?? null));
+      .then((d) => {
+        const loggedUser = d?.user ?? null;
+        setUser(loggedUser);
+        
+        // If user logged in, check if there is a pending package request in localStorage
+        if (loggedUser && typeof window !== "undefined") {
+          const pending = localStorage.getItem("pending_package_request");
+          if (pending) {
+            try {
+              const { productName, productId } = JSON.parse(pending);
+              setOpen(true);
+              setShowProjectForm(true);
+              setProjectForm({
+                project_name: `Request for ${productName}`,
+                description: "",
+                tech_stack: "",
+                product_id: Number(productId)
+              });
+              localStorage.removeItem("pending_package_request");
+            } catch {}
+          }
+        }
+      });
+
+    // Fetch available products
+    fetch("/api/products")
+      .then(r => r.json())
+      .then(d => {
+        if (d.products) setAvailableProducts(d.products);
+      })
+      .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    const handleOpenRequest = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const { productName, productId } = customEvent.detail;
+      
+      if (!user) {
+        // If not logged in, save intent and redirect to login
+        localStorage.setItem("pending_package_request", JSON.stringify({ productName, productId }));
+        router.push("/login");
+        return;
+      }
+
+      setOpen(true);
+      setShowProjectForm(true);
+      setProjectForm({
+        project_name: `Request for ${productName}`,
+        description: "",
+        tech_stack: "",
+        product_id: Number(productId)
+      });
+    };
+
+    window.addEventListener("open-project-request", handleOpenRequest);
+    return () => window.removeEventListener("open-project-request", handleOpenRequest);
+  }, [user, router]);
 
   const fetchConversations = useCallback(async () => {
     const res = await fetch("/api/conversations");
@@ -248,7 +315,7 @@ export default function MessengerWidget() {
         if (activeInviteMsgId !== null) {
           setSubmittedInvites((prev) => new Set(prev).add(activeInviteMsgId));
         }
-        setProjectForm({ project_name: "", description: "", tech_stack: "" });
+        setProjectForm({ project_name: "", description: "", tech_stack: "", product_id: "" });
         setTimeout(() => { setShowProjectForm(false); setProjectSubmitted(false); setActiveInviteMsgId(null); }, 2000);
       }
     } finally {
@@ -830,6 +897,28 @@ export default function MessengerWidget() {
                   <>
                     <h4 className="text-sm font-semibold text-white mb-4">New Project Request</h4>
                     <form onSubmit={submitProjectRequest} className="space-y-3">
+                      <div>
+                        <select
+                          value={projectForm.product_id || ""}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            const prod = availableProducts.find(p => p.id === Number(val));
+                            setProjectForm({
+                              ...projectForm,
+                              product_id: val ? Number(val) : "",
+                              project_name: prod ? `Request for ${prod.package_tier}` : projectForm.project_name,
+                            });
+                          }}
+                          className="glass w-full rounded-xl px-4 py-2.5 text-xs text-white placeholder-zinc-500 outline-none focus:border-cyan-500/50 bg-zinc-950"
+                        >
+                          <option value="" className="text-zinc-500">Select Package Tier (optional)</option>
+                          {availableProducts.map((p) => (
+                            <option key={p.id} value={p.id} className="text-white bg-zinc-950">
+                              {p.package_tier} ({p.project_baseline})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                       <input
                         type="text"
                         placeholder="Project Name"

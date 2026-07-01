@@ -14,6 +14,7 @@ import {
   Shield,
   AlertTriangle,
   Activity,
+  ShoppingBag,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -71,6 +72,7 @@ const statusLabels: Record<string, string> = {
 const quickLinks = [
   { label: "User Management", href: "/dashboard/admin/users", icon: Users, desc: "Manage all users" },
   { label: "Projects", href: "/dashboard/admin/projects", icon: FolderKanban, desc: "Manage portfolio projects" },
+  { label: "Products", href: "/dashboard/admin/products", icon: ShoppingBag, desc: "Manage package tiers" },
   { label: "Services", href: "/dashboard/admin/services", icon: Wrench, desc: "Manage offered services" },
   { label: "Skills", href: "/dashboard/admin/skills", icon: BarChart3, desc: "Manage skill sets" },
   { label: "Project Requests", href: "/dashboard/admin/project-requests", icon: ClipboardList, desc: "Review client requests" },
@@ -87,6 +89,7 @@ export default function AdminDashboard() {
   const [projectsCount, setProjectsCount] = useState(0);
   const [servicesCount, setServicesCount] = useState(0);
   const [skillsCount, setSkillsCount] = useState(0);
+  const [productsCount, setProductsCount] = useState(0);
   const [securityEvents, setSecurityEvents] = useState<SecurityEvent[]>([]);
   const [securitySummary, setSecuritySummary] = useState<SecuritySummary[]>([]);
   const [securityLast24h, setSecurityLast24h] = useState(0);
@@ -101,8 +104,9 @@ export default function AdminDashboard() {
       fetch("/api/services").then((r) => r.json()),
       fetch("/api/skills").then((r) => r.json()),
       fetch("/api/admin/security-events").then((r) => r.json()),
+      fetch("/api/products").then((r) => r.json()),
     ])
-      .then(([me, reqData, usersData, projData, svcData, skillData, secData]) => {
+      .then(([me, reqData, usersData, projData, svcData, skillData, secData, prodData]) => {
         setAdminName(me.user?.name || "Admin");
         setRequests(reqData.requests || []);
         setUsersCount(usersData.users?.length || 0);
@@ -113,6 +117,7 @@ export default function AdminDashboard() {
         setSecurityEvents(secData.events || []);
         setSecuritySummary(secData.summary || []);
         setSecurityLast24h(secData.last24h || 0);
+        setProductsCount(prodData.products?.length || 0);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -125,8 +130,9 @@ export default function AdminDashboard() {
   const statCards = [
     { label: "Total Users", value: usersCount, icon: Users, color: "from-cyan-500 to-blue-600" },
     { label: "Project Requests", value: requests.length, icon: ClipboardList, color: "from-yellow-500 to-orange-600" },
+    { label: "Products / Tiers", value: productsCount, icon: ShoppingBag, color: "from-emerald-500 to-teal-600" },
     { label: "Projects", value: projectsCount, icon: FolderKanban, color: "from-blue-500 to-purple-600" },
-    { label: "Services", value: servicesCount, icon: Wrench, color: "from-emerald-500 to-green-600" },
+    { label: "Services", value: servicesCount, icon: Wrench, color: "from-purple-500 to-indigo-600" },
     { label: "Skills", value: skillsCount, icon: BarChart3, color: "from-pink-500 to-rose-600" },
   ];
 

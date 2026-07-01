@@ -1,4 +1,4 @@
-import { execute } from "./db";
+import { execute, queryOne } from "./db";
 
 export async function ensureChatTables() {
   await execute(`
@@ -83,4 +83,30 @@ export async function ensureSecurityTables() {
   await execute(`
     CREATE INDEX IF NOT EXISTS idx_security_events_created_at ON security_events (created_at DESC)
   `);
+}
+
+export async function ensureProductsTable() {
+  await execute(`
+    CREATE TABLE IF NOT EXISTS products (
+      id SERIAL PRIMARY KEY,
+      package_tier TEXT NOT NULL,
+      project_baseline TEXT NOT NULL,
+      est_timeline TEXT NOT NULL,
+      deliverables TEXT NOT NULL,
+      created_at TIMESTAMP DEFAULT NOW()
+    )
+  `);
+  await execute(`
+    ALTER TABLE project_requests ADD COLUMN IF NOT EXISTS product_id INTEGER REFERENCES products(id) ON DELETE SET NULL
+  `);
+
+  const countRes = await queryOne("SELECT COUNT(*) as count FROM products");
+  if (countRes && Number((countRes as any).count) === 0) {
+    await execute(`
+      INSERT INTO products (package_tier, project_baseline, est_timeline, deliverables) VALUES 
+      ('01. Basic Pack (MVP)', '$800 – $1,800', '2 Weeks', 'Light dynamic websites (3-5 pages)\nClean responsive design\nContact / lead forms\nSEO optimization setup\n1 Month support'),
+      ('02. Standard Pack', '$2,000 – $5,000', '3 – 5 Weeks', 'Full custom web applications\nComplete UI/UX design suite\nDatabase integration & user auth\nPerformance speed optimization\n3 Months support'),
+      ('03. Ultra Pack', '$5,500 – $12,000+', '6 – 10 Weeks', 'Enterprise complex systems\nMicroservices & API architectures\nAdvanced dashboards & analytics\nContinuous integration/deploy\n6 Months support')
+    `);
+  }
 }

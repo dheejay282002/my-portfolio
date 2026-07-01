@@ -7,6 +7,8 @@ import ScrollReveal from "./ScrollReveal";
 export default function AboutSection() {
   const [admin, setAdmin] = useState<{ name: string; last_name: string | null; profile_photo: string | null; bio: string | null } | null>(null);
   const [deliveredCount, setDeliveredCount] = useState<number>(0);
+  const [cupsOfCoffee, setCupsOfCoffee] = useState("0");
+  const [contributions, setContributions] = useState("1k+");
 
   useEffect(() => {
     fetch("/api/profile/public")
@@ -14,13 +16,15 @@ export default function AboutSection() {
       .then((d) => {
         setAdmin(d?.admin ?? null);
         setDeliveredCount(d?.projects_delivered ?? 0);
+        setCupsOfCoffee(d?.cups_of_coffee ?? "0");
+        setContributions(d?.contributions ?? "1k+");
       });
   }, []);
 
   const stats = [
     { icon: Code2, label: "Projects Delivered", value: String(deliveredCount) },
-    { icon: Coffee, label: "Cups of Coffee", value: "500+" },
-    { icon: GitCommit, label: "Contributions", value: "1k+" },
+    { icon: Coffee, label: "Cups of Coffee", value: cupsOfCoffee },
+    { icon: GitCommit, label: "Contributions", value: contributions },
   ];
 
   const bioParagraphs = admin?.bio
