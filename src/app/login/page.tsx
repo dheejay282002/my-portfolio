@@ -6,8 +6,8 @@ import Link from "next/link";
 import { useWebSettings } from "@/hooks/useWebSettings";
 import LoadingOverlay from "@/components/LoadingOverlay";
 
-const TURNSTILE_SITEKEY = "0x4AAAAAADttdgqZSQtYuEx8";
-const SITEVERIFY_URL = "https://turnstile-siteverify-portfolio.deejay-portfolio.workers.dev";
+const RECAPTCHA_SITEKEY = "6Ldy4D4tAAAAAHwUg4jFLlPybO2GugCT1EZ4okyv";
+const SITEVERIFY_URL = "/api/verify-captcha";
 
 type Mode = "login" | "signup" | "forgot" | "forgot-otp" | "reset-success";
 
@@ -42,17 +42,17 @@ export default function LoginPage() {
   const [forgotError, setForgotError] = useState("");
   const [forgotLoading, setForgotLoading] = useState(false);
 
-  // Turnstile — shared across login, signup, forgot
+  // reCAPTCHA — shared across login, signup, forgot
   const [captchaContext, setCaptchaContext] = useState<"login" | "signup" | "forgot" | null>(null);
   const [captchaVerifying, setCaptchaVerifying] = useState(false);
-  const turnstileContainerRef = useRef<HTMLDivElement>(null);
+  const captchaContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (document.getElementById("cf-turnstile-script")) return;
+    if (document.getElementById("grecaptcha-script")) return;
     const script = document.createElement("script");
-    script.id = "cf-turnstile-script";
-    script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js";
+    script.id = "grecaptcha-script";
+    script.src = "https://www.google.com/recaptcha/api.js?render=explicit";
     script.async = true;
     script.defer = true;
     document.head.appendChild(script);
@@ -72,7 +72,7 @@ export default function LoginPage() {
         if (captchaContext === "login") setLoginError(err);
         else if (captchaContext === "forgot") setForgotError(err);
         else setSignupError(err);
-        if ((window as any).turnstile) (window as any).turnstile.reset(turnstileContainerRef.current);
+        if ((window as any).grecaptcha) (window as any).grecaptcha.reset();
         setCaptchaVerifying(false);
         return;
       }
@@ -115,20 +115,19 @@ export default function LoginPage() {
     finally { setCaptchaVerifying(false); }
   }, [captchaContext, loginEmail, loginPassword, signupName, signupEmail, forgotEmail, router]);
 
-  // Render Turnstile widget when the captcha step is shown
+  // Render reCAPTCHA widget when the captcha step is shown
   useEffect(() => {
-    if (!captchaContext || !turnstileContainerRef.current) return;
-    (window as any).turnstile.render(turnstileContainerRef.current, {
-      sitekey: TURNSTILE_SITEKEY,
+    if (!captchaContext || !captchaContainerRef.current) return;
+    (window as any).grecaptcha.render(captchaContainerRef.current, {
+      sitekey: RECAPTCHA_SITEKEY,
       callback: (token: string) => runAfterCaptcha(token),
-      "expired-callback": () => { if ((window as any).turnstile) (window as any).turnstile.reset(turnstileContainerRef.current); },
+      "expired-callback": () => { if ((window as any).grecaptcha) (window as any).grecaptcha.reset(); },
       "error-callback": () => {
         const err = "CAPTCHA error. Please try again.";
         if (captchaContext === "login") setLoginError(err);
         else if (captchaContext === "forgot") setForgotError(err);
         else setSignupError(err);
       },
-      "data-action": "turnstile-spin-v1",
     });
   }, [captchaContext]);
 
@@ -306,7 +305,7 @@ export default function LoginPage() {
           <div className="mt-8 space-y-5">
             <p className="text-center text-sm text-zinc-400">Please complete the CAPTCHA to continue.</p>
             <div className="flex justify-center">
-              <div ref={turnstileContainerRef} />
+              <div ref={captchaContainerRef} />
             </div>
             {captchaVerifying && (
               <p className="text-center text-sm text-cyan-400">Verifying CAPTCHA...</p>
@@ -417,7 +416,7 @@ export default function LoginPage() {
               <div className="mt-8 space-y-5">
                 <p className="text-center text-sm text-zinc-400">Please complete the CAPTCHA to continue.</p>
                 <div className="flex justify-center">
-                  <div ref={turnstileContainerRef} />
+                  <div ref={captchaContainerRef} />
                 </div>
                 {captchaVerifying && (
                   <p className="text-center text-sm text-cyan-400">Verifying CAPTCHA...</p>

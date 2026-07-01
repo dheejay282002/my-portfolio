@@ -95,34 +95,6 @@ export default function MessengerWidget() {
   const [attachmentPreview, setAttachmentPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Call state
-  const [incomingCall, setIncomingCall] = useState<CallData | null>(null);
-  const [activeCall, setActiveCall] = useState<CallData | null>(null);
-  const [callStatus, setCallStatus] = useState<"idle" | "calling" | "active" | "ended">("idle");
-  const [micMuted, setMicMuted] = useState(false);
-  const [cameraOff, setCameraOff] = useState(false);
-  const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
-  const lastSignalIdRef = useRef(0);
-  const pcRef = useRef<RTCPeerConnection | null>(null);
-  const localVideoRef = useRef<HTMLVideoElement>(null);
-  const remoteVideoRef = useRef<HTMLVideoElement>(null);
-  const localStreamRef = useRef<MediaStream | null>(null);
-  const ringtoneRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const incomingPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const signalPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const STUN_SERVERS = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
-
-  const callStatusRef = useRef(callStatus);
-  useEffect(() => {
-    callStatusRef.current = callStatus;
-  }, [callStatus]);
-
-  // Sync remote stream to video element when ref mounts
-  useEffect(() => {
-    if (remoteVideoRef.current && remoteStream) {
-      remoteVideoRef.current.srcObject = remoteStream;
-    }
-  }, [remoteStream, callStatus]);
   const msgEndRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -284,20 +256,21 @@ export default function MessengerWidget() {
     }
   };
 
-  const sendMessage = async () => {
-    if ((!input.trim() && !attachmentFile) || !activeConv || sending) return;
+  const sendMessage = async (fileToUpload?: any) => {
+    const file = (fileToUpload instanceof File) ? fileToUpload : attachmentFile;
+    if ((!input.trim() && !file) || !activeConv || sending) return;
     setSending(true);
     try {
       let attachmentUrl = "";
       let attachmentType = "";
-      if (attachmentFile) {
+      if (file) {
         const formData = new FormData();
-        formData.append("file", attachmentFile);
+        formData.append("file", file);
         const uploadRes = await fetch("/api/upload", { method: "POST", body: formData });
         if (uploadRes.ok) {
           const d = await uploadRes.json();
           attachmentUrl = d.url;
-          attachmentType = attachmentFile.type;
+          attachmentType = file.type;
         }
       }
       const res = await fetch("/api/messages", {
@@ -335,6 +308,7 @@ export default function MessengerWidget() {
     setAttachmentFile(file);
     setAttachmentPreview(URL.createObjectURL(file));
     if (fileInputRef.current) fileInputRef.current.value = "";
+    sendMessage(file);
   };
 
   const toggleReaction = async (msgId: number, emoji: string) => {
@@ -351,24 +325,7 @@ export default function MessengerWidget() {
     }
   };
 
-  // === Call functions ===
-  function startRingtone() {
-    try {
-      const ctx = new AudioContext();
-      function beep() {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain); gain.connect(ctx.destination);
-        osc.frequency.value = 440;
-        gain.gain.setValueAtTime(0.3, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
-        osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.5);
-      }
-      beep();
-      ringtoneRef.current = setInterval(beep, 2000);
-    } catch {}
-  }
-  function stopRingtone() { if (ringtoneRef.current) { clearInterval(ringtoneRef.current); ringtoneRef.current = null; } }
+
 
   function playNotificationSound() {
     try {
@@ -392,183 +349,7 @@ export default function MessengerWidget() {
     } catch {}
   }
 
-  async function initiateCall(calleeId: number, _isVideo: boolean) {
-    try {
-      const res = await fetch("/api/calls", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ callee_id: calleeId }),
-      });
-      if (!res.ok) return;
-      const d = await res.json();
-      
-      const stream = await navigator.mediaDevices.getUserMedia({ video: _isVideo, audio: true });
-      localStreamRef.current = stream;
-      
-      const pc = new RTCPeerConnection(STUN_SERVERS);
-      pcRef.current = pc;
-      stream.getTracks().forEach((t) => pc.addTrack(t, stream));
-      pc.ontrack = (event) => { if (event.streams[0]) setRemoteStream(event.streams[0]); };
-      pc.onicecandidate = (event) => {
-        if (event.candidate) fetch(`/api/calls/${d.call.id}/signal`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "ice", data: event.candidate }) }).catch(() => {});
-      };
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-      await fetch(`/api/calls/${d.call.id}/signal`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "offer", data: offer }) });
 
-      setActiveCall({ ...d.call, caller_name: user?.name || "", caller_photo: null });
-      setCallStatus("calling");
-    } catch { cleanupCall(); }
-  }
-
-  async function acceptCall() {
-    if (!incomingCall) return;
-    stopRingtone();
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      localStreamRef.current = stream;
-      
-      const pc = new RTCPeerConnection(STUN_SERVERS);
-      pcRef.current = pc;
-      stream.getTracks().forEach((t) => pc.addTrack(t, stream));
-      pc.ontrack = (event) => { if (event.streams[0]) setRemoteStream(event.streams[0]); };
-      pc.onicecandidate = (event) => {
-        if (event.candidate) fetch(`/api/calls/${incomingCall.id}/signal`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "ice", data: event.candidate }) }).catch(() => {});
-      };
-
-      await fetch(`/api/calls/${incomingCall.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "accepted" }) });
-      setActiveCall(incomingCall); setIncomingCall(null); setCallStatus("active");
-    } catch { cleanupCall(); }
-  }
-
-  async function rejectCall() {
-    if (!incomingCall) return;
-    stopRingtone();
-    try { await fetch(`/api/calls/${incomingCall.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "rejected" }) }); } catch {}
-    setIncomingCall(null);
-  }
-
-  async function endCall() {
-    if (!activeCall) return;
-    try { await fetch(`/api/calls/${activeCall.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "ended" }) }); } catch {}
-    cleanupCall();
-  }
-
-  function cleanupCall() {
-    stopRingtone();
-    if (signalPollRef.current) { clearInterval(signalPollRef.current); signalPollRef.current = null; }
-    if (incomingPollRef.current) { clearInterval(incomingPollRef.current); incomingPollRef.current = null; }
-    if (pcRef.current) { pcRef.current.close(); pcRef.current = null; }
-    if (localStreamRef.current) { localStreamRef.current.getTracks().forEach((t) => t.stop()); localStreamRef.current = null; }
-    setRemoteStream(null);
-    setCameraOff(false);
-    setActiveCall(null); setIncomingCall(null); setCallStatus("idle"); lastSignalIdRef.current = 0; setMicMuted(false);
-  }
-
-  function startSignalPolling(callId: number) {
-    signalPollRef.current = setInterval(async () => {
-      try {
-        // Poll Call Status continuously from DB
-        const statusRes = await fetch(`/api/calls/${callId}`);
-        if (statusRes.ok) {
-          const statusData = await statusRes.json();
-          const status = statusData.call?.status;
-
-          if (status === "rejected" || status === "ended" || status === "missed") {
-            cleanupCall();
-            return;
-          }
-
-          if (status === "active" && callStatusRef.current === "calling") {
-            setCallStatus("active");
-          }
-        }
-
-        const res = await fetch(`/api/calls/${callId}/signal?since=${lastSignalIdRef.current}`);
-        if (!res.ok) return;
-        const d = await res.json();
-        if (!d.signals?.length) return;
-        for (const sig of d.signals) {
-          if (sig.id > lastSignalIdRef.current) lastSignalIdRef.current = sig.id;
-          const data = typeof sig.data === "string" ? JSON.parse(sig.data) : sig.data;
-          
-          if (sig.type === "offer" && pcRef.current) {
-            await pcRef.current.setRemoteDescription(new RTCSessionDescription(data));
-            const answer = await pcRef.current.createAnswer();
-            await pcRef.current.setLocalDescription(answer);
-            await fetch(`/api/calls/${callId}/signal`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "answer", data: answer }) });
-            
-            const pcAny = pcRef.current as any;
-            if (pcAny.iceQueue) {
-              for (const cand of pcAny.iceQueue) {
-                await pcRef.current.addIceCandidate(new RTCIceCandidate(cand)).catch(() => {});
-              }
-              pcAny.iceQueue = [];
-            }
-          } else if (sig.type === "answer" && pcRef.current) {
-            await pcRef.current.setRemoteDescription(new RTCSessionDescription(data));
-            
-            const pcAny = pcRef.current as any;
-            if (pcAny.iceQueue) {
-              for (const cand of pcAny.iceQueue) {
-                await pcRef.current.addIceCandidate(new RTCIceCandidate(cand)).catch(() => {});
-              }
-              pcAny.iceQueue = [];
-            }
-          } else if (sig.type === "ice" && pcRef.current) {
-            if (pcRef.current.remoteDescription) {
-              await pcRef.current.addIceCandidate(new RTCIceCandidate(data)).catch(() => {});
-            } else {
-              const pcAny = pcRef.current as any;
-              if (!pcAny.iceQueue) pcAny.iceQueue = [];
-              pcAny.iceQueue.push(data);
-            }
-          }
-        }
-      } catch {}
-    }, 2000);
-  }
-
-  // Poll for incoming calls
-  useEffect(() => {
-    if (!user) return;
-    const check = async () => {
-      try {
-        const res = await fetch("/api/calls/incoming");
-        if (!res.ok) return;
-        const d = await res.json();
-        if (d.call && !incomingCall && !activeCall && callStatus === "idle") { setIncomingCall(d.call); startRingtone(); }
-      } catch {}
-    };
-    check();
-    incomingPollRef.current = setInterval(check, 3000);
-    return () => { if (incomingPollRef.current) clearInterval(incomingPollRef.current); stopRingtone(); };
-  }, [user, incomingCall, activeCall, callStatus]);
-
-  // Start/stop signal polling when call is active or calling
-  useEffect(() => {
-    if ((callStatus === "active" || callStatus === "calling") && activeCall) {
-      startSignalPolling(activeCall.id);
-    }
-    return () => {
-      if (signalPollRef.current) {
-        clearInterval(signalPollRef.current);
-        signalPollRef.current = null;
-      }
-    };
-  }, [callStatus, activeCall]);
-
-  function toggleMute() {
-    if (localStreamRef.current) { localStreamRef.current.getAudioTracks().forEach((t) => { t.enabled = micMuted; }); setMicMuted(!micMuted); }
-  }
-
-  function toggleCamera() {
-    if (localStreamRef.current) {
-      localStreamRef.current.getVideoTracks().forEach((t) => {
-        t.enabled = cameraOff;
-      });
-      setCameraOff(!cameraOff);
-    }
-  }
 
   if (!user) return null;
 
@@ -616,7 +397,7 @@ export default function MessengerWidget() {
           </div>
 
           {/* Body */}
-          <div className="flex-1 overflow-y-auto overflow-x-hidden">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide">
             {view === "list" && (
               <div>
                 {conversations.length === 0 ? (
@@ -719,7 +500,7 @@ export default function MessengerWidget() {
 
             {view === "chat" && activeConv && (
               <div className="flex h-full flex-col overflow-x-hidden">
-                <div className="flex-1 overflow-y-auto overflow-x-hidden px-5 py-4 space-y-3">
+                <div className="flex-1 overflow-y-auto overflow-x-hidden px-5 py-4 space-y-3 scrollbar-hide">
                   {messages.length === 0 ? (
                     <div className="flex items-center justify-center py-16 text-zinc-500">
                       <p className="text-sm">No messages yet</p>
@@ -974,22 +755,6 @@ export default function MessengerWidget() {
                               <Camera className="h-4 w-4 text-cyan-400" />
                               Photo / Video
                             </button>
-                            <button
-                              onClick={() => { if (activeConv) initiateCall(activeConv.other_user.id, true); setShowPlusMenu(false); }}
-                              disabled={!activeConv}
-                              className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-zinc-300 transition-colors hover:bg-white/5"
-                            >
-                              <Video className="h-4 w-4 text-cyan-400" />
-                              Video Call
-                            </button>
-                            <button
-                              onClick={() => { if (activeConv) initiateCall(activeConv.other_user.id, false); setShowPlusMenu(false); }}
-                              disabled={!activeConv}
-                              className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-zinc-300 transition-colors hover:bg-white/5"
-                            >
-                              <Phone className="h-4 w-4 text-cyan-400" />
-                              Audio Call
-                            </button>
                             {user?.role === "admin" && (
                               <button
                                 onClick={() => { sendProjectRequestLink(); setShowPlusMenu(false); }}
@@ -1004,25 +769,34 @@ export default function MessengerWidget() {
                         </>
                       )}
                     </div>
-                    <input
-                      type="text"
-                      value={input}
-                      onChange={(e) => {
-                        setInput(e.target.value);
-                        if (activeConv) {
-                          if (e.target.value && !typingIntervalRef.current) {
-                            sendTypingSignal(activeConv.id);
-                            typingIntervalRef.current = setInterval(() => sendTypingSignal(activeConv.id), 1500);
-                          } else if (!e.target.value && typingIntervalRef.current) {
-                            clearInterval(typingIntervalRef.current);
-                            typingIntervalRef.current = null;
+                    {sending ? (
+                      <div className="glass flex-1 rounded-xl px-4 py-2.5 text-sm text-cyan-400 font-medium flex items-center gap-2">
+                        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-cyan-400" style={{ animationDelay: "0ms" }} />
+                        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-cyan-400" style={{ animationDelay: "150ms" }} />
+                        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-cyan-400" style={{ animationDelay: "300ms" }} />
+                        Sending...
+                      </div>
+                    ) : (
+                      <input
+                        type="text"
+                        value={input}
+                        onChange={(e) => {
+                          setInput(e.target.value);
+                          if (activeConv) {
+                            if (e.target.value && !typingIntervalRef.current) {
+                              sendTypingSignal(activeConv.id);
+                              typingIntervalRef.current = setInterval(() => sendTypingSignal(activeConv.id), 1500);
+                            } else if (!e.target.value && typingIntervalRef.current) {
+                              clearInterval(typingIntervalRef.current);
+                              typingIntervalRef.current = null;
+                            }
                           }
-                        }
-                      }}
-                      onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-                      placeholder="Type a message..."
-                      className="glass flex-1 rounded-xl px-4 py-2.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-cyan-500/50"
-                    />
+                        }}
+                        onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+                        placeholder="Type a message..."
+                        className="glass flex-1 rounded-xl px-4 py-2.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-cyan-500/50"
+                      />
+                    )}
                     <button
                       onClick={sendMessage}
                       disabled={sending || (!input.trim() && !attachmentFile)}
@@ -1121,70 +895,7 @@ export default function MessengerWidget() {
       </div>
     )}
 
-    {/* Incoming call overlay */}
-    {incomingCall && (
-      <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/80">
-        <div className="glass-strong mx-4 w-full max-w-sm rounded-3xl p-8 text-center">
-          <div className="mx-auto mb-4 h-24 w-24 overflow-hidden rounded-full bg-gradient-to-br from-cyan-500 to-blue-600">
-            {incomingCall.caller_photo ? (
-              <Image src={incomingCall.caller_photo} alt="" width={96} height={96} className="object-cover" unoptimized />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center text-3xl font-bold text-white">
-                {incomingCall.caller_name?.charAt(0)?.toUpperCase() || "?"}
-              </div>
-            )}
-          </div>
-          <h2 className="text-xl font-semibold text-white">{incomingCall.caller_name}</h2>
-          <p className="mt-1 text-sm text-zinc-400">Incoming video call...</p>
-          <div className="mt-8 flex items-center justify-center gap-6">
-            <button onClick={rejectCall} className="flex h-16 w-16 items-center justify-center rounded-full bg-red-500 text-white transition-transform hover:scale-105">
-              <PhoneOff className="h-7 w-7" />
-            </button>
-            <button onClick={acceptCall} className="flex h-16 w-16 items-center justify-center rounded-full bg-green-500 text-white transition-transform hover:scale-105">
-              <Phone className="h-7 w-7" />
-            </button>
-          </div>
-        </div>
-      </div>
-    )}
 
-    {/* Calling overlay */}
-    {activeCall && callStatus === "calling" && (
-      <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/80">
-        <div className="text-center">
-          <div className="mx-auto mb-4 h-24 w-24 animate-pulse overflow-hidden rounded-full bg-gradient-to-br from-cyan-500 to-blue-600">
-            <div className="flex h-full w-full items-center justify-center text-3xl font-bold text-white">
-              {activeConv?.other_user.name?.charAt(0)?.toUpperCase() || "?"}
-            </div>
-          </div>
-          <h2 className="text-xl font-semibold text-white">Calling {activeConv?.other_user.name}...</h2>
-          <p className="mt-1 text-sm text-zinc-400">Waiting for them to answer</p>
-          <button onClick={endCall} className="mx-auto mt-8 flex h-16 w-16 items-center justify-center rounded-full bg-red-500 text-white transition-transform hover:scale-105">
-            <PhoneOff className="h-7 w-7" />
-          </button>
-        </div>
-      </div>
-    )}
-
-    {/* Active call overlay */}
-    {activeCall && callStatus === "active" && (
-      <div className="fixed inset-0 z-[300] flex flex-col bg-black">
-        <div className="relative flex-1 bg-zinc-900">
-          <video ref={remoteVideoRef} autoPlay playsInline className="h-full w-full object-contain" />
-        </div>
-        <div className="flex items-center justify-center gap-8 bg-zinc-900 px-6 py-6">
-          <button onClick={toggleMute} className={`flex h-14 w-14 items-center justify-center rounded-full transition-colors ${micMuted ? "bg-red-500 text-white" : "bg-white/10 text-white hover:bg-white/20"}`}>
-            {micMuted ? <MicOff className="h-6 w-6" /> : <Mic className="h-6 w-6" />}
-          </button>
-          <button onClick={toggleCamera} className={`flex h-14 w-14 items-center justify-center rounded-full transition-colors ${cameraOff ? "bg-red-500 text-white" : "bg-white/10 text-white hover:bg-white/20"}`}>
-            {cameraOff ? <VideoOff className="h-6 w-6" /> : <Video className="h-6 w-6" />}
-          </button>
-          <button onClick={endCall} className="flex h-14 w-14 items-center justify-center rounded-full bg-red-500 text-white transition-transform hover:scale-105">
-            <PhoneOff className="h-6 w-6" />
-          </button>
-        </div>
-      </div>
-    )}
   </>
 );
 }
