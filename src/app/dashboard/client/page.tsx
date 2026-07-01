@@ -5,6 +5,12 @@ import Skeleton from "@/components/Skeleton";
 import { ClipboardList, FileText, MessageSquare, Settings, Star, Wrench } from "lucide-react";
 import Link from "next/link";
 
+const formatDate = (dateVal: any) => {
+  if (!dateVal) return "N/A";
+  const d = new Date(dateVal);
+  return isNaN(d.getTime()) ? "N/A" : d.toLocaleDateString();
+};
+
 interface ProjectRequest {
   id: number;
   project_name: string;
@@ -278,7 +284,7 @@ export default function ClientDashboard() {
                       {req.project_name}
                     </p>
                     <p className="mt-0.5 text-xs text-zinc-500 truncate">
-                      {new Date(req.created_at + "Z").toLocaleDateString()}
+                      {formatDate(req.created_at)}
                     </p>
                   </div>
                   <span

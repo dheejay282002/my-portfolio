@@ -111,6 +111,9 @@ export async function ensureProductsTable() {
   await execute(`
     ALTER TABLE project_requests ADD COLUMN IF NOT EXISTS contract_signed_acknowledged BOOLEAN DEFAULT FALSE
   `);
+  await execute(`
+    ALTER TABLE project_requests ADD COLUMN IF NOT EXISTS rejection_reason TEXT
+  `);
 
   const countRes = await queryOne("SELECT COUNT(*) as count FROM products");
   if (countRes && Number((countRes as any).count) === 0) {

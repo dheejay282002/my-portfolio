@@ -20,6 +20,7 @@ interface ProjectRequest {
   contract_signed?: boolean;
   contract_signed_name?: string | null;
   contract_signed_at?: string | null;
+  rejection_reason?: string | null;
 }
 
 const statusColors: Record<string, string> = {
@@ -40,6 +41,12 @@ const statusLabels: Record<string, string> = {
   testing: "Testing",
   completed: "Completed",
   delivered: "Delivered",
+};
+
+const formatDate = (dateVal: any) => {
+  if (!dateVal) return "N/A";
+  const d = new Date(dateVal);
+  return isNaN(d.getTime()) ? "N/A" : d.toLocaleDateString();
 };
 
 interface ReviewModalProps {
@@ -291,7 +298,7 @@ function DetailsModal({ request, onClose }: DetailsModalProps) {
             <div>
               <p className="text-xs text-zinc-500">Submitted Date</p>
               <p className="mt-1 text-xs text-white">
-                {new Date(request.created_at + "Z").toLocaleDateString()}
+                {formatDate(request.created_at)}
               </p>
             </div>
             <div>
@@ -303,6 +310,12 @@ function DetailsModal({ request, onClose }: DetailsModalProps) {
                   {statusLabels[request.status] || request.status}
                 </span>
               </p>
+              {request.status === "rejected" && request.rejection_reason && (
+                <div className="mt-2.5 rounded-xl bg-red-500/5 border border-red-500/10 p-3 text-[11px] text-red-400 text-left">
+                  <span className="font-semibold block text-white mb-0.5">Rejection Note:</span>
+                  &ldquo;{request.rejection_reason}&rdquo;
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -660,7 +673,7 @@ export default function ClientProjectRequests() {
                         )}
                       </td>
                       <td className="px-6 py-4 text-xs text-zinc-500">
-                        {new Date(req.created_at + "Z").toLocaleDateString()}
+                        {formatDate(req.created_at)}
                       </td>
                       <td className="px-6 py-4">
                         <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium ${statusColors[req.status] || "bg-zinc-500/10 text-zinc-400"}`}>

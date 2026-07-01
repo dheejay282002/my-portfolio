@@ -22,7 +22,14 @@ interface ProjectRequest {
   contract_signed?: boolean;
   contract_signed_name?: string | null;
   contract_signed_at?: string | null;
+  rejection_reason?: string | null;
 }
+
+const formatDate = (dateVal: any) => {
+  if (!dateVal) return "N/A";
+  const d = new Date(dateVal);
+  return isNaN(d.getTime()) ? "N/A" : d.toLocaleDateString();
+};
 
 const statusColors: Record<string, string> = {
   pending: "bg-yellow-500/10 text-yellow-400",
@@ -41,6 +48,8 @@ export default function ProjectRequestsPage() {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<ProjectRequest | null>(null);
   const [openDropdown, setOpenDropdown] = useState<number | null>(null);
+  const [rejectingId, setRejectingId] = useState<number | null>(null);
+  const [rejectionReasonInput, setRejectionReasonInput] = useState("");
 
   const printContract = (request: ProjectRequest) => {
     const w = window.open("", "_blank");
@@ -137,6 +146,26 @@ export default function ProjectRequestsPage() {
       if (selected?.id === id) setSelected((prev) => prev ? { ...prev, status } : null);
     }
     setOpenDropdown(null);
+  };
+
+  const submitRejection = async (id: number) => {
+    const res = await fetch(`/api/project-requests/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "rejected", rejection_reason: rejectionReasonInput.trim() }),
+    });
+    if (res.ok) {
+      setRequests((prev) =>
+        prev.map((r) => (r.id === id ? { ...r, status: "rejected", rejection_reason: rejectionReasonInput.trim() } : r))
+      );
+      if (selected?.id === id) {
+        setSelected((prev) =>
+          prev ? { ...prev, status: "rejected", rejection_reason: rejectionReasonInput.trim() } : null
+        );
+      }
+    }
+    setRejectingId(null);
+    setRejectionReasonInput("");
   };
 
   if (loading) {
@@ -242,7 +271,7 @@ export default function ProjectRequestsPage() {
                         )}
                       </td>
                       <td className="px-6 py-4 text-xs text-zinc-500">
-                        {new Date(req.created_at + "Z").toLocaleDateString()}
+                        {formatDate(req.created_at)}
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex flex-col gap-1 items-start">
@@ -327,6 +356,14 @@ export default function ProjectRequestsPage() {
                   {selected.status.replace("_", " ")}
                 </span>
               </div>
+              {selected.status === "rejected" && selected.rejection_reason && (
+                <div>
+                  <p className="text-xs text-zinc-500">Rejection Note Sent</p>
+                  <p className="mt-1 text-xs text-red-400 italic bg-red-500/5 border border-red-500/10 p-3 rounded-xl">
+                    &ldquo;{selected.rejection_reason}&rdquo;
+                  </p>
+                </div>
+              )}
               {selected.status === "accepted" && (
                 <div>
                   <p className="text-xs text-zinc-500">Contract Agreement Status</p>
@@ -351,20 +388,47 @@ export default function ProjectRequestsPage() {
 
             <div className="mt-6 flex flex-wrap items-center gap-3 border-t border-white/10 pt-4">
               {selected.status === "pending" && (
-                <>
-                  <button
-                    onClick={() => updateStatus(selected.id, "accepted")}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-green-500/20 px-4 py-2 text-xs font-medium text-green-400 transition-colors hover:bg-green-500/30"
-                  >
-                    <Check className="h-3.5 w-3.5" /> Accept
-                  </button>
-                  <button
-                    onClick={() => updateStatus(selected.id, "rejected")}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-red-500/20 px-4 py-2 text-xs font-medium text-red-400 transition-colors hover:bg-red-500/30"
-                  >
-                    <XCircle className="h-3.5 w-3.5" /> Reject
-                  </button>
-                </>
+                rejectingId === selected.id ? (
+                  <div className="w-full space-y-3 bg-zinc-900/40 p-4 rounded-xl border border-red-500/10 text-left">
+                    <label className="block text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">Reason for Rejection (Optional)</label>
+                    <textarea
+                      rows={3}
+                      placeholder="e.g. Current workload is too high. Let's chat next month!"
+                      value={rejectionReasonInput}
+                      onChange={(e) => setRejectionReasonInput(e.target.value)}
+                      className="glass w-full resize-none rounded-xl px-3 py-2 text-xs text-white placeholder-zinc-500 outline-none focus:border-red-500/30 bg-zinc-950"
+                    />
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => { setRejectingId(null); setRejectionReasonInput(""); }}
+                        className="rounded-lg border border-white/10 px-3 py-1.5 text-[10px] font-semibold text-zinc-400 transition-colors hover:text-white"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={() => submitRejection(selected.id)}
+                        className="rounded-lg bg-red-600 px-3 py-1.5 text-[10px] font-bold text-white transition-opacity hover:opacity-90"
+                      >
+                        Confirm Reject
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => updateStatus(selected.id, "accepted")}
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-green-500/20 px-4 py-2 text-xs font-medium text-green-400 transition-colors hover:bg-green-500/30"
+                    >
+                      <Check className="h-3.5 w-3.5" /> Accept
+                    </button>
+                    <button
+                      onClick={() => setRejectingId(selected.id)}
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-red-500/20 px-4 py-2 text-xs font-medium text-red-400 transition-colors hover:bg-red-500/30"
+                    >
+                      <XCircle className="h-3.5 w-3.5" /> Reject
+                    </button>
+                  </>
+                )
               )}
 
               {selected.status !== "pending" && selected.status !== "rejected" && (

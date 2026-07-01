@@ -76,16 +76,27 @@ export async function PATCH(
         return NextResponse.json({ error: "Invalid status" }, { status: 400 });
       }
 
+      const { rejection_reason } = body;
+
       await execute(
-        "UPDATE project_requests SET status = $1, updated_at = NOW() WHERE id = $2",
-        [status, Number(id)]
+        `UPDATE project_requests 
+         SET status = $1, 
+             rejection_reason = CASE WHEN $1 = 'rejected' THEN $2 ELSE NULL END, 
+             updated_at = NOW() 
+         WHERE id = $3`,
+        [status, rejection_reason || null, Number(id)]
       );
 
       // Send chat message on accept/reject
       if (request.conversation_id) {
         let msg = "";
-        if (status === "accepted") msg = "Your project request has been accepted! 🎉 Please sign the project agreement contract.";
-        else if (status === "rejected") msg = "Your project request has been rejected.";
+        if (status === "accepted") {
+          msg = "Your project request has been accepted! 🎉 Please sign the project agreement contract.";
+        } else if (status === "rejected") {
+          msg = rejection_reason 
+            ? `Your project request has been rejected. Note from developer: "${rejection_reason}"`
+            : "Your project request has been rejected.";
+        }
         if (msg) {
           await execute(
             "INSERT INTO messages (conversation_id, sender_id, content) VALUES ($1, $2, $3)",
