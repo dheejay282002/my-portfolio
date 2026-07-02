@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { X, Check, XCircle, ChevronDown } from "lucide-react";
 import Skeleton from "@/components/Skeleton";
+import { useWebSettings } from "@/hooks/useWebSettings";
 
 interface ProjectRequest {
   id: number;
@@ -54,16 +55,12 @@ export default function ProjectRequestsPage() {
   const [openDropdown, setOpenDropdown] = useState<number | null>(null);
   const [rejectingId, setRejectingId] = useState<number | null>(null);
   const [rejectionReasonInput, setRejectionReasonInput] = useState("");
+  const { settings } = useWebSettings();
 
-  const printContract = async (request: ProjectRequest) => {
+  const printContract = (request: ProjectRequest) => {
     const w = window.open("", "_blank");
     if (!w) return;
-    let brandName = "Dee Jay.";
-    try {
-      const res = await fetch("/api/web-settings/public");
-      const data = await res.json();
-      if (data?.settings?.web_name) brandName = data.settings.web_name;
-    } catch {}
+    const brandName = settings.web_name || "Dee Jay.";
     const deliverablesHtml = request.deliverables
       ? request.deliverables.split("\n").map((d: string) => `<li>${d.replace(/^-\s*/, "").trim()}</li>`).join("")
       : "<li>Custom project specification deliverables</li>";
