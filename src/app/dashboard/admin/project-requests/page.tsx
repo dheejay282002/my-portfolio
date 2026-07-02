@@ -116,7 +116,7 @@ export default function ProjectRequestsPage() {
           </style>
         </head>
         <body>
-          <div class="logo-header"><span class="logo-bold">${brandName}</span></div>
+          <div class="logo-header">${settings.logo_type === "image" && settings.logo_image ? `<img src="${settings.logo_image}" alt="${brandName}" style="height:28px;max-width:200px;object-fit:contain;display:inline-block;vertical-align:middle" />` : `<span class="logo-bold">${brandName}</span>`}</div>
           
           <h1 class="agreement-title">Project Development Agreement</h1>
           <div class="series-subtitle">Series of ${currentYear}</div>
