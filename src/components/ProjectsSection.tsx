@@ -184,8 +184,8 @@ export default function ProjectsSection() {
 
       const x = Math.min(1.2, distance / halfWidth);
 
-      // Continuous scale: 1.2 in center to 0.6 at screen edge
-      const scale = 0.6 + 0.6 * Math.cos((Math.min(1, x) * Math.PI) / 2);
+      // Continuous scale: 1.0 in center to 0.7 at screen edge
+      const scale = 0.7 + 0.3 * Math.cos((Math.min(1, x) * Math.PI) / 2);
 
       // Continuous opacity fade: 1.0 in center to 0.25 at screen edge
       const opacity = 0.25 + 0.75 * (1 - Math.pow(Math.min(1, x), 1.8));
