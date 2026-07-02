@@ -24,9 +24,12 @@ interface PaymentMethod {
 interface Props {
   open: boolean;
   onClose: () => void;
+  conversationId?: number | null;
+  inviteMsgId?: number | null;
+  onSubmitted?: (msgId: number) => void;
 }
 
-export default function ProjectRequestModal({ open, onClose }: Props) {
+export default function ProjectRequestModal({ open, onClose, conversationId, inviteMsgId, onSubmitted }: Props) {
   const router = useRouter();
   const [user, setUser] = useState<{ id: number; name: string } | null>(null);
   const [availableProducts, setAvailableProducts] = useState<Product[]>([]);
@@ -156,16 +159,15 @@ export default function ProjectRequestModal({ open, onClose }: Props) {
     setSubmittingProject(true);
     setErrorMsg("");
     try {
+      const body: Record<string, any> = { ...projectForm, payment_receipt_url: paymentReceiptUrl, payment_reference_no: paymentReferenceNo.trim() };
+      if (conversationId) body.conversation_id = conversationId;
       const res = await fetch("/api/project-requests", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...projectForm,
-          payment_receipt_url: paymentReceiptUrl,
-          payment_reference_no: paymentReferenceNo.trim(),
-        }),
+        body: JSON.stringify(body),
       });
       if (res.ok) {
+        if (inviteMsgId && onSubmitted) onSubmitted(inviteMsgId);
         setProjectSubmitted(true);
         setProjectForm({ project_name: "", description: "", tech_stack: "", product_id: "" });
         setPaymentReceiptUrl("");
