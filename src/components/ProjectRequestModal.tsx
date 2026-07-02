@@ -179,7 +179,9 @@ export default function ProjectRequestModal({ open, onClose, conversationId, inv
                       const min = Number(nums[0]);
                       const max = nums.length > 1 ? Number(nums[1]) : min;
                       const midpoint = (min + max) / 2;
-                      setAmount(String(Math.round(midpoint * 0.5)));
+                      const half = Math.round(midpoint * 0.5);
+                      const converted = currency !== "USD" && rate !== 1 ? Math.round(half * rate) : half;
+                      setAmount(String(converted));
                     }
                   } else {
                     setAmount("");
