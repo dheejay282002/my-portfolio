@@ -28,7 +28,6 @@ export default function ServicesSection() {
   const [rate, setRate] = useState(1);
   const [activeIndex, setActiveIndex] = useState(0);
   const dragStartX = useRef(0);
-  const dragOffset = useRef(0);
   const isDragging = useRef(false);
 
   const formatPrice = (baseline: string) => {
@@ -100,7 +99,6 @@ export default function ServicesSection() {
 
   useEffect(() => {
     fetchProducts();
-
     fetch("https://ipapi.co/json/")
       .then((res) => res.json())
       .then((data) => {
@@ -109,9 +107,7 @@ export default function ServicesSection() {
         fetch("https://open.er-api.com/v6/latest/USD")
           .then((r) => r.json())
           .then((ratesData) => {
-            if (ratesData.rates && ratesData.rates[cur]) {
-              setRate(ratesData.rates[cur]);
-            }
+            if (ratesData.rates && ratesData.rates[cur]) setRate(ratesData.rates[cur]);
           });
       })
       .catch(() => {
@@ -121,9 +117,7 @@ export default function ServicesSection() {
           fetch("https://open.er-api.com/v6/latest/USD")
             .then((r) => r.json())
             .then((ratesData) => {
-              if (ratesData.rates && ratesData.rates["PHP"]) {
-                setRate(ratesData.rates["PHP"]);
-              }
+              if (ratesData.rates && ratesData.rates["PHP"]) setRate(ratesData.rates["PHP"]);
             });
         }
       });
@@ -149,32 +143,15 @@ export default function ServicesSection() {
     return () => clearInterval(timer);
   }, [activeIndex, goTo]);
 
-  const handleMouseDown = (e: React.MouseEvent) => {
+  const handlePointerDown = (clientX: number) => {
     isDragging.current = true;
-    dragStartX.current = e.clientX;
-    dragOffset.current = 0;
+    dragStartX.current = clientX;
   };
 
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging.current) return;
-    dragOffset.current = e.clientX - dragStartX.current;
-  };
-
-  const handleMouseUp = () => {
+  const handlePointerUp = (clientX: number) => {
     if (!isDragging.current) return;
     isDragging.current = false;
-    if (Math.abs(dragOffset.current) > 50) {
-      goTo(dragOffset.current > 0 ? activeIndex - 1 : activeIndex + 1);
-    }
-  };
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    dragStartX.current = e.touches[0].clientX;
-    dragOffset.current = 0;
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    const dx = e.changedTouches[0].clientX - dragStartX.current;
+    const dx = clientX - dragStartX.current;
     if (Math.abs(dx) > 50) {
       goTo(dx > 0 ? activeIndex - 1 : activeIndex + 1);
     }
@@ -182,27 +159,28 @@ export default function ServicesSection() {
 
   if (products.length === 0) return null;
 
-  const getTransform = (index: number) => {
+  const cardW = 320;
+
+  const getStyle = (index: number) => {
     const diff = index - activeIndex;
     const abs = Math.abs(diff);
-    const scale = Math.max(0.55, 1 - abs * 0.2);
-    const translateX = diff * 120;
-    const translateZ = abs === 0 ? 80 : -abs * 60;
-    const rotateY = diff * 20;
-    const opacity = abs <= 2 ? (abs === 0 ? 1 : abs === 1 ? 0.85 : 0.5) : 0;
+    const scale = abs === 0 ? 1 : abs === 1 ? 0.82 : abs === 2 ? 0.65 : 0.5;
+    const opacity = abs <= 1 ? 1 : abs === 2 ? 0.6 : 0;
     const zIndex = products.length - abs;
+    const translateX = diff * (cardW + 24);
 
     return {
-      transform: `perspective(900px) translateX(${translateX}%) translateZ(${translateZ}px) rotateY(${rotateY}deg) scale(${scale})`,
+      transform: `translateX(${translateX}px) scale(${scale})`,
       opacity,
       zIndex,
-      transition: "all 0.5s cubic-bezier(0.4, 0, 0.2, 1)",
+      transition: "transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s ease",
       pointerEvents: (abs <= 2 ? "auto" : "none") as React.CSSProperties["pointerEvents"],
+      willChange: "transform" as const,
     };
   };
 
   return (
-    <section id="offers" className="border-t border-white/5 px-6 py-24 overflow-hidden">
+    <section id="offers" className="border-t border-white/5 px-6 py-24">
       <ScrollReveal className="mx-auto max-w-7xl">
         <div className="text-center">
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
@@ -218,101 +196,99 @@ export default function ServicesSection() {
 
         <div className="relative mt-16">
           <div
-            className="relative mx-auto flex h-[520px] items-center justify-center select-none"
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
-            onTouchStart={handleTouchStart}
-            onTouchEnd={handleTouchEnd}
+            className="relative mx-auto flex h-[500px] items-center justify-center select-none"
+            onMouseDown={(e) => handlePointerDown(e.clientX)}
+            onMouseUp={(e) => handlePointerUp(e.clientX)}
+            onMouseLeave={(e) => { if (isDragging.current) handlePointerUp(e.clientX); }}
+            onTouchStart={(e) => handlePointerDown(e.touches[0].clientX)}
+            onTouchEnd={(e) => handlePointerUp(e.changedTouches[0].clientX)}
           >
-            <div className="relative flex h-full w-full items-center justify-center" style={{ perspective: "900px" }}>
-              {products.map((p, i) => {
-                const isPopular = p.id === popularId;
-                const isRecommended = p.id === recommendedId && !isPopular;
-                const items = p.deliverables.split("\n").filter(Boolean);
-                const style = getTransform(i);
-                const isCenter = i === activeIndex;
+            {products.map((p, i) => {
+              const isPopular = p.id === popularId;
+              const isRecommended = p.id === recommendedId && !isPopular;
+              const items = p.deliverables.split("\n").filter(Boolean);
+              const style = getStyle(i);
+              const isCenter = i === activeIndex;
 
-                return (
+              return (
+                <div
+                  key={p.id}
+                  className="absolute cursor-pointer"
+                  style={style}
+                  onClick={() => goTo(i)}
+                >
                   <div
-                    key={p.id}
-                    className="absolute cursor-pointer"
-                    style={style}
-                    onClick={() => goTo(i)}
+                    className="rounded-2xl p-6 flex flex-col text-left w-[280px] sm:w-[320px] h-[460px] relative"
+                    style={{
+                      background: "rgba(255,255,255,0.04)",
+                      border: `1px solid ${
+                        isCenter && isPopular
+                          ? "rgba(6,182,212,0.25)"
+                          : isCenter && isRecommended
+                          ? "rgba(59,130,246,0.25)"
+                          : "rgba(255,255,255,0.06)"
+                      }`,
+                      boxShadow: isCenter && isPopular
+                        ? "0 0 40px rgba(6,182,212,0.12)"
+                        : isCenter && isRecommended
+                        ? "0 0 40px rgba(59,130,246,0.12)"
+                        : "none",
+                    }}
                   >
-                    <div
-                      className="rounded-2xl p-6 flex flex-col text-left w-[280px] sm:w-[320px] h-[480px] transition-shadow duration-500 relative"
-                      style={{
-                        background: "rgba(255,255,255,0.04)",
-                        border: "1px solid rgba(255,255,255,0.06)",
-                        backfaceVisibility: "hidden",
-                        transformStyle: "preserve-3d",
-                        ...(isCenter
-                          ? isPopular
-                            ? { boxShadow: "0 0 40px rgba(6,182,212,0.12)", borderColor: "rgba(6,182,212,0.25)" }
-                            : isRecommended
-                            ? { boxShadow: "0 0 40px rgba(59,130,246,0.12)", borderColor: "rgba(59,130,246,0.25)" }
-                            : { boxShadow: "0 0 30px rgba(255,255,255,0.03)" }
-                          : {}
-                        ),
-                      }}
-                    >
-                      {isPopular && (
-                        <div className="absolute top-0 right-0 bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-0.5 rounded-bl-xl text-[9px] font-bold text-white uppercase tracking-wider z-10">
-                          Popular
-                        </div>
-                      )}
-                      {isRecommended && !isPopular && (
-                        <div className="absolute top-0 right-0 bg-gradient-to-r from-blue-500 to-purple-600 px-3 py-0.5 rounded-bl-xl text-[9px] font-bold text-white uppercase tracking-wider z-10">
-                          Recommended
-                        </div>
-                      )}
-
-                      <h3 className="text-lg font-bold text-white pr-16 truncate">
-                        {p.package_tier}
-                      </h3>
-
-                      <div className="mt-2 flex items-baseline gap-1">
-                        <span className="text-xl font-extrabold text-white tracking-tight">
-                          {formatPrice(p.project_baseline)}
-                        </span>
+                    {isPopular && (
+                      <div className="absolute top-0 right-0 bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-0.5 rounded-bl-xl text-[9px] font-bold text-white uppercase tracking-wider z-10">
+                        Popular
                       </div>
-
-                      <div className="mt-1 flex items-center gap-1 text-[11px] text-zinc-400">
-                        <Clock className="h-3 w-3 text-cyan-400" />
-                        <span>Est. Timeline: {p.est_timeline}</span>
+                    )}
+                    {isRecommended && !isPopular && (
+                      <div className="absolute top-0 right-0 bg-gradient-to-r from-blue-500 to-purple-600 px-3 py-0.5 rounded-bl-xl text-[9px] font-bold text-white uppercase tracking-wider z-10">
+                        Recommended
                       </div>
+                    )}
 
-                      <div className="mt-4 flex-1 border-t border-white/5 pt-4 min-h-0 overflow-hidden">
-                        <h4 className="text-[9px] font-semibold text-zinc-500 uppercase tracking-wider mb-3">
-                          Key Deliverables
-                        </h4>
-                        <ul className="space-y-1.5 overflow-y-auto max-h-[180px] scrollbar-thin pr-1">
-                          {items.map((item, idx) => (
-                            <li key={idx} className="flex items-start gap-2 text-xs text-zinc-300 leading-relaxed">
-                              <Check className="h-3 w-3 shrink-0 text-cyan-400 mt-0.5" />
-                              <span className="line-clamp-2">{item}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
+                    <h3 className="text-lg font-bold text-white pr-16 truncate">
+                      {p.package_tier}
+                    </h3>
 
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleChoosePackage(p); }}
-                        className={`mt-4 w-full rounded-xl py-2.5 text-xs font-semibold text-white transition-all shrink-0 ${
-                          isPopular
-                            ? "bg-gradient-to-r from-cyan-500 to-blue-600 hover:opacity-90 shadow-md shadow-cyan-500/10"
-                            : "bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20"
-                        }`}
-                      >
-                        Choose Package
-                      </button>
+                    <div className="mt-2 flex items-baseline gap-1">
+                      <span className="text-xl font-extrabold text-white tracking-tight">
+                        {formatPrice(p.project_baseline)}
+                      </span>
                     </div>
+
+                    <div className="mt-1 flex items-center gap-1 text-[11px] text-zinc-400">
+                      <Clock className="h-3 w-3 text-cyan-400" />
+                      <span>Est. Timeline: {p.est_timeline}</span>
+                    </div>
+
+                    <div className="mt-4 flex-1 border-t border-white/5 pt-4 min-h-0 overflow-hidden">
+                      <h4 className="text-[9px] font-semibold text-zinc-500 uppercase tracking-wider mb-3">
+                        Key Deliverables
+                      </h4>
+                      <ul className="space-y-1.5 overflow-y-auto max-h-[200px] scrollbar-thin pr-1">
+                        {items.map((item, idx) => (
+                          <li key={idx} className="flex items-start gap-2 text-xs text-zinc-300 leading-relaxed">
+                            <Check className="h-3 w-3 shrink-0 text-cyan-400 mt-0.5" />
+                            <span className="line-clamp-2">{item}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleChoosePackage(p); }}
+                      className={`mt-4 w-full rounded-xl py-2.5 text-xs font-semibold text-white transition-all shrink-0 ${
+                        isPopular
+                          ? "bg-gradient-to-r from-cyan-500 to-blue-600 hover:opacity-90 shadow-md shadow-cyan-500/10"
+                          : "bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20"
+                      }`}
+                    >
+                      Choose Package
+                    </button>
                   </div>
-                );
-              })}
-            </div>
+                </div>
+              );
+            })}
           </div>
 
           <button
