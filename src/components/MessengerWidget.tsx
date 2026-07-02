@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { MessageSquare, X, Send, Plus, ChevronLeft, User, FileText, Camera, CornerUpLeft, Phone, Video, VideoOff, Mic, MicOff, PhoneOff, X as XIcon, Upload, AlertCircle, Check, CreditCard } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import Image from "next/image";
 
 interface OtherUser {
@@ -76,6 +76,7 @@ const PROJECT_REQUEST_PREFIX = "📋 PROJECT_REQUEST_SUBMIT";
 
 export default function MessengerWidget() {
   const router = useRouter();
+  const pathname = usePathname();
   const [user, setUser] = useState<{ id: number; name: string; role: string } | null>(null);
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<"list" | "chat" | "new">("list");
@@ -572,8 +573,10 @@ export default function MessengerWidget() {
 
 
 
+  const hideChat = pathname === "/" && !user;
+
   return (<>
-    <div className="fixed bottom-6 right-6 z-[100]">
+    <div className={`fixed bottom-6 right-6 z-[100] ${hideChat ? "hidden" : ""}`}>
       {!open ? (
         <button
           onClick={() => { setOpen(true); setUnreadCount(0); prevUnreadRef.current = 0; }}
@@ -1163,7 +1166,7 @@ export default function MessengerWidget() {
                                       {showQRId === m.id ? "Hide QR" : "Show QR Code ↗"}
                                     </button>
                                     {showQRId === m.id && (
-                                      <div className="relative h-20 w-20 border border-white/10 rounded-lg overflow-hidden bg-white mt-1">
+                                      <div className="relative h-36 w-36 border border-white/10 rounded-xl overflow-hidden bg-white mt-2">
                                         <img src={m.qr_code_url} alt="QR" className="h-full w-full object-contain" />
                                       </div>
                                     )}

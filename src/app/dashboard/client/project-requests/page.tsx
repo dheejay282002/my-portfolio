@@ -205,7 +205,7 @@ function FinalPaymentModal({ request, onClose, onSuccess }: FinalPaymentModalPro
                           {showQRId === m.id ? "Hide QR Code" : "Show QR Code ↗"}
                         </button>
                         {showQRId === m.id && (
-                          <div className="relative mt-2 h-28 w-28 mx-auto border border-white/10 rounded-xl overflow-hidden bg-white">
+                          <div className="relative mt-2 h-36 w-36 mx-auto border border-white/10 rounded-xl overflow-hidden bg-white">
                             <Image src={m.qr_code_url} alt="Bank QR" fill className="object-contain" unoptimized />
                           </div>
                         )}
