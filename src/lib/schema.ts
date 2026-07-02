@@ -115,6 +115,9 @@ export async function ensureProductsTable() {
     ALTER TABLE project_requests ADD COLUMN IF NOT EXISTS rejection_reason TEXT
   `);
   await execute(`
+    ALTER TABLE project_requests ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()
+  `);
+  await execute(`
     ALTER TABLE project_requests 
     ADD COLUMN IF NOT EXISTS payment_receipt_url TEXT,
     ADD COLUMN IF NOT EXISTS payment_reference_no VARCHAR(255),

@@ -12,6 +12,8 @@ export async function PATCH(
   }
 
   try {
+    const { ensureProductsTable } = await import("@/lib/schema");
+    await ensureProductsTable();
     const { id } = await params;
     const request = await queryOne("SELECT * FROM project_requests WHERE id = $1", [id]) as Record<string, any> | null;
 
@@ -176,7 +178,8 @@ export async function PATCH(
     }
 
     return NextResponse.json({ error: "No action provided" }, { status: 400 });
-  } catch {
-    return NextResponse.json({ error: "Something went wrong" }, { status: 500 });
+  } catch (err: any) {
+    console.error("[PATCH PROJECT REQUEST ERROR]", err?.message || err);
+    return NextResponse.json({ error: `Something went wrong: ${err?.message || "Unknown"}` }, { status: 500 });
   }
 }
