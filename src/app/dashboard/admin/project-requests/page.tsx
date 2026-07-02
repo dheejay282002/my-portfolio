@@ -88,9 +88,9 @@ export default function ProjectRequestsPage() {
         <head>
           <title>Agreement Contract - ${request.project_name}</title>
           <style>
+            ${settings.logo_font_file ? `@font-face { font-family: 'UploadedCustomFont'; src: url('${settings.logo_font_file}'); }` : ""}
             body { font-family: 'Georgia', serif; padding: 60px 50px; color: #111; line-height: 1.6; max-width: 800px; margin: 0 auto; background: #fff; }
             .logo-header { font-size: 11px; font-style: italic; color: #666; margin-bottom: 30px; text-align: center; }
-            .logo-bold { font-weight: bold; font-style: normal; color: #111; font-size: 15px; }
             h1.agreement-title { text-align: center; font-size: 18px; font-weight: bold; text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.5px; }
             .series-subtitle { text-align: center; font-weight: bold; font-size: 13px; margin-bottom: 30px; text-transform: uppercase; }
             .legal-statement { font-weight: bold; text-align: justify; font-size: 12px; line-height: 1.6; margin-bottom: 25px; text-transform: uppercase; border-bottom: 1.5px solid #111; border-top: 1.5px solid #111; padding: 15px 0; }
@@ -116,7 +116,7 @@ export default function ProjectRequestsPage() {
           </style>
         </head>
         <body>
-          <div class="logo-header">${settings.logo_type === "image" && settings.logo_image ? `<img src="${settings.logo_image}" alt="${brandName}" style="height:28px;max-width:200px;object-fit:contain;display:inline-block;vertical-align:middle" />` : `<span class="logo-bold">${brandName}</span>`}</div>
+          <div class="logo-header">${settings.logo_type === "image" && settings.logo_image ? `<img src="${settings.logo_image}" alt="${brandName}" style="height:28px;max-width:200px;object-fit:contain;display:inline-block;vertical-align:middle" />` : `<span style="font-family:${settings.logo_font_file ? 'UploadedCustomFont' : settings.logo_font};color:${settings.logo_color || '#111'};font-weight:bold;font-size:15px">${brandName}</span>`}</div>
           
           <h1 class="agreement-title">Project Development Agreement</h1>
           <div class="series-subtitle">Series of ${currentYear}</div>
