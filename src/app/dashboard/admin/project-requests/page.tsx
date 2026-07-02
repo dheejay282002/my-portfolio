@@ -56,14 +56,14 @@ export default function ProjectRequestsPage() {
   const [rejectionReasonInput, setRejectionReasonInput] = useState("");
 
   const printContract = async (request: ProjectRequest) => {
+    const w = window.open("", "_blank");
+    if (!w) return;
     let brandName = "Dee Jay.";
     try {
       const res = await fetch("/api/web-settings/public");
       const data = await res.json();
       if (data?.settings?.web_name) brandName = data.settings.web_name;
     } catch {}
-    const w = window.open("", "_blank");
-    if (!w) return;
     const deliverablesHtml = request.deliverables
       ? request.deliverables.split("\n").map((d: string) => `<li>${d.replace(/^-\s*/, "").trim()}</li>`).join("")
       : "<li>Custom project specification deliverables</li>";
