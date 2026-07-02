@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import Header from "@/components/Header";
 import MessengerWidget from "@/components/MessengerWidget";
 import ThemeProvider from "@/components/ThemeProvider";
@@ -37,6 +38,7 @@ export default function RootLayout({
           {children}
           <MessengerWidget />
         </ThemeProvider>
+        <SpeedInsights />
       </body>
     </html>
   );
