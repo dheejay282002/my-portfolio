@@ -43,6 +43,7 @@ export default function PaymentMethodsPage() {
     environment: "test",
   });
   const [dodoSaving, setDodoSaving] = useState(false);
+  const [dodoTesting, setDodoTesting] = useState(false);
   const [dodoSuccess, setDodoSuccess] = useState("");
   const [dodoError, setDodoError] = useState("");
 
@@ -65,6 +66,25 @@ export default function PaymentMethodsPage() {
         }
       }
     } catch {}
+  };
+
+  const handleTestDodo = async () => {
+    setDodoTesting(true);
+    setDodoError("");
+    setDodoSuccess("");
+    try {
+      const res = await fetch("/api/dodo/test-connection", { method: "POST" });
+      const data = await res.json();
+      if (res.ok) {
+        setDodoSuccess(data.message || "Connection successful!");
+      } else {
+        setDodoError(data.error || "Connection failed");
+      }
+    } catch {
+      setDodoError("Could not reach server");
+    } finally {
+      setDodoTesting(false);
+    }
   };
 
   const handleSaveDodo = async () => {
@@ -514,11 +534,18 @@ export default function PaymentMethodsPage() {
             </select>
           </div>
           <button
+            onClick={handleTestDodo}
+            disabled={dodoTesting || dodoSaving}
+            className="rounded-xl border border-cyan-500/30 px-4 py-2 text-xs font-semibold text-cyan-400 transition-colors hover:bg-cyan-500/10 disabled:opacity-50"
+          >
+            {dodoTesting ? "Testing..." : "Test Connection"}
+          </button>
+          <button
             onClick={handleSaveDodo}
             disabled={dodoSaving}
-            className="ml-auto rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-6 py-2 text-xs font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+            className="rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-6 py-2 text-xs font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
           >
-            {dodoSaving ? "Saving..." : "Save DODO Configuration"}
+            {dodoSaving ? "Saving..." : "Save Configuration"}
           </button>
         </div>
         {dodoSuccess && (
