@@ -876,17 +876,18 @@ export default function MessengerWidget() {
             )}
           </div>
 
-          <ProjectRequestModal
-            open={showProjectForm}
-            onClose={() => { setShowProjectForm(false); setActiveInviteMsgId(null); }}
-            conversationId={activeConv?.id}
-            inviteMsgId={activeInviteMsgId}
-            onSubmitted={(msgId) => setSubmittedInvites((prev) => new Set(prev).add(msgId))}
-          />
-
         </div>
       )}
     </div>
+
+    <ProjectRequestModal
+      open={showProjectForm}
+      onClose={() => { setShowProjectForm(false); setActiveInviteMsgId(null); }}
+      conversationId={activeConv?.id}
+      inviteMsgId={activeInviteMsgId}
+      onSubmitted={(msgId) => setSubmittedInvites((prev) => new Set(prev).add(msgId))}
+    />
+
     {lightboxUrl && (
       <div
         className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80"
