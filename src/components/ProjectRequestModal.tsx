@@ -172,7 +172,6 @@ export default function ProjectRequestModal({ open, onClose, conversationId, inv
                   setProjectForm({
                     ...projectForm,
                     product_id: val ? Number(val) : "",
-                    project_name: prod ? `Request for ${prod.package_tier}` : projectForm.project_name,
                   });
                   if (prod) {
                     const nums = prod.project_baseline.replace(/,/g, "").match(/\d+/g);
