@@ -69,10 +69,15 @@ interface FinalPaymentModalProps {
 
 function FinalPaymentModal({ request, onClose, onSuccess }: FinalPaymentModalProps) {
   const { settings } = useWebSettings();
+  const [amount, setAmount] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
   const handleDodoPayment = async () => {
+    if (!amount || parseFloat(amount) <= 0) {
+      setError("Please enter the final payment amount.");
+      return;
+    }
     setSubmitting(true);
     setError("");
     try {
@@ -82,6 +87,7 @@ function FinalPaymentModal({ request, onClose, onSuccess }: FinalPaymentModalPro
         body: JSON.stringify({
           type: "final_payment",
           projectRequestId: request.id,
+          amount: amount ? parseFloat(amount) : undefined,
         }),
       });
       if (!res.ok) {
@@ -124,13 +130,26 @@ function FinalPaymentModal({ request, onClose, onSuccess }: FinalPaymentModalPro
           )}
 
           <p className="text-xs text-zinc-400 mb-6 leading-relaxed">
-            Your project build is completed and staging is ready! Please settle the remaining 50% balance payment of <span className="text-cyan-400 font-bold">{request.project_baseline}</span> to unlock code handover delivery.
+            Your project build is completed and staging is ready! Please settle the remaining 50% balance payment to unlock code handover delivery.
           </p>
 
-          <div className="rounded-xl border border-white/5 bg-zinc-950/40 p-5 mb-6 text-left">
-            <p className="text-xs text-zinc-400 mb-4 leading-relaxed">
+          <div className="rounded-xl border border-white/5 bg-zinc-950/40 p-5 mb-6 text-left space-y-4">
+            <p className="text-xs text-zinc-400 leading-relaxed">
               Pay securely via DODO Payments using your credit/debit card or any supported payment method.
             </p>
+            <div>
+              <label className="mb-1 block text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">Amount to Pay (USD)</label>
+              <input
+                type="number"
+                min="1"
+                step="0.01"
+                placeholder="e.g. 250"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                required
+                className="glass w-full rounded-xl px-4 py-2.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-cyan-500/50 bg-zinc-950"
+              />
+            </div>
             <button
               onClick={handleDodoPayment}
               disabled={submitting}

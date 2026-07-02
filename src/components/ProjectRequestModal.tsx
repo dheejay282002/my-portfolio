@@ -27,6 +27,7 @@ export default function ProjectRequestModal({ open, onClose, conversationId, inv
   const [currency, setCurrency] = useState("USD");
   const [rate, setRate] = useState(1);
   const [projectForm, setProjectForm] = useState({ project_name: "", description: "", tech_stack: "", product_id: "" as string | number });
+  const [amount, setAmount] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [projectSubmitted, setProjectSubmitted] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
@@ -71,6 +72,11 @@ export default function ProjectRequestModal({ open, onClose, conversationId, inv
   const handleDodoPayment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!projectForm.project_name.trim() || !projectForm.description.trim()) return;
+    if (!amount || parseFloat(amount) <= 0) {
+      setErrorMsg("Please enter the downpayment amount.");
+      setSubmitting(false);
+      return;
+    }
     if (!user) {
       const pending = JSON.stringify({ productName: projectForm.project_name, productId: projectForm.product_id });
       localStorage.setItem("pending_package_request", pending);
@@ -105,6 +111,7 @@ export default function ProjectRequestModal({ open, onClose, conversationId, inv
         body: JSON.stringify({
           type: "downpayment",
           projectRequestId: id,
+          amount: amount ? parseFloat(amount) : undefined,
         }),
       });
       if (!checkoutRes.ok) {
@@ -211,6 +218,19 @@ export default function ProjectRequestModal({ open, onClose, conversationId, inv
                 Secure Checkout
               </p>
               <p>A 50% downpayment is required to start your project. Pay securely via DODO Payments using credit/debit card or any supported payment method.</p>
+              <div>
+                <label className="mb-1 block text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">Amount to Pay (USD)</label>
+                <input
+                  type="number"
+                  min="1"
+                  step="0.01"
+                  placeholder="e.g. 250"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  required
+                  className="glass w-full rounded-xl px-4 py-2.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-cyan-500/50 bg-zinc-950"
+                />
+              </div>
             </div>
 
             <div className="flex gap-3 pt-2 border-t border-white/5">
