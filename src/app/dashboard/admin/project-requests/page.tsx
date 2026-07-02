@@ -28,6 +28,8 @@ interface ProjectRequest {
   payment_reference_no?: string | null;
   final_payment_receipt_url?: string | null;
   final_payment_reference_no?: string | null;
+  dodo_downpayment_id?: string | null;
+  dodo_final_payment_id?: string | null;
 }
 
 const formatDate = (dateVal: any) => {
@@ -37,6 +39,7 @@ const formatDate = (dateVal: any) => {
 };
 
 const statusColors: Record<string, string> = {
+  pending_payment: "bg-purple-500/10 text-purple-400",
   pending: "bg-yellow-500/10 text-yellow-400",
   accepted: "bg-green-500/10 text-green-400",
   rejected: "bg-red-500/10 text-red-400",
@@ -426,8 +429,16 @@ export default function ProjectRequestsPage() {
                 </div>
               )}
 
-              {/* Downpayment Receipt */}
-              {selected.payment_receipt_url && (
+              {/* Downpayment Receipt / DODO */}
+              {selected.dodo_downpayment_id ? (
+                <div className="border-t border-white/5 pt-4 space-y-1.5 text-left">
+                  <p className="text-xs text-zinc-500">50% Downpayment (via DODO)</p>
+                  <p className="text-xs text-green-400 font-semibold flex items-center gap-1">
+                    <Check className="h-3 w-3" /> Paid
+                  </p>
+                  <p className="text-xs text-zinc-400 font-mono">ID: {selected.dodo_downpayment_id}</p>
+                </div>
+              ) : selected.payment_receipt_url ? (
                 <div className="border-t border-white/5 pt-4 space-y-1.5 text-left">
                   <p className="text-xs text-zinc-500">50% Downpayment Receipt</p>
                   <p className="text-xs text-zinc-300">
@@ -442,10 +453,18 @@ export default function ProjectRequestsPage() {
                     View Downpayment Screenshot ↗
                   </a>
                 </div>
-              )}
+              ) : null}
 
-              {/* Final Payment Receipt */}
-              {selected.final_payment_receipt_url && (
+              {/* Final Payment Receipt / DODO */}
+              {selected.dodo_final_payment_id ? (
+                <div className="border-t border-white/5 pt-4 space-y-1.5 text-left">
+                  <p className="text-xs text-zinc-500">Final 50% Payment (via DODO)</p>
+                  <p className="text-xs text-green-400 font-semibold flex items-center gap-1">
+                    <Check className="h-3 w-3" /> Paid
+                  </p>
+                  <p className="text-xs text-zinc-400 font-mono">ID: {selected.dodo_final_payment_id}</p>
+                </div>
+              ) : selected.final_payment_receipt_url ? (
                 <div className="border-t border-white/5 pt-4 space-y-1.5 text-left">
                   <p className="text-xs text-zinc-500">Final 50% Payment Receipt</p>
                   <p className="text-xs text-zinc-300">
@@ -460,7 +479,7 @@ export default function ProjectRequestsPage() {
                     View Final Payment Screenshot ↗
                   </a>
                 </div>
-              )}
+              ) : null}
 
               {selected.status === "accepted" && (
                 <div>
@@ -548,7 +567,7 @@ export default function ProjectRequestsPage() {
                     {openDropdown === selected.id && (
                       <div className="absolute right-0 top-full z-10 mt-1 w-40 overflow-hidden rounded-xl glass-strong">
                         {progressOptions.map((opt) => {
-                          const isDeliveredDisabled = opt === "delivered" && !selected.final_payment_receipt_url;
+                          const isDeliveredDisabled = opt === "delivered" && !selected.final_payment_receipt_url && !selected.dodo_final_payment_id;
                           return (
                             <button
                               key={opt}

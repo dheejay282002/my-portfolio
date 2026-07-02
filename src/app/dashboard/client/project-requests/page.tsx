@@ -29,9 +29,12 @@ interface ProjectRequest {
   payment_reference_no?: string | null;
   final_payment_receipt_url?: string | null;
   final_payment_reference_no?: string | null;
+  dodo_downpayment_id?: string | null;
+  dodo_final_payment_id?: string | null;
 }
 
 const statusColors: Record<string, string> = {
+  pending_payment: "bg-purple-500/10 text-purple-400",
   pending: "bg-yellow-500/10 text-yellow-400",
   accepted: "bg-green-500/10 text-green-400",
   rejected: "bg-red-500/10 text-red-400",
@@ -42,6 +45,7 @@ const statusColors: Record<string, string> = {
 };
 
 const statusLabels: Record<string, string> = {
+  pending_payment: "Awaiting Payment",
   pending: "Pending",
   accepted: "Accepted",
   rejected: "Rejected",
@@ -63,87 +67,34 @@ interface FinalPaymentModalProps {
   onSuccess: (id: number, receiptUrl: string, refNo: string) => void;
 }
 
-interface PaymentMethod {
-  id: number;
-  provider_name: string;
-  account_name: string;
-  account_number: string;
-  qr_code_url: string;
-  is_active: boolean;
-}
-
 function FinalPaymentModal({ request, onClose, onSuccess }: FinalPaymentModalProps) {
   const { settings } = useWebSettings();
-  const [refNo, setRefNo] = useState("");
-  const [receiptUrl, setReceiptUrl] = useState("");
-  const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
-  const [loadingMethods, setLoadingMethods] = useState(true);
-  const [showQRId, setShowQRId] = useState<number | null>(null);
 
-  useEffect(() => {
-    fetch("/api/payment-methods")
-      .then((r) => r.json())
-      .then((d) => {
-        setPaymentMethods(d.methods?.filter((m: any) => m.is_active) || []);
-        setLoadingMethods(false);
-      })
-      .catch(() => setLoadingMethods(false));
-  }, []);
-
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploading(true);
-    setError("");
-    const fd = new FormData();
-    fd.append("file", file);
-    try {
-      const res = await fetch("/api/upload", { method: "POST", body: fd });
-      if (res.ok) {
-        const data = await res.json();
-        setReceiptUrl(data.url);
-      } else {
-        setError("Failed to upload screenshot. Please make sure file size is under 4.5MB.");
-      }
-    } catch {
-      setError("An error occurred during file upload.");
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!receiptUrl || !refNo.trim()) {
-      setError("Please upload the final payment receipt screenshot and enter reference number.");
-      return;
-    }
+  const handleDodoPayment = async () => {
     setSubmitting(true);
     setError("");
-
     try {
-      const res = await fetch(`/api/project-requests/${request.id}`, {
-        method: "PATCH",
+      const res = await fetch("/api/dodo/create-checkout", {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          final_payment_receipt_url: receiptUrl,
-          final_payment_reference_no: refNo.trim(),
+          type: "final_payment",
+          projectRequestId: request.id,
         }),
       });
-
-      if (res.ok) {
-        onSuccess(request.id, receiptUrl, refNo.trim());
-        onClose();
-      } else {
-        const data = await res.json();
-        setError(data.error || "Fake Receipt Detected or invalid reference code. Please verify.");
+      if (!res.ok) {
+        setError("DODO Payments is not configured yet. Please contact the developer.");
+        setSubmitting(false);
+        return;
+      }
+      const { checkout_url } = await res.json();
+      if (checkout_url) {
+        window.location.href = checkout_url;
       }
     } catch {
       setError("Something went wrong. Please try again.");
-    } finally {
       setSubmitting(false);
     }
   };
@@ -173,109 +124,31 @@ function FinalPaymentModal({ request, onClose, onSuccess }: FinalPaymentModalPro
           )}
 
           <p className="text-xs text-zinc-400 mb-6 leading-relaxed">
-            Your project build is completed and staging is ready! Please settle the remaining 50% balance payment of <span className="text-cyan-400 font-bold">{request.project_baseline}</span> using any of the bank channels below, and upload your payment receipt below to unlock code handover delivery.
+            Your project build is completed and staging is ready! Please settle the remaining 50% balance payment of <span className="text-cyan-400 font-bold">{request.project_baseline}</span> to unlock code handover delivery.
           </p>
 
-          {/* Payment Methods */}
-          <div className="space-y-3 mb-6">
-            <h4 className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">Developer Bank Accounts</h4>
-            {loadingMethods ? (
-              <div className="space-y-2">
-                <Skeleton className="h-10 w-full rounded-xl animate-pulse" />
-                <Skeleton className="h-10 w-full rounded-xl animate-pulse" />
-              </div>
-            ) : paymentMethods.length === 0 ? (
-              <div className="rounded-xl border border-white/5 p-4 text-xs text-zinc-500 text-center italic bg-white/2">
-                No active payment accounts found. Please contact developer via chat.
-              </div>
-            ) : (
-              <div className="grid gap-3 sm:grid-cols-2">
-                {paymentMethods.map((m) => (
-                  <div key={m.id} className="p-4 rounded-xl bg-zinc-950/40 border border-white/5 flex flex-col justify-between space-y-3">
-                    <div>
-                      <p className="text-[10px] font-semibold text-zinc-500 uppercase">{m.provider_name}</p>
-                      <p className="text-xs font-bold text-white mt-1">{m.account_name}</p>
-                      <p className="text-xs font-mono text-cyan-400 tracking-wider mt-0.5">{m.account_number}</p>
-                    </div>
-                    {m.qr_code_url && (
-                      <div>
-                        <button
-                          type="button"
-                          onClick={() => setShowQRId(showQRId === m.id ? null : m.id)}
-                          className="text-[10px] text-cyan-400 hover:underline inline-flex items-center gap-1"
-                        >
-                          {showQRId === m.id ? "Hide QR Code" : "Show QR Code ↗"}
-                        </button>
-                        {showQRId === m.id && (
-                          <div className="relative mt-2 h-36 w-36 mx-auto border border-white/10 rounded-xl overflow-hidden bg-white">
-                            <Image src={m.qr_code_url} alt="Bank QR" fill className="object-contain" unoptimized />
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
+          <div className="rounded-xl border border-white/5 bg-zinc-950/40 p-5 mb-6 text-left">
+            <p className="text-xs text-zinc-400 mb-4 leading-relaxed">
+              Pay securely via DODO Payments using your credit/debit card or any supported payment method.
+            </p>
+            <button
+              onClick={handleDodoPayment}
+              disabled={submitting}
+              className="w-full rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 py-3 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              <CreditCard className="h-4 w-4" />
+              {submitting ? "Processing..." : "Pay Remaining 50% Balance"}
+            </button>
           </div>
-
-          {/* Upload form */}
-          <form onSubmit={handleSubmit} className="space-y-4 border-t border-white/5 pt-6 text-left">
-            <div>
-              <label className="mb-1.5 block text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">Transaction Reference Number</label>
-              <input
-                type="text"
-                placeholder="Enter bank transfer reference number"
-                value={refNo}
-                onChange={(e) => setRefNo(e.target.value)}
-                required
-                className="glass w-full rounded-xl px-4 py-2.5 text-xs text-white placeholder-zinc-500 outline-none focus:border-cyan-500/50 bg-zinc-950"
-              />
-            </div>
-
-            <div>
-              <label className="mb-1.5 block text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">Payment Receipt Screenshot</label>
-              <div className="flex items-center gap-4">
-                <input
-                  type="file"
-                  onChange={handleUpload}
-                  accept="image/*"
-                  id="final-receipt-upload"
-                  className="hidden"
-                />
-                <label
-                  htmlFor="final-receipt-upload"
-                  className="cursor-pointer rounded-xl border border-white/10 px-4 py-2.5 text-xs font-semibold text-zinc-300 transition-colors hover:border-white/20 hover:text-white bg-zinc-950/40 inline-flex items-center gap-1.5"
-                >
-                  <Upload className="h-3.5 w-3.5" />
-                  {uploading ? "Uploading..." : "Upload Screenshot"}
-                </label>
-                {receiptUrl && (
-                  <span className="text-xs text-green-400 font-semibold flex items-center gap-1">
-                    <Check className="h-4 w-4" /> Screenshot Added
-                  </span>
-                )}
-              </div>
-            </div>
-
-            <div className="pt-4 flex gap-3 border-t border-white/5 mt-6">
-              <button
-                type="submit"
-                disabled={submitting || uploading}
-                className="flex-1 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 py-2.5 text-xs font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-              >
-                {submitting ? "Analyzing Receipt..." : "Submit Final Payment"}
-              </button>
-              <button
-                type="button"
-                onClick={onClose}
-                className="rounded-xl border border-white/10 px-5 py-2.5 text-xs font-semibold text-zinc-400 transition-colors hover:border-white/20 hover:text-white"
-              >
-                Close
-              </button>
-            </div>
-          </form>
         </div>
+
+        <button
+          type="button"
+          onClick={onClose}
+          className="w-full rounded-xl border border-white/10 py-2.5 text-xs font-semibold text-zinc-400 transition-colors hover:border-white/20 hover:text-white"
+        >
+          Close
+        </button>
       </div>
     </div>
   );
@@ -885,10 +758,24 @@ function ContractModal({ request, onClose, onSuccess }: ContractModalProps) {
 export default function ClientProjectRequests() {
   const [requests, setRequests] = useState<ProjectRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dodoMessage, setDodoMessage] = useState("");
   const [activeReviewRequest, setActiveReviewRequest] = useState<ProjectRequest | null>(null);
   const [activeDetailsRequest, setActiveDetailsRequest] = useState<ProjectRequest | null>(null);
   const [activeContractRequest, setActiveContractRequest] = useState<ProjectRequest | null>(null);
   const [activeFinalPaymentRequest, setActiveFinalPaymentRequest] = useState<ProjectRequest | null>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const status = params.get("status");
+    if (status === "succeeded") {
+      setDodoMessage("Payment successful! Your request is being processed.");
+    } else if (status === "failed") {
+      setDodoMessage("Payment was not completed. You can try again.");
+    }
+    if (params.has("status")) {
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []);
 
   useEffect(() => {
     fetch("/api/project-requests")
@@ -935,6 +822,16 @@ export default function ClientProjectRequests() {
           Track the status of your submitted project requests.
         </p>
       </div>
+
+      {dodoMessage && (
+        <div className="mt-6 rounded-xl bg-cyan-500/10 border border-cyan-500/20 p-4 text-sm text-cyan-400 flex items-center gap-3">
+          <CreditCard className="h-5 w-5 shrink-0" />
+          {dodoMessage}
+          <button onClick={() => setDodoMessage("")} className="ml-auto text-cyan-400/60 hover:text-cyan-400">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
       <div className="mt-8">
         {requests.length === 0 ? (
@@ -1020,8 +917,8 @@ export default function ClientProjectRequests() {
                         )}
 
                         {req.status === "completed" && (
-                          req.final_payment_receipt_url ? (
-                            <span className="text-[10px] text-zinc-500 italic">Receipt Pending Verification</span>
+                          req.final_payment_receipt_url || req.dodo_final_payment_id ? (
+                            <span className="text-[10px] text-zinc-500 italic">Payment Pending Verification</span>
                           ) : (
                             <button
                               onClick={(e) => {

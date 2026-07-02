@@ -124,7 +124,9 @@ export async function ensureProductsTable() {
     ADD COLUMN IF NOT EXISTS final_payment_receipt_url TEXT,
     ADD COLUMN IF NOT EXISTS final_payment_reference_no VARCHAR(255),
     ADD COLUMN IF NOT EXISTS receipt_verified BOOLEAN DEFAULT FALSE,
-    ADD COLUMN IF NOT EXISTS final_receipt_verified BOOLEAN DEFAULT FALSE
+    ADD COLUMN IF NOT EXISTS final_receipt_verified BOOLEAN DEFAULT FALSE,
+    ADD COLUMN IF NOT EXISTS dodo_downpayment_id TEXT,
+    ADD COLUMN IF NOT EXISTS dodo_final_payment_id TEXT
   `);
   await execute(`
     CREATE TABLE IF NOT EXISTS payment_methods (
@@ -137,6 +139,24 @@ export async function ensureProductsTable() {
       created_at TIMESTAMP DEFAULT NOW()
     )
   `);
+
+  await execute(`
+    CREATE TABLE IF NOT EXISTS payment_gateways (
+      id SERIAL PRIMARY KEY,
+      provider VARCHAR(50) NOT NULL UNIQUE,
+      is_enabled BOOLEAN DEFAULT FALSE,
+      config JSONB DEFAULT '{}',
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW()
+    )
+  `);
+
+  const existingGateway = await queryOne("SELECT id FROM payment_gateways WHERE provider = 'dodo'");
+  if (!existingGateway) {
+    await execute(
+      "INSERT INTO payment_gateways (provider, is_enabled, config) VALUES ('dodo', FALSE, '{}')"
+    );
+  }
 
   const countRes = await queryOne("SELECT COUNT(*) as count FROM products");
   if (countRes && Number((countRes as any).count) === 0) {
