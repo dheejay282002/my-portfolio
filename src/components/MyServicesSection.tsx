@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import { Code2, Shield, Server, Globe, Database, GitBranch, Smartphone, Palette, Cloud, Braces, Layers, Rocket, ChevronLeft, ChevronRight } from "lucide-react";
+import { useRouter } from "next/navigation";
 import ScrollReveal from "./ScrollReveal";
 
 const iconMap: Record<string, React.ElementType> = {
@@ -16,6 +17,7 @@ interface Service {
 }
 
 export default function MyServicesSection() {
+  const router = useRouter();
   const [services, setServices] = useState<Service[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -33,6 +35,12 @@ export default function MyServicesSection() {
   useEffect(() => {
     fetchServices();
   }, []);
+
+  const handleRequestService = (s: Service) => {
+    window.dispatchEvent(new CustomEvent("open-project-request", {
+      detail: { productName: s.title, productId: 0 }
+    }));
+  };
 
   const goTo = useCallback((index: number) => {
     setActiveIndex((prev) => {
@@ -167,7 +175,7 @@ export default function MyServicesSection() {
                         </div>
 
                         {bestFor && (
-                          <div className="border-t border-white/5 pt-3 mt-auto shrink-0">
+                          <div className="border-t border-white/5 pt-3 shrink-0">
                             <h4 className="text-[9px] font-semibold text-zinc-500 uppercase tracking-wider">Best For</h4>
                             <p className="mt-1 text-[11px] text-zinc-400 italic truncate">
                               {bestFor}
@@ -175,6 +183,12 @@ export default function MyServicesSection() {
                           </div>
                         )}
                       </div>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleRequestService(s); }}
+                        className="mt-3 w-full rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 py-2 text-[11px] font-semibold text-white transition-opacity hover:opacity-90 shrink-0"
+                      >
+                        Request This Service
+                      </button>
                     </div>
                   </div>
                 );
