@@ -226,9 +226,6 @@ export default function ServicesSection() {
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
           >
-            <div className="pointer-events-none absolute left-0 top-0 z-20 h-full w-24 bg-gradient-to-r from-[#0b0b10] to-transparent" />
-            <div className="pointer-events-none absolute right-0 top-0 z-20 h-full w-24 bg-gradient-to-l from-[#0b0b10] to-transparent" />
-
             <div className="relative flex h-full w-full items-center justify-center" style={{ perspective: "900px" }}>
               {products.map((p, i) => {
                 const isPopular = p.id === popularId;
