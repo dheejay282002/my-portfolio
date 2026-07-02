@@ -54,6 +54,7 @@ export default function ProjectRequestsPage() {
   const [openDropdown, setOpenDropdown] = useState<number | null>(null);
   const [rejectingId, setRejectingId] = useState<number | null>(null);
   const [rejectionReasonInput, setRejectionReasonInput] = useState("");
+  const [webName, setWebName] = useState("Dee Jay.");
 
   const printContract = (request: ProjectRequest) => {
     const w = window.open("", "_blank");
@@ -113,7 +114,7 @@ export default function ProjectRequestsPage() {
           </style>
         </head>
         <body>
-          <div class="logo-header">(this must be my logo, which is the website logo, like <span class="logo-bold">Dee Jay.</span>)</div>
+          <div class="logo-header"><span class="logo-bold">${webName}</span></div>
           
           <h1 class="agreement-title">Project Development Agreement</h1>
           <div class="series-subtitle">Series of ${currentYear}</div>
@@ -183,6 +184,10 @@ export default function ProjectRequestsPage() {
     fetch("/api/project-requests")
       .then((r) => r.json())
       .then((d) => { setRequests(d.requests); setLoading(false); });
+    fetch("/api/web-settings/public")
+      .then((r) => r.json())
+      .then((d) => { if (d?.settings?.web_name) setWebName(d.settings.web_name); })
+      .catch(() => {});
   }, []);
 
   const updateStatus = async (id: number, status: string) => {
