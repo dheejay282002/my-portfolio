@@ -47,7 +47,7 @@ export default function ServicesPage() {
     setSaving(true);
     const fullDesc = form.best_for
       ? `What's Included: ${form.description} | Best For: ${form.best_for}`
-      : form.description;
+      : `What's Included: ${form.description}`;
     try {
       if (editing) {
         await fetch(`/api/services/${editing.id}`, {
@@ -187,7 +187,7 @@ export default function ServicesPage() {
             <form onSubmit={handleSave} className="mt-6 space-y-4">
               <input type="text" placeholder="Service Title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required className="glass w-full rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-500 outline-none focus:border-cyan-500/50" />
               <textarea rows={3} placeholder="Service Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} required className="glass w-full resize-none rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-500 outline-none focus:border-cyan-500/50" />
-              <input type="text" placeholder="Best For (e.g., Startups, E-commerce, Portfolios)" value={form.best_for} onChange={(e) => setForm({ ...form, best_for: e.target.value })} required className="glass w-full rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-500 outline-none focus:border-cyan-500/50" />
+              <input type="text" placeholder="Best For (e.g., Startups, E-commerce, Portfolios)" value={form.best_for} onChange={(e) => setForm({ ...form, best_for: e.target.value })} className="glass w-full rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-500 outline-none focus:border-cyan-500/50" />
               <div>
                 <label className="mb-2 block text-xs text-zinc-500">Icon</label>
                 <div className="flex flex-wrap gap-2">
