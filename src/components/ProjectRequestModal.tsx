@@ -164,17 +164,28 @@ export default function ProjectRequestModal({ open, onClose, conversationId, inv
               </div>
             )}
 
-            <select
-              value={projectForm.product_id || ""}
-              onChange={(e) => {
-                const val = e.target.value;
-                const prod = availableProducts.find(p => p.id === Number(val));
-                setProjectForm({
-                  ...projectForm,
-                  product_id: val ? Number(val) : "",
-                  project_name: prod ? `Request for ${prod.package_tier}` : projectForm.project_name,
-                });
-              }}
+              <select
+                value={projectForm.product_id || ""}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  const prod = availableProducts.find(p => p.id === Number(val));
+                  setProjectForm({
+                    ...projectForm,
+                    product_id: val ? Number(val) : "",
+                    project_name: prod ? `Request for ${prod.package_tier}` : projectForm.project_name,
+                  });
+                  if (prod) {
+                    const nums = prod.project_baseline.replace(/,/g, "").match(/\d+/g);
+                    if (nums && nums.length > 0) {
+                      const min = Number(nums[0]);
+                      const max = nums.length > 1 ? Number(nums[1]) : min;
+                      const midpoint = (min + max) / 2;
+                      setAmount(String(Math.round(midpoint * 0.5)));
+                    }
+                  } else {
+                    setAmount("");
+                  }
+                }}
               className="glass w-full rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-500 outline-none focus:border-cyan-500/50 bg-zinc-950 text-left"
             >
               <option value="" className="text-zinc-500">Select Package Tier (optional)</option>
