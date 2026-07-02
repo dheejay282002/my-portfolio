@@ -144,13 +144,14 @@ export async function PATCH(
 
       const { rejection_reason } = body;
 
+      const isRejected = status === "rejected";
       await execute(
         `UPDATE project_requests 
          SET status = $1, 
-             rejection_reason = CASE WHEN $1::text = 'rejected' THEN $2 ELSE NULL END, 
+             rejection_reason = CASE WHEN $2 THEN $3 ELSE NULL END, 
              updated_at = NOW() 
-         WHERE id = $3`,
-        [status, rejection_reason || null, Number(id)]
+         WHERE id = $4`,
+        [status, isRejected, rejection_reason || null, Number(id)]
       );
 
       // Send chat message on accept/reject
