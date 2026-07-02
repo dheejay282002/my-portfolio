@@ -154,9 +154,14 @@ export default function MyServicesSection() {
                     onClick={() => goTo(i)}
                   >
                     <div
-                      className={`glass rounded-2xl p-6 sm:p-8 flex flex-col overflow-hidden text-left w-[260px] sm:w-[300px] h-[360px] transition-shadow duration-500 ${
-                        i === activeIndex ? "shadow-2xl shadow-cyan-500/10 ring-1 ring-cyan-500/20" : ""
-                      }`}
+                      className="rounded-2xl p-6 sm:p-8 flex flex-col text-left w-[260px] sm:w-[300px] h-[360px] transition-shadow duration-500"
+                      style={{
+                        background: "rgba(255,255,255,0.04)",
+                        border: "1px solid rgba(255,255,255,0.06)",
+                        backfaceVisibility: "hidden",
+                        transformStyle: "preserve-3d",
+                        ...(i === activeIndex ? { boxShadow: "0 0 40px rgba(6,182,212,0.1)", borderColor: "rgba(6,182,212,0.2)" } : {}),
+                      }}
                     >
                       <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-600/20">
                         <Icon className="h-5 w-5 text-cyan-400" />

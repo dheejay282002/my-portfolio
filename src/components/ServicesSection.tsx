@@ -245,15 +245,21 @@ export default function ServicesSection() {
                     onClick={() => goTo(i)}
                   >
                     <div
-                      className={`glass rounded-2xl p-6 flex flex-col overflow-hidden text-left w-[280px] sm:w-[320px] h-[480px] transition-shadow duration-500 relative ${
-                        isCenter
-                          ? (isPopular
-                            ? "shadow-2xl shadow-cyan-500/10 ring-1 ring-cyan-500/20"
+                      className="rounded-2xl p-6 flex flex-col text-left w-[280px] sm:w-[320px] h-[480px] transition-shadow duration-500 relative"
+                      style={{
+                        background: "rgba(255,255,255,0.04)",
+                        border: "1px solid rgba(255,255,255,0.06)",
+                        backfaceVisibility: "hidden",
+                        transformStyle: "preserve-3d",
+                        ...(isCenter
+                          ? isPopular
+                            ? { boxShadow: "0 0 40px rgba(6,182,212,0.12)", borderColor: "rgba(6,182,212,0.25)" }
                             : isRecommended
-                            ? "shadow-2xl shadow-blue-500/10 ring-1 ring-blue-500/20"
-                            : "shadow-2xl shadow-white/5")
-                          : ""
-                      }`}
+                            ? { boxShadow: "0 0 40px rgba(59,130,246,0.12)", borderColor: "rgba(59,130,246,0.25)" }
+                            : { boxShadow: "0 0 30px rgba(255,255,255,0.03)" }
+                          : {}
+                        ),
+                      }}
                     >
                       {isPopular && (
                         <div className="absolute top-0 right-0 bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-0.5 rounded-bl-xl text-[9px] font-bold text-white uppercase tracking-wider z-10">
