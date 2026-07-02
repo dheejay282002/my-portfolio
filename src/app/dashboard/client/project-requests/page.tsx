@@ -72,6 +72,14 @@ function FinalPaymentModal({ request, onClose, onSuccess }: FinalPaymentModalPro
   const [amount, setAmount] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [currency, setCurrency] = useState("USD");
+
+  useEffect(() => {
+    fetch("https://ipapi.co/json/")
+      .then((r) => r.json())
+      .then((d) => { if (d.currency) setCurrency(d.currency); })
+      .catch(() => {});
+  }, []);
 
   const handleDodoPayment = async () => {
     if (!amount || parseFloat(amount) <= 0) {
@@ -138,7 +146,7 @@ function FinalPaymentModal({ request, onClose, onSuccess }: FinalPaymentModalPro
               Pay securely via DODO Payments using your credit/debit card or any supported payment method.
             </p>
             <div>
-              <label className="mb-1 block text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">Amount to Pay (USD)</label>
+              <label className="mb-1 block text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">Amount to Pay ({currency})</label>
               <input
                 type="number"
                 min="1"

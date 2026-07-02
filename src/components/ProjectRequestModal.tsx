@@ -229,7 +229,7 @@ export default function ProjectRequestModal({ open, onClose, conversationId, inv
               </p>
               <p>A 50% downpayment is required to start your project. Pay securely via DODO Payments using credit/debit card or any supported payment method.</p>
               <div>
-                <label className="mb-1 block text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">Amount to Pay (USD)</label>
+                <label className="mb-1 block text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">Amount to Pay ({currency})</label>
                 <input
                   type="number"
                   min="1"
