@@ -4,6 +4,7 @@ import { Fragment, useEffect, useState } from "react";
 import { Star, X, Upload, AlertCircle, Check, CreditCard, Clock } from "lucide-react";
 import Skeleton from "@/components/Skeleton";
 import Image from "next/image";
+import { useWebSettings } from "@/hooks/useWebSettings";
 
 interface ProjectRequest {
   id: number;
@@ -72,6 +73,7 @@ interface PaymentMethod {
 }
 
 function FinalPaymentModal({ request, onClose, onSuccess }: FinalPaymentModalProps) {
+  const { settings } = useWebSettings();
   const [refNo, setRefNo] = useState("");
   const [receiptUrl, setReceiptUrl] = useState("");
   const [uploading, setUploading] = useState(false);
@@ -582,6 +584,7 @@ interface ContractModalProps {
 }
 
 function ContractModal({ request, onClose, onSuccess }: ContractModalProps) {
+  const { settings } = useWebSettings();
   const [agreed, setAgreed] = useState(false);
   const [signatureName, setSignatureName] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -627,6 +630,7 @@ function ContractModal({ request, onClose, onSuccess }: ContractModalProps) {
   const printContract = () => {
     const w = window.open("", "_blank");
     if (!w) return;
+    const brandName = settings.web_name || "Dee Jay.";
     const deliverablesHtml = request.deliverables
       ? request.deliverables.split("\n").map((d: string) => `<li>${d.replace(/^-\s*/, "").trim()}</li>`).join("")
       : "<li>Custom project specification deliverables</li>";
@@ -682,7 +686,7 @@ function ContractModal({ request, onClose, onSuccess }: ContractModalProps) {
           </style>
         </head>
         <body>
-          <div class="logo-header">(this must be my logo, which is the website logo, like <span class="logo-bold">Dee Jay.</span>)</div>
+          <div class="logo-header"><span class="logo-bold">${brandName}</span></div>
           
           <h1 class="agreement-title">Project Development Agreement</h1>
           <div class="series-subtitle">Series of ${currentYear}</div>
@@ -769,7 +773,7 @@ function ContractModal({ request, onClose, onSuccess }: ContractModalProps) {
           )}
 
           <div className="space-y-4 text-[13px] text-zinc-300 bg-white/2 border border-white/5 rounded-2xl p-6 h-[340px] overflow-y-auto leading-relaxed text-left font-serif">
-            <div className="text-[10px] italic text-zinc-500 text-center mb-4">(this must be my logo, which is the website logo, like <span className="font-bold text-white font-sans text-xs">Dee Jay.</span>)</div>
+            <div className="text-[10px] italic text-zinc-500 text-center mb-4"><span className="font-bold text-white font-sans text-xs">{settings.web_name || "Dee Jay."}</span></div>
             
             <p className="font-bold text-white text-base text-center uppercase tracking-wider mb-1">Project Development Agreement</p>
             <p className="text-zinc-400 text-[11px] font-bold text-center mb-4 uppercase">Series of {request.created_at ? new Date(request.created_at).getFullYear() : 2026}</p>
