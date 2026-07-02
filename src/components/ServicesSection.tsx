@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
-import { Clock, Check, ChevronLeft, ChevronRight } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Code2, Shield, Server, Globe, Database, GitBranch, Smartphone, Palette, Cloud, Braces, Layers, Rocket, Check, Clock } from "lucide-react";
 import ScrollReveal from "./ScrollReveal";
 
 interface Product {
@@ -26,9 +26,6 @@ export default function ServicesSection() {
   const [recommendedId, setRecommendedId] = useState<number>(-1);
   const [currency, setCurrency] = useState("USD");
   const [rate, setRate] = useState(1);
-  const [activeIndex, setActiveIndex] = useState(0);
-  const dragStartX = useRef(0);
-  const isDragging = useRef(false);
 
   const formatPrice = (baseline: string) => {
     if (currency === "USD" || rate === 1) return baseline;
@@ -61,6 +58,7 @@ export default function ServicesSection() {
           const prods: Product[] = d.products;
           setProducts(prods);
 
+          // 1. Calculate Popular automatically based on requests count
           let maxCount = 0;
           let popId = -1;
           if (d.requestCounts && d.requestCounts.length > 0) {
@@ -74,6 +72,7 @@ export default function ServicesSection() {
           }
           setPopularId(popId);
 
+          // 2. Calculate Recommended automatically based on average price
           if (prods.length > 0) {
             const productAverages = prods.map(p => ({
               id: p.id,
@@ -99,6 +98,8 @@ export default function ServicesSection() {
 
   useEffect(() => {
     fetchProducts();
+
+    // Live Geolocation check
     fetch("https://ipapi.co/json/")
       .then((res) => res.json())
       .then((data) => {
@@ -107,76 +108,33 @@ export default function ServicesSection() {
         fetch("https://open.er-api.com/v6/latest/USD")
           .then((r) => r.json())
           .then((ratesData) => {
-            if (ratesData.rates && ratesData.rates[cur]) setRate(ratesData.rates[cur]);
+            if (ratesData.rates && ratesData.rates[cur]) {
+              setRate(ratesData.rates[cur]);
+            }
           });
       })
       .catch(() => {
+        // Safe time-zone fallback detection
         const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
         if (tz === "Asia/Manila") {
           setCurrency("PHP");
           fetch("https://open.er-api.com/v6/latest/USD")
             .then((r) => r.json())
             .then((ratesData) => {
-              if (ratesData.rates && ratesData.rates["PHP"]) setRate(ratesData.rates["PHP"]);
+              if (ratesData.rates && ratesData.rates["PHP"]) {
+                setRate(ratesData.rates["PHP"]);
+              }
             });
         }
       });
   }, []);
 
+  if (products.length === 0) return null;
+
   const handleChoosePackage = (p: Product) => {
     window.dispatchEvent(new CustomEvent("open-project-request", {
       detail: { productName: p.package_tier, productId: p.id }
     }));
-  };
-
-  const goTo = useCallback((index: number) => {
-    setActiveIndex((prev) => {
-      const max = products.length - 1;
-      if (index < 0) return max;
-      if (index > max) return 0;
-      return index;
-    });
-  }, [products.length]);
-
-  useEffect(() => {
-    const timer = setInterval(() => goTo(activeIndex + 1), 6000);
-    return () => clearInterval(timer);
-  }, [activeIndex, goTo]);
-
-  const handlePointerDown = (clientX: number) => {
-    isDragging.current = true;
-    dragStartX.current = clientX;
-  };
-
-  const handlePointerUp = (clientX: number) => {
-    if (!isDragging.current) return;
-    isDragging.current = false;
-    const dx = clientX - dragStartX.current;
-    if (Math.abs(dx) > 50) {
-      goTo(dx > 0 ? activeIndex - 1 : activeIndex + 1);
-    }
-  };
-
-  if (products.length === 0) return null;
-
-  const cardW = 320;
-
-  const getStyle = (index: number) => {
-    const diff = index - activeIndex;
-    const abs = Math.abs(diff);
-    const scale = abs === 0 ? 1 : abs === 1 ? 0.82 : abs === 2 ? 0.65 : 0.5;
-    const opacity = abs <= 1 ? 1 : abs === 2 ? 0.6 : 0;
-    const zIndex = products.length - abs;
-    const translateX = diff * (cardW + 24);
-
-    return {
-      transform: `translateX(${translateX}px) scale(${scale})`,
-      opacity,
-      zIndex,
-      transition: "transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s ease",
-      pointerEvents: (abs <= 2 ? "auto" : "none") as React.CSSProperties["pointerEvents"],
-      willChange: "transform" as const,
-    };
   };
 
   return (
@@ -194,130 +152,80 @@ export default function ServicesSection() {
           </p>
         </div>
 
-        <div className="relative mt-16">
-          <div
-            className="relative mx-auto flex h-[500px] items-center justify-center select-none"
-            onMouseDown={(e) => handlePointerDown(e.clientX)}
-            onMouseUp={(e) => handlePointerUp(e.clientX)}
-            onMouseLeave={(e) => { if (isDragging.current) handlePointerUp(e.clientX); }}
-            onTouchStart={(e) => handlePointerDown(e.touches[0].clientX)}
-            onTouchEnd={(e) => handlePointerUp(e.changedTouches[0].clientX)}
-          >
-            {products.map((p, i) => {
-              const isPopular = p.id === popularId;
-              const isRecommended = p.id === recommendedId && !isPopular;
-              const items = p.deliverables.split("\n").filter(Boolean);
-              const style = getStyle(i);
-              const isCenter = i === activeIndex;
+        <div className="mt-16 grid gap-8 sm:grid-cols-2 lg:grid-cols-3 items-stretch">
+          {products.map((p) => {
+            const isPopular = p.id === popularId;
+            const isRecommended = p.id === recommendedId && !isPopular;
+            const items = p.deliverables.split("\n").filter(Boolean);
 
-              return (
-                <div
-                  key={p.id}
-                  className="absolute cursor-pointer"
-                  style={style}
-                  onClick={() => goTo(i)}
-                >
-                  <div
-                    className="rounded-2xl p-6 flex flex-col text-left w-[280px] sm:w-[320px] h-[460px] relative"
-                    style={{
-                      background: "rgba(255,255,255,0.04)",
-                      border: `1px solid ${
-                        isCenter && isPopular
-                          ? "rgba(6,182,212,0.25)"
-                          : isCenter && isRecommended
-                          ? "rgba(59,130,246,0.25)"
-                          : "rgba(255,255,255,0.06)"
-                      }`,
-                      boxShadow: isCenter && isPopular
-                        ? "0 0 40px rgba(6,182,212,0.12)"
-                        : isCenter && isRecommended
-                        ? "0 0 40px rgba(59,130,246,0.12)"
-                        : "none",
-                    }}
-                  >
-                    {isPopular && (
-                      <div className="absolute top-0 right-0 bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-0.5 rounded-bl-xl text-[9px] font-bold text-white uppercase tracking-wider z-10">
-                        Popular
-                      </div>
-                    )}
-                    {isRecommended && !isPopular && (
-                      <div className="absolute top-0 right-0 bg-gradient-to-r from-blue-500 to-purple-600 px-3 py-0.5 rounded-bl-xl text-[9px] font-bold text-white uppercase tracking-wider z-10">
-                        Recommended
-                      </div>
-                    )}
+            return (
+              <div
+                key={p.id}
+                className={`glass rounded-3xl p-8 transition-all duration-300 glass-hover flex flex-col justify-between relative overflow-hidden ${
+                  isPopular 
+                    ? "border-cyan-500/30 shadow-[0_0_35px_rgba(6,182,212,0.18)] md:-translate-y-2" 
+                    : isRecommended
+                    ? "border-blue-500/30 shadow-[0_0_30px_rgba(59,130,246,0.12)] md:-translate-y-1"
+                    : ""
+                }`}
+              >
+                {isPopular && (
+                  <div className="absolute top-0 right-0 bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-1 rounded-bl-xl text-[10px] font-bold text-white uppercase tracking-wider">
+                    Popular
+                  </div>
+                )}
+                {isRecommended && (
+                  <div className="absolute top-0 right-0 bg-gradient-to-r from-blue-500 to-purple-600 px-4 py-1 rounded-bl-xl text-[10px] font-bold text-white uppercase tracking-wider">
+                    Recommended
+                  </div>
+                )}
 
-                    <h3 className="text-lg font-bold text-white pr-16 truncate">
-                      {p.package_tier}
-                    </h3>
+                <div>
+                  <h3 className="text-xl font-bold text-white">
+                    {p.package_tier}
+                  </h3>
 
-                    <div className="mt-2 flex items-baseline gap-1">
-                      <span className="text-xl font-extrabold text-white tracking-tight">
-                        {formatPrice(p.project_baseline)}
-                      </span>
-                    </div>
+                  <div className="mt-4 flex items-baseline gap-2">
+                    <span className="text-2xl font-extrabold text-white tracking-tight animate-fade-in">
+                      {formatPrice(p.project_baseline)}
+                    </span>
+                  </div>
 
-                    <div className="mt-1 flex items-center gap-1 text-[11px] text-zinc-400">
-                      <Clock className="h-3 w-3 text-cyan-400" />
-                      <span>Est. Timeline: {p.est_timeline}</span>
-                    </div>
+                  <div className="mt-2 flex items-center gap-1.5 text-xs text-zinc-400">
+                    <Clock className="h-3.5 w-3.5 text-cyan-400" />
+                    <span>Est. Timeline: {p.est_timeline}</span>
+                  </div>
 
-                    <div className="mt-4 flex-1 border-t border-white/5 pt-4 min-h-0 overflow-hidden">
-                      <h4 className="text-[9px] font-semibold text-zinc-500 uppercase tracking-wider mb-3">
-                        Key Deliverables
-                      </h4>
-                      <ul className="space-y-1.5 overflow-y-auto max-h-[200px] scrollbar-thin pr-1">
-                        {items.map((item, idx) => (
-                          <li key={idx} className="flex items-start gap-2 text-xs text-zinc-300 leading-relaxed">
-                            <Check className="h-3 w-3 shrink-0 text-cyan-400 mt-0.5" />
-                            <span className="line-clamp-2">{item}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleChoosePackage(p); }}
-                      className={`mt-4 w-full rounded-xl py-2.5 text-xs font-semibold text-white transition-all shrink-0 ${
-                        isPopular
-                          ? "bg-gradient-to-r from-cyan-500 to-blue-600 hover:opacity-90 shadow-md shadow-cyan-500/10"
-                          : "bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20"
-                      }`}
-                    >
-                      Choose Package
-                    </button>
+                  <div className="mt-8 border-t border-white/5 pt-6">
+                    <h4 className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider mb-4">
+                      Key Deliverables & Included Features
+                    </h4>
+                    <ul className="space-y-3">
+                      {items.map((item, idx) => (
+                        <li key={idx} className="flex items-start gap-2.5 text-sm text-zinc-300 leading-normal">
+                          <Check className="h-4 w-4 shrink-0 text-cyan-400 mt-0.5" />
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 </div>
-              );
-            })}
-          </div>
 
-          <button
-            onClick={() => goTo(activeIndex - 1)}
-            className="absolute left-2 sm:left-8 top-1/2 -translate-y-1/2 z-30 flex h-10 w-10 items-center justify-center rounded-full bg-zinc-800/80 text-zinc-400 transition-all hover:bg-zinc-700 hover:text-white backdrop-blur-sm border border-white/10"
-            aria-label="Previous package"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </button>
-          <button
-            onClick={() => goTo(activeIndex + 1)}
-            className="absolute right-2 sm:right-8 top-1/2 -translate-y-1/2 z-30 flex h-10 w-10 items-center justify-center rounded-full bg-zinc-800/80 text-zinc-400 transition-all hover:bg-zinc-700 hover:text-white backdrop-blur-sm border border-white/10"
-            aria-label="Next package"
-          >
-            <ChevronRight className="h-5 w-5" />
-          </button>
-
-          <div className="mt-6 flex items-center justify-center gap-2">
-            {products.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => goTo(i)}
-                className={`h-1.5 rounded-full transition-all duration-300 ${
-                  i === activeIndex ? "w-6 bg-cyan-400" : "w-1.5 bg-zinc-600 hover:bg-zinc-500"
-                }`}
-                aria-label={`Go to package ${i + 1}`}
-              />
-            ))}
-          </div>
+                <div className="mt-8 pt-4">
+                  <button
+                    onClick={() => handleChoosePackage(p)}
+                    className={`w-full rounded-2xl py-3 text-sm font-semibold text-white transition-all ${
+                      isPopular 
+                        ? "bg-gradient-to-r from-cyan-500 to-blue-600 hover:opacity-90 shadow-md shadow-cyan-500/10" 
+                        : "bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20"
+                    }`}
+                  >
+                    Choose Package
+                  </button>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </ScrollReveal>
     </section>
