@@ -196,6 +196,9 @@ export default function ProjectRequestsPage() {
         prev.map((r) => (r.id === id ? { ...r, status } : r))
       );
       if (selected?.id === id) setSelected((prev) => prev ? { ...prev, status } : null);
+    } else {
+      const err = await res.json().catch(() => ({ error: "Unknown error" }));
+      alert(`Failed to update status: ${err.error}`);
     }
     setOpenDropdown(null);
   };
@@ -215,6 +218,9 @@ export default function ProjectRequestsPage() {
           prev ? { ...prev, status: "rejected", rejection_reason: rejectionReasonInput.trim() } : null
         );
       }
+    } else {
+      const err = await res.json().catch(() => ({ error: "Unknown error" }));
+      alert(`Failed to reject: ${err.error}`);
     }
     setRejectingId(null);
     setRejectionReasonInput("");
