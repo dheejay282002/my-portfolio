@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Code2, Shield, Server, Globe, Database, GitBranch, Smartphone, Palette, Cloud, Braces, Layers, Rocket, Check, Clock } from "lucide-react";
+import { Check, Clock } from "lucide-react";
 import ScrollReveal from "./ScrollReveal";
 
 interface Product {
@@ -12,18 +12,8 @@ interface Product {
   deliverables: string;
 }
 
-function getAveragePrice(baseline: string): number {
-  const matches = baseline.replace(/,/g, "").match(/\d+/g);
-  if (!matches || matches.length === 0) return 0;
-  const numbers = matches.map(Number);
-  const sum = numbers.reduce((a, b) => a + b, 0);
-  return sum / numbers.length;
-}
-
 export default function ServicesSection() {
   const [products, setProducts] = useState<Product[]>([]);
-  const [popularId, setPopularId] = useState<number>(-1);
-  const [recommendedId, setRecommendedId] = useState<number>(-1);
   const [currency, setCurrency] = useState("USD");
   const [rate, setRate] = useState(1);
 
@@ -55,42 +45,7 @@ export default function ServicesSection() {
       .then((r) => r.json())
       .then((d) => {
         if (d.products) {
-          const prods: Product[] = d.products;
-          setProducts(prods);
-
-          // 1. Calculate Popular automatically based on requests count
-          let maxCount = 0;
-          let popId = -1;
-          if (d.requestCounts && d.requestCounts.length > 0) {
-            d.requestCounts.forEach((rc: any) => {
-              const count = Number(rc.count);
-              if (count > maxCount) {
-                maxCount = count;
-                popId = Number(rc.product_id);
-              }
-            });
-          }
-          setPopularId(popId);
-
-          // 2. Calculate Recommended automatically based on average price
-          if (prods.length > 0) {
-            const productAverages = prods.map(p => ({
-              id: p.id,
-              avg: getAveragePrice(p.project_baseline)
-            }));
-            const totalAverage = productAverages.reduce((sum, item) => sum + item.avg, 0) / (prods.length || 1);
-
-            let recId = -1;
-            let minDiff = Infinity;
-            productAverages.forEach(item => {
-              const diff = Math.abs(item.avg - totalAverage);
-              if (diff < minDiff) {
-                minDiff = diff;
-                recId = item.id;
-              }
-            });
-            setRecommendedId(recId);
-          }
+          setProducts(d.products);
         }
       })
       .catch(() => {});
@@ -154,31 +109,13 @@ export default function ServicesSection() {
 
         <div className="mt-16 grid gap-8 sm:grid-cols-2 lg:grid-cols-3 items-stretch">
           {products.map((p) => {
-            const isPopular = p.id === popularId;
-            const isRecommended = p.id === recommendedId && !isPopular;
             const items = p.deliverables.split("\n").filter(Boolean);
 
             return (
               <div
                 key={p.id}
-                className={`glass rounded-3xl p-8 transition-all duration-300 glass-hover flex flex-col justify-between relative overflow-hidden ${
-                  isPopular 
-                    ? "border-cyan-500/30 shadow-[0_0_35px_rgba(6,182,212,0.18)] md:-translate-y-2" 
-                    : isRecommended
-                    ? "border-blue-500/30 shadow-[0_0_30px_rgba(59,130,246,0.12)] md:-translate-y-1"
-                    : ""
-                }`}
+                className="glass rounded-3xl p-8 transition-all duration-300 glass-hover flex flex-col justify-between relative overflow-hidden"
               >
-                {isPopular && (
-                  <div className="absolute top-0 right-0 bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-1 rounded-bl-xl text-[10px] font-bold text-white uppercase tracking-wider">
-                    Popular
-                  </div>
-                )}
-                {isRecommended && (
-                  <div className="absolute top-0 right-0 bg-gradient-to-r from-blue-500 to-purple-600 px-4 py-1 rounded-bl-xl text-[10px] font-bold text-white uppercase tracking-wider">
-                    Recommended
-                  </div>
-                )}
 
                 <div>
                   <h3 className="text-xl font-bold text-white">
@@ -214,11 +151,7 @@ export default function ServicesSection() {
                 <div className="mt-8 pt-4">
                   <button
                     onClick={() => handleChoosePackage(p)}
-                    className={`w-full rounded-2xl py-3 text-sm font-semibold text-white transition-all ${
-                      isPopular 
-                        ? "bg-gradient-to-r from-cyan-500 to-blue-600 hover:opacity-90 shadow-md shadow-cyan-500/10" 
-                        : "bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20"
-                    }`}
+                    className="w-full rounded-2xl py-3 text-sm font-semibold text-white transition-all bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20"
                   >
                     Choose Package
                   </button>
