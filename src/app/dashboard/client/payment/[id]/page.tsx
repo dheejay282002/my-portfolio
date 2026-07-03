@@ -117,6 +117,15 @@ export default function PaymentPage() {
 
   const selectedBank = banks.find((b) => b.id === selectedBankId);
 
+  const getDownpaymentAmount = (baseline?: string) => {
+    if (!baseline) return null;
+    const nums = baseline.replace(/[$,]/g, "").match(/\d+/g);
+    if (!nums) return null;
+    const minPrice = parseInt(nums[0], 10);
+    const half = Math.round(minPrice / 2);
+    return `$${half.toLocaleString()}`;
+  };
+
   return (
     <div className="min-h-screen px-4 py-12 sm:px-6">
       <div className="mx-auto max-w-2xl">
@@ -165,10 +174,10 @@ export default function PaymentPage() {
                     <div className="h-px bg-white/5" />
                     <p className="text-xs text-cyan-400 font-semibold">{request.package_tier}</p>
                     <p className="text-xs text-zinc-300">
-                      Price Range: <span className="font-semibold text-white">{request.project_baseline}</span>
+                      Package Price: <span className="font-semibold text-white">{request.project_baseline}</span>
                     </p>
-                    <p className="text-xs text-yellow-400">
-                      <span className="font-semibold">Downpayment:</span> 50% of package price required
+                    <p className="text-xs text-yellow-400 font-semibold">
+                      Downpayment (50%): <span className="text-white">{getDownpaymentAmount(request.project_baseline) || request.project_baseline}</span>
                     </p>
                   </>
                 )}

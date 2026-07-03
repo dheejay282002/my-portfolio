@@ -43,6 +43,16 @@ export default function ProjectRequestModal({ open, onClose, conversationId, inv
 
   const formatPrice = (baseline: string) => baseline;
 
+  const getDownpaymentAmount = (baseline: string) => {
+    const nums = baseline.replace(/[$,]/g, "").match(/\d+/g);
+    if (!nums) return null;
+    const minPrice = parseInt(nums[0], 10);
+    const half = Math.round(minPrice / 2);
+    return `$${half.toLocaleString()}`;
+  };
+
+  const selectedProduct = availableProducts.find((p) => p.id === projectForm.product_id);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!projectForm.project_name.trim() || !projectForm.description.trim()) return;
@@ -137,12 +147,20 @@ export default function ProjectRequestModal({ open, onClose, conversationId, inv
               className="glass w-full rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-500 outline-none focus:border-cyan-500/50 bg-zinc-950 text-left"
             >
               <option value="" className="text-zinc-500">Select Package Tier (optional)</option>
-              {availableProducts.map((p) => (
-                <option key={p.id} value={p.id} className="text-white bg-zinc-950">
-                  {p.package_tier} ({formatPrice(p.project_baseline)})
-                </option>
-              ))}
+              {availableProducts.map((p) => {
+                const dp = getDownpaymentAmount(p.project_baseline);
+                return (
+                  <option key={p.id} value={p.id} className="text-white bg-zinc-950">
+                    {p.package_tier} ({formatPrice(p.project_baseline)}) {dp ? `— 50% DP: ${dp}` : ""}
+                  </option>
+                );
+              })}
             </select>
+            {selectedProduct && getDownpaymentAmount(selectedProduct.project_baseline) && (
+              <div className="rounded-xl bg-yellow-500/10 border border-yellow-500/20 p-3 text-xs text-yellow-400 text-left">
+                <span className="font-semibold">Downpayment Required:</span> 50% of package price — <span className="font-bold text-white">{getDownpaymentAmount(selectedProduct.project_baseline)}</span>
+              </div>
+            )}
 
             <input
               type="text"
