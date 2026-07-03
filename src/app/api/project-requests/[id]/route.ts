@@ -116,7 +116,7 @@ export async function PATCH(
     }
 
     // Admin actions
-    const { status, contract_signed_acknowledged, confirm_dodo_payment } = body;
+    const { status, contract_signed_acknowledged } = body;
 
     if (contract_signed_acknowledged !== undefined) {
       await execute(
@@ -124,23 +124,6 @@ export async function PATCH(
         [!!contract_signed_acknowledged, Number(id)]
       );
       return NextResponse.json({ success: true });
-    }
-
-    // Admin manually confirms a DODO payment (fallback if webhook failed)
-    if (confirm_dodo_payment) {
-      if (request.status !== "pending_payment") {
-        return NextResponse.json({ error: "Request is not in pending_payment status" }, { status: 400 });
-      }
-      const dodoId = `manual_${Date.now()}`;
-      await execute(
-        `UPDATE project_requests 
-         SET status = 'pending', 
-             dodo_downpayment_id = $1,
-             updated_at = NOW() 
-         WHERE id = $2`,
-        [dodoId, Number(id)]
-      );
-      return NextResponse.json({ success: true, dodo_downpayment_id: dodoId });
     }
 
     if (status !== undefined) {
