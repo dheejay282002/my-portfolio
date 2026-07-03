@@ -926,7 +926,47 @@ export default function ClientProjectRequests() {
                           {statusLabels[req.status] || req.status}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-right flex gap-3 justify-end items-center">
+                      <td className="px-6 py-4 text-right flex gap-3 justify-end items-center flex-wrap">
+                        {req.status === "pending_payment" && (
+                          <button
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              try {
+                                let amount: number | undefined;
+                                if (req.project_baseline) {
+                                  const nums = req.project_baseline.replace(/,/g, "").match(/\d+/g);
+                                  if (nums && nums.length > 0) {
+                                    const min = Number(nums[0]);
+                                    const max = nums.length > 1 ? Number(nums[1]) : min;
+                                    const midpoint = (min + max) / 2;
+                                    amount = Math.round(midpoint * 0.5);
+                                  }
+                                }
+                                const res = await fetch("/api/dodo/create-checkout", {
+                                  method: "POST",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({
+                                    type: "downpayment",
+                                    projectRequestId: req.id,
+                                    ...(amount ? { amount } : {}),
+                                  }),
+                                });
+                                if (!res.ok) {
+                                  const err = await res.json();
+                                  alert(err.error || "Payment gateway not configured");
+                                  return;
+                                }
+                                const { checkout_url } = await res.json();
+                                if (checkout_url) window.location.href = checkout_url;
+                              } catch {
+                                alert("Something went wrong. Please try again.");
+                              }
+                            }}
+                            className="bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30 border border-cyan-500/10 inline-flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-lg transition-all leading-none"
+                          >
+                            <CreditCard className="h-3.5 w-3.5" /> Pay Now
+                          </button>
+                        )}
                         {req.status === "accepted" && (
                           <button
                             onClick={(e) => {
