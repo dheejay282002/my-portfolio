@@ -28,8 +28,6 @@ export default function ProjectRequestModal({ open, onClose, conversationId, inv
   const [availableProducts, setAvailableProducts] = useState<Product[]>([]);
   const [projectForm, setProjectForm] = useState({ project_name: "", description: "", tech_stack: "", product_id: "" as string | number });
   const [submitting, setSubmitting] = useState(false);
-  const [projectSubmitted, setProjectSubmitted] = useState(false);
-  const [submittedId, setSubmittedId] = useState<number | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
 
   useEffect(() => {
@@ -76,9 +74,9 @@ export default function ProjectRequestModal({ open, onClose, conversationId, inv
       }
 
       const data = await createRes.json();
-      setSubmittedId(data.id);
-      setProjectSubmitted(true);
+      onClose();
       if (inviteMsgId && onSubmitted) onSubmitted(inviteMsgId);
+      router.push(`/dashboard/client/payment/${data.id}`);
     } catch {
       setErrorMsg("Something went wrong. Please try again.");
       setSubmitting(false);
@@ -106,27 +104,7 @@ export default function ProjectRequestModal({ open, onClose, conversationId, inv
           </div>
         </div>
 
-        {projectSubmitted ? (
-          <div className="py-12 text-center">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-500/20">
-              <Check className="h-8 w-8 text-green-400" />
-            </div>
-            <p className="text-lg text-green-400 font-semibold">Project Request Submitted!</p>
-            <p className="mt-1 text-sm text-zinc-500">Now proceed to payment to complete your downpayment.</p>
-            <button
-              onClick={() => {
-                onClose();
-                setProjectSubmitted(false);
-                setErrorMsg("");
-                if (submittedId) router.push(`/dashboard/client/payment/${submittedId}`);
-              }}
-              className="mt-4 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-6 py-3 text-sm font-bold text-white transition-opacity hover:opacity-90"
-            >
-              Proceed to Payment
-            </button>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
             {errorMsg && (
               <div className="rounded-xl bg-red-500/10 border border-red-500/20 p-3 text-xs text-red-400 flex items-start gap-2 text-left">
                 <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
@@ -190,7 +168,7 @@ export default function ProjectRequestModal({ open, onClose, conversationId, inv
             <div className="flex gap-3 pt-2 border-t border-white/5">
               <button
                 type="button"
-                onClick={() => { onClose(); setProjectSubmitted(false); setErrorMsg(""); }}
+                onClick={() => { onClose(); setErrorMsg(""); }}
                 className="flex-1 rounded-xl border border-white/10 px-4 py-3 text-sm font-medium text-zinc-400 transition-colors hover:border-white/20 hover:text-white"
               >
                 Cancel
@@ -211,7 +189,6 @@ export default function ProjectRequestModal({ open, onClose, conversationId, inv
               </button>
             </div>
           </form>
-        )}
       </div>
     </div>
   );
