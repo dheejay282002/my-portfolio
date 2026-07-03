@@ -209,6 +209,25 @@ export default function ProjectRequestsPage() {
     setOpenDropdown(null);
   };
 
+  const confirmDodoPayment = async (id: number) => {
+    const res = await fetch(`/api/project-requests/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ confirm_dodo_payment: true }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const dodoId = data.dodo_downpayment_id || `manual_${Date.now()}`;
+      setRequests((prev) =>
+        prev.map((r) => (r.id === id ? { ...r, status: "pending", dodo_downpayment_id: dodoId } : r))
+      );
+      if (selected?.id === id) setSelected((prev) => prev ? { ...prev, status: "pending", dodo_downpayment_id: dodoId } : null);
+    } else {
+      const err = await res.json().catch(() => ({ error: "Unknown error" }));
+      alert(`Failed: ${err.error}`);
+    }
+  };
+
   const submitRejection = async (id: number) => {
     const res = await fetch(`/api/project-requests/${id}`, {
       method: "PATCH",
@@ -504,7 +523,7 @@ export default function ProjectRequestsPage() {
             </div>
 
             <div className="mt-6 flex flex-wrap items-center gap-3 border-t border-white/10 pt-4">
-              {(selected.status === "pending" || (selected.status === "accepted" && !selected.contract_signed)) && (
+              {(selected.status === "pending" || selected.status === "pending_payment" || (selected.status === "accepted" && !selected.contract_signed)) && (
                 rejectingId === selected.id ? (
                   <div className="w-full space-y-3 bg-zinc-900/40 p-4 rounded-xl border border-red-500/10 text-left">
                     <label className="block text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">Reason for Rejection (Optional)</label>
@@ -538,6 +557,14 @@ export default function ProjectRequestsPage() {
                         className="inline-flex items-center gap-1.5 rounded-xl bg-green-500/20 px-4 py-2 text-xs font-medium text-green-400 transition-colors hover:bg-green-500/30"
                       >
                         <Check className="h-3.5 w-3.5" /> Accept
+                      </button>
+                    )}
+                    {selected.status === "pending_payment" && (
+                      <button
+                        onClick={() => confirmDodoPayment(selected.id)}
+                        className="inline-flex items-center gap-1.5 rounded-xl bg-cyan-500/20 px-4 py-2 text-xs font-medium text-cyan-400 transition-colors hover:bg-cyan-500/30"
+                      >
+                        <Check className="h-3.5 w-3.5" /> Mark as Paid
                       </button>
                     )}
                     <button
