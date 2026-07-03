@@ -932,23 +932,12 @@ export default function ClientProjectRequests() {
                             onClick={async (e) => {
                               e.stopPropagation();
                               try {
-                                let amount: number | undefined;
-                                if (req.project_baseline) {
-                                  const nums = req.project_baseline.replace(/,/g, "").match(/\d+/g);
-                                  if (nums && nums.length > 0) {
-                                    const min = Number(nums[0]);
-                                    const max = nums.length > 1 ? Number(nums[1]) : min;
-                                    const midpoint = (min + max) / 2;
-                                    amount = Math.round(midpoint * 0.5);
-                                  }
-                                }
                                 const res = await fetch("/api/dodo/create-checkout", {
                                   method: "POST",
                                   headers: { "Content-Type": "application/json" },
                                   body: JSON.stringify({
                                     type: "downpayment",
                                     projectRequestId: req.id,
-                                    ...(amount ? { amount } : {}),
                                   }),
                                 });
                                 if (!res.ok) {

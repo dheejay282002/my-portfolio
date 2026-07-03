@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     const client = new DodoPayments({ bearerToken: apiKey, environment });
 
     const body = await request.json();
-    const { type, projectRequestId, amount, returnUrl, cancelUrl } = body;
+    const { type, projectRequestId, returnUrl, cancelUrl } = body;
 
     if (!type || !projectRequestId) {
       return NextResponse.json({ error: "Missing type or projectRequestId" }, { status: 400 });
@@ -45,7 +45,6 @@ export async function POST(request: NextRequest) {
         {
           product_id: activeProductId,
           quantity: 1,
-          ...(amount ? { amount: Math.round(amount * 100) } : {}),
         },
       ],
       customer: { email: user.email || "", name: user.name || "" },
