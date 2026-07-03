@@ -30,6 +30,7 @@ interface ProjectRequest {
   payment_reference_no?: string | null;
   final_payment_receipt_url?: string | null;
   final_payment_reference_no?: string | null;
+  payment_rejection_reason?: string | null;
 }
 
 const statusColors: Record<string, string> = {
@@ -445,6 +446,12 @@ function DetailsModal({ request, onClose }: DetailsModalProps) {
                 <div className="mt-2.5 rounded-xl bg-red-500/5 border border-red-500/10 p-3 text-[11px] text-red-400 text-left">
                   <span className="font-semibold block text-white mb-0.5">Rejection Note:</span>
                   &ldquo;{request.rejection_reason}&rdquo;
+                  {request.payment_rejection_reason && (
+                    <div className="mt-2 rounded-lg bg-red-500/10 border border-red-500/20 p-2.5 text-[10px]">
+                      <p className="font-semibold text-white">⚠️ Refund Notice</p>
+                      <p className="mt-0.5">Your downpayment has been rejected. A <strong className="text-white">refund will be processed</strong>. Please contact the developer for details.</p>
+                    </div>
+                  )}
                 </div>
               )}
               {request.payment_receipt_url && (

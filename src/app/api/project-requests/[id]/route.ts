@@ -148,7 +148,64 @@ export async function PATCH(
     }
 
     // Admin actions
-    const { status, contract_signed_acknowledged } = body;
+    const { status, contract_signed_acknowledged, receipt_verified, payment_rejection_reason } = body;
+
+    // Payment validation (admin accepts or rejects downpayment receipt)
+    if (receipt_verified === true) {
+      await execute(
+        `UPDATE project_requests 
+         SET receipt_verified = TRUE, 
+             status = 'accepted', 
+             updated_at = NOW() 
+         WHERE id = $1`,
+        [Number(id)]
+      );
+
+      if (request.conversation_id) {
+        const msg = "✅ Downpayment verified! Your project request has been accepted. 🎉 Please sign the project agreement contract.";
+        await execute(
+          "INSERT INTO messages (conversation_id, sender_id, content) VALUES ($1, $2, $3)",
+          [request.conversation_id, user.id, msg]
+        );
+        await execute(
+          "UPDATE conversations SET last_message = $1, last_message_at = NOW() WHERE id = $2",
+          [msg, request.conversation_id]
+        );
+      }
+
+      return NextResponse.json({ success: true });
+    }
+
+    if (receipt_verified === false) {
+      if (!payment_rejection_reason) {
+        return NextResponse.json({ error: "Rejection reason is required when rejecting payment." }, { status: 400 });
+      }
+
+      await execute(
+        `UPDATE project_requests 
+         SET receipt_verified = FALSE, 
+             payment_rejection_reason = $1,
+             status = 'rejected', 
+             rejection_reason = $1,
+             updated_at = NOW() 
+         WHERE id = $2`,
+        [payment_rejection_reason.trim(), Number(id)]
+      );
+
+      if (request.conversation_id) {
+        const msg = `❌ Your downpayment has been rejected. Developer's note: "${payment_rejection_reason.trim()}". Please contact the developer for refund arrangements.`;
+        await execute(
+          "INSERT INTO messages (conversation_id, sender_id, content) VALUES ($1, $2, $3)",
+          [request.conversation_id, user.id, msg]
+        );
+        await execute(
+          "UPDATE conversations SET last_message = $1, last_message_at = NOW() WHERE id = $2",
+          [msg, request.conversation_id]
+        );
+      }
+
+      return NextResponse.json({ success: true });
+    }
 
     if (contract_signed_acknowledged !== undefined) {
       await execute(

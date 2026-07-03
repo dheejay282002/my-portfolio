@@ -28,6 +28,8 @@ interface ProjectRequest {
   payment_reference_no?: string | null;
   final_payment_receipt_url?: string | null;
   final_payment_reference_no?: string | null;
+  receipt_verified?: boolean;
+  payment_rejection_reason?: string | null;
 }
 
 const formatDate = (dateVal: any) => {
@@ -205,6 +207,51 @@ export default function ProjectRequestsPage() {
       alert(`Failed to update status: ${err.error}`);
     }
     setOpenDropdown(null);
+  };
+
+  const acceptPayment = async (id: number) => {
+    const res = await fetch(`/api/project-requests/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ receipt_verified: true }),
+    });
+    if (res.ok) {
+      setRequests((prev) =>
+        prev.map((r) => r.id === id ? { ...r, receipt_verified: true, status: "accepted" } : r)
+      );
+      if (selected?.id === id) setSelected((prev) => prev ? { ...prev, receipt_verified: true, status: "accepted" } : null);
+    } else {
+      const err = await res.json().catch(() => ({ error: "Unknown error" }));
+      alert(`Failed to accept payment: ${err.error}`);
+    }
+    setOpenDropdown(null);
+  };
+
+  const submitPaymentRejection = async (id: number) => {
+    if (!rejectionReasonInput.trim()) {
+      alert("Please provide a reason for rejecting the payment.");
+      return;
+    }
+    const res = await fetch(`/api/project-requests/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ receipt_verified: false, payment_rejection_reason: rejectionReasonInput.trim() }),
+    });
+    if (res.ok) {
+      setRequests((prev) =>
+        prev.map((r) => r.id === id ? { ...r, receipt_verified: false, status: "rejected", rejection_reason: rejectionReasonInput.trim(), payment_rejection_reason: rejectionReasonInput.trim() } : r)
+      );
+      if (selected?.id === id) {
+        setSelected((prev) =>
+          prev ? { ...prev, receipt_verified: false, status: "rejected", rejection_reason: rejectionReasonInput.trim(), payment_rejection_reason: rejectionReasonInput.trim() } : null
+        );
+      }
+    } else {
+      const err = await res.json().catch(() => ({ error: "Unknown error" }));
+      alert(`Failed to reject payment: ${err.error}`);
+    }
+    setRejectingId(null);
+    setRejectionReasonInput("");
   };
 
   const submitRejection = async (id: number) => {
@@ -424,6 +471,12 @@ export default function ProjectRequestsPage() {
                   <p className="mt-1 text-xs text-red-400 italic bg-red-500/5 border border-red-500/10 p-3 rounded-xl">
                     &ldquo;{selected.rejection_reason}&rdquo;
                   </p>
+                  {selected.payment_rejection_reason && (
+                    <div className="mt-2 rounded-lg bg-red-500/10 border border-red-500/20 p-3 text-[11px] text-red-400">
+                      <p className="font-semibold text-white mb-1">⚠️ Payment Refund Notice</p>
+                      <p>The downpayment was rejected. A refund will be processed for the client. Reason: &ldquo;{selected.payment_rejection_reason}&rdquo;</p>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -486,7 +539,58 @@ export default function ProjectRequestsPage() {
             </div>
 
             <div className="mt-6 flex flex-wrap items-center gap-3 border-t border-white/10 pt-4">
-              {(selected.status === "pending" || (selected.status === "accepted" && !selected.contract_signed)) && (
+              {/* Payment Validation — receipt uploaded, admin must accept or reject */}
+              {selected.status === "pending" && selected.payment_receipt_url && (
+                rejectingId === selected.id ? (
+                  <div className="w-full space-y-3 bg-zinc-900/40 p-4 rounded-xl border border-red-500/10 text-left">
+                    <div className="rounded-lg bg-red-500/10 border border-red-500/20 p-3 text-[11px] text-red-400">
+                      <p className="font-semibold text-white mb-1">Refund Notice</p>
+                      <p>If you reject this payment, the client will be notified and a <strong className="text-white">refund will be processed</strong> for the downpayment amount.</p>
+                    </div>
+                    <label className="block text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">Reason for Payment Rejection</label>
+                    <textarea
+                      rows={3}
+                      placeholder="e.g. Receipt is unclear. Please upload a clearer screenshot."
+                      value={rejectionReasonInput}
+                      onChange={(e) => setRejectionReasonInput(e.target.value)}
+                      required
+                      className="glass w-full resize-none rounded-xl px-3 py-2 text-xs text-white placeholder-zinc-500 outline-none focus:border-red-500/30 bg-zinc-950"
+                    />
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => { setRejectingId(null); setRejectionReasonInput(""); }}
+                        className="rounded-lg border border-white/10 px-3 py-1.5 text-[10px] font-semibold text-zinc-400 transition-colors hover:text-white"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={() => submitPaymentRejection(selected.id)}
+                        className="rounded-lg bg-red-600 px-3 py-1.5 text-[10px] font-bold text-white transition-opacity hover:opacity-90"
+                      >
+                        Reject Payment & Refund
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex gap-2 w-full">
+                    <button
+                      onClick={() => acceptPayment(selected.id)}
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-green-500/20 px-4 py-2 text-xs font-medium text-green-400 transition-colors hover:bg-green-500/30 flex-1"
+                    >
+                      <Check className="h-3.5 w-3.5" /> Accept Payment
+                    </button>
+                    <button
+                      onClick={() => setRejectingId(selected.id)}
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-red-500/20 px-4 py-2 text-xs font-medium text-red-400 transition-colors hover:bg-red-500/30 flex-1"
+                    >
+                      <XCircle className="h-3.5 w-3.5" /> Reject Payment
+                    </button>
+                  </div>
+                )
+              )}
+
+              {/* Initial request — no receipt yet, simple accept/reject */}
+              {selected.status === "pending" && !selected.payment_receipt_url && (
                 rejectingId === selected.id ? (
                   <div className="w-full space-y-3 bg-zinc-900/40 p-4 rounded-xl border border-red-500/10 text-left">
                     <label className="block text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">Reason for Rejection (Optional)</label>
@@ -514,14 +618,12 @@ export default function ProjectRequestsPage() {
                   </div>
                 ) : (
                   <>
-                    {selected.status === "pending" && (
-                      <button
-                        onClick={() => updateStatus(selected.id, "accepted")}
-                        className="inline-flex items-center gap-1.5 rounded-xl bg-green-500/20 px-4 py-2 text-xs font-medium text-green-400 transition-colors hover:bg-green-500/30"
-                      >
-                        <Check className="h-3.5 w-3.5" /> Accept
-                      </button>
-                    )}
+                    <button
+                      onClick={() => updateStatus(selected.id, "accepted")}
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-green-500/20 px-4 py-2 text-xs font-medium text-green-400 transition-colors hover:bg-green-500/30"
+                    >
+                      <Check className="h-3.5 w-3.5" /> Accept
+                    </button>
                     <button
                       onClick={() => setRejectingId(selected.id)}
                       className="inline-flex items-center gap-1.5 rounded-xl bg-red-500/20 px-4 py-2 text-xs font-medium text-red-400 transition-colors hover:bg-red-500/30"
@@ -530,6 +632,15 @@ export default function ProjectRequestsPage() {
                     </button>
                   </>
                 )
+              )}
+
+              {selected.status === "accepted" && !selected.contract_signed && (
+                <button
+                  onClick={() => setRejectingId(selected.id)}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-red-500/20 px-4 py-2 text-xs font-medium text-red-400 transition-colors hover:bg-red-500/30"
+                >
+                  <XCircle className="h-3.5 w-3.5" /> Reject Request
+                </button>
               )}
 
               {selected.status !== "pending" && selected.status !== "rejected" && (() => {
