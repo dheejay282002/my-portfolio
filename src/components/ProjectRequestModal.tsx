@@ -183,7 +183,7 @@ export default function ProjectRequestModal({ open, onClose, conversationId, inv
                 ) : (
                   <>
                     <CreditCard className="h-4 w-4" />
-                    Submit Request
+                    Proceed to Payment
                   </>
                 )}
               </button>
