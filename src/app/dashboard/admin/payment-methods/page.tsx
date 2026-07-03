@@ -39,6 +39,7 @@ export default function PaymentMethodsPage() {
     api_key: "",
     webhook_key: "",
     product_id: "",
+    downpayment_product_id: "",
     return_url: "",
     environment: "test",
   });
@@ -60,6 +61,7 @@ export default function PaymentMethodsPage() {
             api_key: cfg.api_key || "",
             webhook_key: cfg.webhook_key || "",
             product_id: cfg.product_id || "",
+            downpayment_product_id: cfg.downpayment_product_id || "",
             return_url: cfg.return_url || "",
             environment: cfg.environment || "test",
           });
@@ -102,6 +104,7 @@ export default function PaymentMethodsPage() {
             api_key: dodoForm.api_key,
             webhook_key: dodoForm.webhook_key,
             product_id: dodoForm.product_id,
+            downpayment_product_id: dodoForm.downpayment_product_id,
             return_url: dodoForm.return_url,
             environment: dodoForm.environment,
           },
@@ -497,13 +500,25 @@ export default function PaymentMethodsPage() {
           </div>
           <div>
             <label className="mb-1.5 block text-[10px] font-semibold text-zinc-500 uppercase tracking-wider flex items-center gap-1">
-              <Globe className="h-3 w-3" /> Product ID
+              <Globe className="h-3 w-3" /> Product ID (Final Payment)
             </label>
             <input
               type="text"
               placeholder="prod_..."
               value={dodoForm.product_id}
               onChange={(e) => setDodoForm((prev) => ({ ...prev, product_id: e.target.value }))}
+              className="glass w-full rounded-xl px-4 py-2.5 text-xs text-white placeholder-zinc-500 outline-none focus:border-cyan-500/50 bg-zinc-950 font-mono"
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-[10px] font-semibold text-zinc-500 uppercase tracking-wider flex items-center gap-1">
+              <Globe className="h-3 w-3" /> Product ID (50% Downpayment)
+            </label>
+            <input
+              type="text"
+              placeholder="prod_..."
+              value={dodoForm.downpayment_product_id}
+              onChange={(e) => setDodoForm((prev) => ({ ...prev, downpayment_product_id: e.target.value }))}
               className="glass w-full rounded-xl px-4 py-2.5 text-xs text-white placeholder-zinc-500 outline-none focus:border-cyan-500/50 bg-zinc-950 font-mono"
             />
           </div>

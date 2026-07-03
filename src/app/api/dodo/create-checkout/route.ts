@@ -21,6 +21,7 @@ export async function POST(request: NextRequest) {
     const config = typeof gateway.config === "string" ? JSON.parse(gateway.config) : gateway.config;
     const apiKey = config.api_key;
     const productId = config.product_id;
+    const downpaymentProductId = config.downpayment_product_id || config.product_id;
     const environment = config.environment === "live" ? "live_mode" : "test_mode";
 
     if (!apiKey || !productId) {
@@ -36,10 +37,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing type or projectRequestId" }, { status: 400 });
     }
 
+    const isDownpayment = type === "downpayment";
+    const activeProductId = isDownpayment ? downpaymentProductId : productId;
+
     const session = await client.checkoutSessions.create({
       product_cart: [
         {
-          product_id: productId,
+          product_id: activeProductId,
           quantity: 1,
           ...(amount ? { amount: Math.round(amount * 100) } : {}),
         },
