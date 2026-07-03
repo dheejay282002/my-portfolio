@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Upload, X, Save, Eye, EyeOff, Lock, CheckCircle } from "lucide-react";
+import { Upload, X, Save, Eye, EyeOff, Lock, CheckCircle, PenLine, ImageIcon } from "lucide-react";
 import Image from "next/image";
 import Skeleton from "@/components/Skeleton";
 import SignaturePad from "@/components/SignaturePad";
@@ -26,6 +26,7 @@ export default function ProfileForm() {
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState("");
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showSignatureModal, setShowSignatureModal] = useState(false);
 
   const [form, setForm] = useState({
     name: "",
@@ -303,13 +304,23 @@ export default function ProfileForm() {
               </div>
 
               <div className="border-t border-white/5 pt-6">
-                <h3 className="text-sm font-semibold text-zinc-300 mb-3">Signature for Contracts</h3>
-                <p className="text-[11px] text-zinc-500 mb-4">Draw your signature below. This will appear on all project agreement contracts.</p>
-                <SignaturePad
-                  onSave={(dataUrl) => setForm({ ...form, admin_signature_url: dataUrl || "" })}
-                  defaultImage={form.admin_signature_url}
-                  label="Developer Signature"
-                />
+                <div className="flex items-center justify-between mb-1">
+                  <h3 className="text-sm font-semibold text-zinc-300">Signature for Contracts</h3>
+                  <button
+                    type="button"
+                    onClick={() => setShowSignatureModal(true)}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-cyan-500/20 px-4 py-2 text-xs font-medium text-cyan-400 transition-colors hover:bg-cyan-500/30"
+                  >
+                    <PenLine className="h-3.5 w-3.5" />
+                    {form.admin_signature_url ? "Change Signature" : "Set Signature"}
+                  </button>
+                </div>
+                <p className="text-[11px] text-zinc-500 mb-3">This signature will appear on all project agreement contracts.</p>
+                {form.admin_signature_url && (
+                  <div className="inline-block rounded-xl border border-white/5 bg-white p-2">
+                    <img src={form.admin_signature_url} alt="Admin signature" className="h-12 w-auto max-w-[180px] object-contain" />
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -331,11 +342,137 @@ export default function ProfileForm() {
         </form>
 
         {/* ── Change Password Modal ── */}
-        {showPasswordModal && (
-          <ChangePasswordModal
-            onClose={() => setShowPasswordModal(false)}
+          {showPasswordModal && (
+            <ChangePasswordModal
+              onClose={() => setShowPasswordModal(false)}
+            />
+          )}
+
+          {showSignatureModal && (
+            <SignatureModal
+              currentSignature={form.admin_signature_url}
+              onSave={(dataUrl) => {
+                setForm({ ...form, admin_signature_url: dataUrl });
+                setShowSignatureModal(false);
+              }}
+              onClose={() => setShowSignatureModal(false)}
+            />
+          )}
+      </div>
+    </div>
+  );
+}
+
+function SignatureModal({ currentSignature, onSave, onClose }: { currentSignature: string; onSave: (dataUrl: string) => void; onClose: () => void }) {
+  const [mode, setMode] = useState<"draw" | "upload">("draw");
+  const [drawnDataUrl, setDrawnDataUrl] = useState<string | null>(null);
+  const [uploadedUrl, setUploadedUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) { setError("Image must be under 2MB."); return; }
+    setUploading(true);
+    setError("");
+    const fd = new FormData();
+    fd.append("file", file);
+    try {
+      const res = await fetch("/api/upload", { method: "POST", body: fd });
+      const data = await res.json();
+      if (res.ok) { setUploadedUrl(data.url); }
+      else { setError("Upload failed."); }
+    } catch { setError("Upload failed."); }
+    finally { setUploading(false); }
+  };
+
+  const handleSave = () => {
+    const finalUrl = mode === "draw" ? drawnDataUrl : uploadedUrl;
+    if (!finalUrl) { setError("Please provide a signature first."); return; }
+    onSave(finalUrl);
+  };
+
+  const previewUrl = mode === "draw" ? drawnDataUrl : uploadedUrl;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4" onClick={onClose}>
+      <div className="glass-strong w-full max-w-lg rounded-2xl p-6" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-white">Signature for Contracts</h3>
+          <button onClick={onClose} className="text-zinc-500 transition-colors hover:text-white"><X className="h-5 w-5" /></button>
+        </div>
+
+        {/* Mode Tabs */}
+        <div className="flex gap-2 mb-4">
+          <button
+            type="button"
+            onClick={() => setMode("draw")}
+            className={`flex-1 rounded-xl py-2.5 text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${
+              mode === "draw" ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30" : "bg-white/5 text-zinc-400 border border-transparent hover:bg-white/10"
+            }`}
+          >
+            <PenLine className="h-3.5 w-3.5" /> Draw Signature
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("upload")}
+            className={`flex-1 rounded-xl py-2.5 text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${
+              mode === "upload" ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30" : "bg-white/5 text-zinc-400 border border-transparent hover:bg-white/10"
+            }`}
+          >
+            <ImageIcon className="h-3.5 w-3.5" /> Upload Image
+          </button>
+        </div>
+
+        {error && (
+          <div className="mb-3 rounded-xl bg-red-500/10 border border-red-500/20 p-3 text-xs text-red-400">{error}</div>
+        )}
+
+        {/* Draw Mode */}
+        {mode === "draw" && (
+          <SignaturePad
+            onSave={setDrawnDataUrl}
+            defaultImage={currentSignature}
+            label="Draw your signature below"
           />
         )}
+
+        {/* Upload Mode */}
+        {mode === "upload" && (
+          <div className="rounded-xl border border-white/5 bg-zinc-950/40 p-4 space-y-3">
+            <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">Upload Signature Image</p>
+            <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed border-white/10 p-6 text-xs text-zinc-400 hover:border-cyan-500/30 transition-colors">
+              <Upload className="h-5 w-5" />
+              <span>{uploading ? "Uploading..." : "Click to upload signature image (PNG, JPG)"}</span>
+              <input type="file" accept="image/*" className="hidden" disabled={uploading} onChange={handleUpload} />
+            </label>
+          </div>
+        )}
+
+        {/* Preview */}
+        {previewUrl && (
+          <div className="mt-4 rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-4 text-center">
+            <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider mb-2">Preview</p>
+            <div className="inline-block rounded-lg border border-white/5 bg-white p-2">
+              <img src={previewUrl} alt="Signature preview" className="h-14 w-auto max-w-[200px] object-contain" />
+            </div>
+          </div>
+        )}
+
+        <div className="flex gap-3 mt-6 border-t border-white/5 pt-4">
+          <button type="button" onClick={onClose} className="flex-1 rounded-xl border border-white/10 px-4 py-2.5 text-xs font-medium text-zinc-400 transition-colors hover:border-white/20 hover:text-white">
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={(mode === "draw" && !drawnDataUrl) || (mode === "upload" && !uploadedUrl)}
+            className="flex-1 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2.5 text-xs font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            Save Signature
+          </button>
+        </div>
       </div>
     </div>
   );
