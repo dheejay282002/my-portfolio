@@ -23,8 +23,9 @@ export async function DELETE(
 
     const conversationId = request.conversation_id;
 
-    // Delete associated messages first if conversation exists
+    // Nullify conversation FK on project request first, then delete conversation tree
     if (conversationId) {
+      await execute("UPDATE project_requests SET conversation_id = NULL WHERE id = $1", [Number(id)]);
       await execute("DELETE FROM messages WHERE conversation_id = $1", [conversationId]);
       await execute("DELETE FROM conversations WHERE id = $1", [conversationId]);
     }

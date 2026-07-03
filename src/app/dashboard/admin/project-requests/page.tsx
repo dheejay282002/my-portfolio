@@ -74,132 +74,126 @@ export default function ProjectRequestsPage() {
   }, []);
 
   const printContract = (request: ProjectRequest) => {
-    const w = window.open("", "_blank");
-    if (!w) return;
     const brandName = settings.web_name || "Dee Jay.";
     const deliverablesHtml = request.deliverables
       ? request.deliverables.split("\n").map((d: string) => `<li>${d.replace(/^-\s*/, "").trim()}</li>`).join("")
       : "<li>Custom project specification deliverables</li>";
-    
+
     const formatApprovalDate = (dateVal: any) => {
       const d = dateVal ? new Date(dateVal) : new Date();
       const day = d.getDate();
       const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
       const month = monthNames[d.getMonth()];
       const year = d.getFullYear();
-
       let suffix = "th";
       if (day === 1 || day === 21 || day === 31) suffix = "st";
       else if (day === 2 || day === 22) suffix = "nd";
       else if (day === 3 || day === 23) suffix = "rd";
-
       return `${day}${suffix} day of ${month}, ${year}`;
     };
 
     const currentYear = request.created_at ? new Date(request.created_at).getFullYear() : 2026;
     const approvalDateFormatted = formatApprovalDate(request.contract_signed_at);
-    
-    w.document.write(`
-      <html>
-        <head>
-          <title>Agreement Contract - ${request.project_name}</title>
-          <style>
-            ${settings.logo_font_file ? `@font-face { font-family: 'UploadedCustomFont'; src: url('${settings.logo_font_file}'); }` : ""}
-            body { font-family: 'Georgia', serif; padding: 60px 50px; color: #111; line-height: 1.6; max-width: 800px; margin: 0 auto; background: #fff; }
-            .logo-header { font-size: 11px; font-style: italic; color: #666; margin-bottom: 30px; text-align: center; }
-            h1.agreement-title { text-align: center; font-size: 18px; font-weight: bold; text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.5px; }
-            .series-subtitle { text-align: center; font-weight: bold; font-size: 13px; margin-bottom: 30px; text-transform: uppercase; }
-            .legal-statement { font-weight: bold; text-align: justify; font-size: 12px; line-height: 1.6; margin-bottom: 25px; text-transform: uppercase; border-bottom: 1.5px solid #111; border-top: 1.5px solid #111; padding: 15px 0; }
-            p.whereas-clause { text-align: justify; font-size: 12.5px; text-indent: 30px; margin-bottom: 15px; }
-            p.whereas-clause span.whereas-bold { font-weight: bold; }
-            .whereas-list { list-style-type: disc; margin-left: 55px; margin-bottom: 20px; font-size: 12.5px; }
-            .whereas-list li { margin-bottom: 6px; }
-            .resolving-clause { font-size: 12.5px; margin-bottom: 20px; text-align: justify; }
-            .resolving-clause span.bold { font-weight: bold; }
-            ol.deliverables-list { margin-left: 55px; margin-bottom: 25px; font-size: 12.5px; }
-            ol.deliverables-list li { margin-bottom: 8px; line-height: 1.5; }
-            .approved-statement { font-size: 12.5px; font-weight: bold; margin-top: 40px; margin-bottom: 60px; text-transform: uppercase; }
-            .signatures-row { display: flex; justify-content: space-between; margin-top: 70px; }
-            .sig-line-container { width: 42%; text-align: center; }
-            .sig-underline { border-bottom: 1.5px solid #111; margin-bottom: 8px; height: 35px; font-style: italic; font-size: 17px; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 2px; }
-            .sig-label-title { font-weight: bold; font-size: 12px; }
-            .sig-sub-label { font-size: 11px; color: #555; margin-top: 2px; }
-            .actions-bar { margin-top: 40px; text-align: center; border-top: 1px solid #eee; padding-top: 20px; }
-            @media print {
-              .actions-bar { display: none; }
-              body { padding: 30px 10px; }
-            }
-          </style>
-        </head>
-        <body>
-          <div class="logo-header">${settings.logo_type === "image" && settings.logo_image ? `<img src="${settings.logo_image}" alt="${brandName}" style="height:28px;max-width:200px;object-fit:contain;display:inline-block;vertical-align:middle" />` : `<span style="font-family:${settings.logo_font_file ? 'UploadedCustomFont' : settings.logo_font};color:${settings.logo_color || '#111'};font-weight:bold;font-size:15px">${brandName}</span>`}</div>
-          
-          <h1 class="agreement-title">Project Development Agreement</h1>
-          <div class="series-subtitle">Series of ${currentYear}</div>
-          
-          <div class="legal-statement">
-            A TERMS AUTHORIZING THE COMMENCEMENT AND EXECUTION OF THE PROJECT DEVELOPMENT AGREEMENT FOR THE APPLICATION "${request.project_name.toUpperCase()}" BETWEEN THE CLIENT, MR/MS. ${request.client_name?.toUpperCase() || "CLIENT"}, AND THE DEVELOPER, MR. DEE JAY CRISTOBAL, OUTLINING THE SCOPE, DELIVERABLES, AND FINANCES UNDER THE ${request.package_tier?.toUpperCase() || "STANDARD PACK"} ARRANGEMENT.
-          </div>
 
-          <p class="whereas-clause"><span class="whereas-bold">WHEREAS</span>, the Client, ${request.client_name || "Client Name"}, requires high-level professional technical software development services for the implementation and execution of the digital project specified as "${request.project_name}";</p>
-          
-          <p class="whereas-clause"><span class="whereas-bold">WHEREAS</span>, the Developer, Dee Jay Cristobal, possesses the requisite full-stack engineering expertise to deliver the comprehensive technical scope required by the Client;</p>
-          
-          <p class="whereas-clause"><span class="whereas-bold">WHEREAS</span>, both parties have mutually established and finalized the key technical parameters, project specifications, and milestones required for a successful launch;</p>
-          
-          <p class="whereas-clause"><span class="whereas-bold">WHEREAS</span>, the parameters, finances, and execution terms agreed upon under the "${request.package_tier || "Standard Pack"}" are designated as follows:</p>
-          
-          <ul class="whereas-list">
-            <li><strong>Project Specification:</strong> ${request.project_name}</li>
-            <li><strong>Project Package:</strong> ${request.package_tier || "Custom Services"}</li>
-            <li><strong>Baseline Budget / Price Range:</strong> ${request.project_baseline || "Custom baseline"}</li>
-            <li><strong>Estimated Timeline:</strong> ${request.est_timeline || "3 – 5 Weeks"}</li>
-          </ul>
+    const fontFace = settings.logo_font_file
+      ? `@font-face { font-family: 'UploadedCustomFont'; src: url('${settings.logo_font_file}'); }`
+      : "";
+    const logoHtml = settings.logo_type === "image" && settings.logo_image
+      ? `<img src="${settings.logo_image}" alt="${brandName}" style="height:28px;max-width:200px;object-fit:contain;display:inline-block;vertical-align:middle" />`
+      : `<span style="font-family:${settings.logo_font_file ? 'UploadedCustomFont' : settings.logo_font};color:${settings.logo_color || '#111'};font-weight:bold;font-size:15px">${brandName}</span>`;
 
-          <p class="resolving-clause">
-            <span class="bold">NOW, THEREFORE</span>, upon the mutual understanding, consent, and execution of the terms detailed herein,
-          </p>
-          
-          <p class="resolving-clause">
-            <span class="bold">BE IT RESOLVED, AS IT IS HEREBY RESOLVED</span>, that the Developer shall execute and deliver the following Key Deliverables & Included Features:
-          </p>
+    const devSigHtml = adminSignatureUrl
+      ? `<img src="${adminSignatureUrl}" style="max-height:45px;max-width:140px;object-fit:contain;" />`
+      : "Dee Jay Cristobal";
+    const clientSigHtml = request.contract_signed && request.contract_signature_url
+      ? `<img src="${request.contract_signature_url}" style="max-height:45px;max-width:140px;object-fit:contain;" />`
+      : (request.contract_signed ? (request.contract_signed_name || "Signed") : "");
 
-          <ol class="deliverables-list">
-            ${deliverablesHtml}
-          </ol>
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+  <title>Agreement Contract - ${request.project_name}</title>
+  <style>
+    ${fontFace}
+    body { font-family: 'Georgia', serif; padding: 60px 50px; color: #111; line-height: 1.6; max-width: 800px; margin: 0 auto; background: #fff; }
+    .logo-header { font-size: 11px; font-style: italic; color: #666; margin-bottom: 30px; text-align: center; }
+    h1.agreement-title { text-align: center; font-size: 18px; font-weight: bold; text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.5px; }
+    .series-subtitle { text-align: center; font-weight: bold; font-size: 13px; margin-bottom: 30px; text-transform: uppercase; }
+    .legal-statement { font-weight: bold; text-align: justify; font-size: 12px; line-height: 1.6; margin-bottom: 25px; text-transform: uppercase; border-bottom: 1.5px solid #111; border-top: 1.5px solid #111; padding: 15px 0; }
+    p.whereas-clause { text-align: justify; font-size: 12.5px; text-indent: 30px; margin-bottom: 15px; }
+    p.whereas-clause span.whereas-bold { font-weight: bold; }
+    .whereas-list { list-style-type: disc; margin-left: 55px; margin-bottom: 20px; font-size: 12.5px; }
+    .whereas-list li { margin-bottom: 6px; }
+    .resolving-clause { font-size: 12.5px; margin-bottom: 20px; text-align: justify; }
+    .resolving-clause span.bold { font-weight: bold; }
+    ol.deliverables-list { margin-left: 55px; margin-bottom: 25px; font-size: 12.5px; }
+    ol.deliverables-list li { margin-bottom: 8px; line-height: 1.5; }
+    .approved-statement { font-size: 12.5px; font-weight: bold; margin-top: 40px; margin-bottom: 60px; text-transform: uppercase; }
+    .signatures-row { display: flex; justify-content: space-between; margin-top: 70px; }
+    .sig-line-container { width: 42%; text-align: center; }
+    .sig-underline { border-bottom: 1.5px solid #111; margin-bottom: 8px; min-height: 50px; display: flex; align-items: center; justify-content: center; padding: 4px; }
+    .sig-label-title { font-weight: bold; font-size: 12px; }
+    .sig-sub-label { font-size: 11px; color: #555; margin-top: 2px; }
+    .actions-bar { margin-top: 40px; text-align: center; border-top: 1px solid #eee; padding-top: 20px; }
+    @media print { .actions-bar { display: none; } body { padding: 30px 10px; } }
+  </style>
+</head>
+<body>
+  <div class="logo-header">${logoHtml}</div>
 
-          <p class="resolving-clause">
-            <span class="bold">RESOLVED FURTHER</span>, that upon receipt of the full payment balance due for the development services, all title, copyrights, and intellectual property ownership rights to the final code, assets, and builds shall transfer exclusively to the Client.
-          </p>
+  <h1 class="agreement-title">Project Development Agreement</h1>
+  <div class="series-subtitle">Series of ${currentYear}</div>
 
-          <div class="approved-statement">
-            APPROVED on this ${approvalDateFormatted}.
-          </div>
+  <div class="legal-statement">
+    A TERMS AUTHORIZING THE COMMENCEMENT AND EXECUTION OF THE PROJECT DEVELOPMENT AGREEMENT FOR THE APPLICATION "${request.project_name.toUpperCase()}" BETWEEN THE CLIENT, MR/MS. ${request.client_name?.toUpperCase() || "CLIENT"}, AND THE DEVELOPER, MR. DEE JAY CRISTOBAL, OUTLINING THE SCOPE, DELIVERABLES, AND FINANCES UNDER THE ${request.package_tier?.toUpperCase() || "STANDARD PACK"} ARRANGEMENT.
+  </div>
 
-          <div class="signatures-row">
-            <div class="sig-line-container">
-              <div class="sig-underline" style="height:50px;display:flex;align-items:center;justify-content:center;border-bottom:1.5px solid #111;margin-bottom:8px;">
-                ${adminSignatureUrl ? `<img src="${adminSignatureUrl}" style="max-height:45px;max-width:140px;object-fit:contain;" />` : "Dee Jay Cristobal"}
-              </div>
-              <div class="sig-label-title">Dee Jay Cristobal</div>
-              <div class="sig-sub-label">Developer Signature</div>
-            </div>
-            <div class="sig-line-container">
-              <div class="sig-underline" style="height:50px;display:flex;align-items:center;justify-content:center;border-bottom:1.5px solid #111;margin-bottom:8px;">
-                ${request.contract_signed && request.contract_signature_url ? `<img src="${request.contract_signature_url}" style="max-height:45px;max-width:140px;object-fit:contain;" />` : (request.contract_signed ? (request.contract_signed_name || "Signed") : "")}
-              </div>
-              <div class="sig-label-title">${request.contract_signed ? (request.contract_signed_name || "Client") : "(Unsigned)"}</div>
-              <div class="sig-sub-label">Client Signature</div>
-            </div>
-          </div>
-          
-          <div class="actions-bar">
-            <button onclick="window.print()" style="padding: 12px 24px; font-weight: bold; background: #111; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 14px;">Print Contract / Save PDF</button>
-          </div>
-        </body>
-      </html>
-    `);
-    w.document.close();
+  <p class="whereas-clause"><span class="whereas-bold">WHEREAS</span>, the Client, ${request.client_name || "Client Name"}, requires high-level professional technical software development services for the implementation and execution of the digital project specified as "${request.project_name}";</p>
+  <p class="whereas-clause"><span class="whereas-bold">WHEREAS</span>, the Developer, Dee Jay Cristobal, possesses the requisite full-stack engineering expertise to deliver the comprehensive technical scope required by the Client;</p>
+  <p class="whereas-clause"><span class="whereas-bold">WHEREAS</span>, both parties have mutually established and finalized the key technical parameters, project specifications, and milestones required for a successful launch;</p>
+  <p class="whereas-clause"><span class="whereas-bold">WHEREAS</span>, the parameters, finances, and execution terms agreed upon under the "${request.package_tier || "Standard Pack"}" are designated as follows:</p>
+
+  <ul class="whereas-list">
+    <li><strong>Project Specification:</strong> ${request.project_name}</li>
+    <li><strong>Project Package:</strong> ${request.package_tier || "Custom Services"}</li>
+    <li><strong>Baseline Budget / Price Range:</strong> ${request.project_baseline || "Custom baseline"}</li>
+    <li><strong>Estimated Timeline:</strong> ${request.est_timeline || "3 – 5 Weeks"}</li>
+  </ul>
+
+  <p class="resolving-clause"><span class="bold">NOW, THEREFORE</span>, upon the mutual understanding, consent, and execution of the terms detailed herein,</p>
+  <p class="resolving-clause"><span class="bold">BE IT RESOLVED, AS IT IS HEREBY RESOLVED</span>, that the Developer shall execute and deliver the following Key Deliverables &amp; Included Features:</p>
+
+  <ol class="deliverables-list">${deliverablesHtml}</ol>
+
+  <p class="resolving-clause"><span class="bold">RESOLVED FURTHER</span>, that upon receipt of the full payment balance due for the development services, all title, copyrights, and intellectual property ownership rights to the final code, assets, and builds shall transfer exclusively to the Client.</p>
+
+  <div class="approved-statement">APPROVED on this ${approvalDateFormatted}.</div>
+
+  <div class="signatures-row">
+    <div class="sig-line-container">
+      <div class="sig-underline">${devSigHtml}</div>
+      <div class="sig-label-title">Dee Jay Cristobal</div>
+      <div class="sig-sub-label">Developer Signature</div>
+    </div>
+    <div class="sig-line-container">
+      <div class="sig-underline">${clientSigHtml}</div>
+      <div class="sig-label-title">${request.contract_signed ? (request.contract_signed_name || "Client") : "(Unsigned)"}</div>
+      <div class="sig-sub-label">Client Signature</div>
+    </div>
+  </div>
+
+  <div class="actions-bar">
+    <button onclick="window.print()" style="padding:12px 24px;font-weight:bold;background:#111;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px">Print Contract / Save PDF</button>
+  </div>
+</body>
+</html>`;
+
+    const blob = new Blob([html], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    const w = window.open(url, "_blank");
+    if (w) {
+      w.onload = () => URL.revokeObjectURL(url);
+    }
   };
 
   useEffect(() => {
@@ -424,15 +418,26 @@ export default function ProjectRequestsPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelected(req);
-                          }}
-                          className="text-xs font-medium text-cyan-400 hover:text-cyan-300 transition-colors"
-                        >
-                          Manage
-                        </button>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelected(req);
+                            }}
+                            className="text-xs font-medium text-cyan-400 hover:text-cyan-300 transition-colors"
+                          >
+                            Manage
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteRequest(req.id);
+                            }}
+                            className="text-xs font-medium text-red-400 hover:text-red-300 transition-colors"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );

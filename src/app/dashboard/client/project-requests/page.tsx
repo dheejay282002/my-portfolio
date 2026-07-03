@@ -271,8 +271,89 @@ interface FinalPaymentModalProps {
 }
 
 function FinalPaymentModal({ request, onClose, onSuccess }: FinalPaymentModalProps) {
+  const [banks, setBanks] = useState<BankMethod[]>([]);
+  const [selectedBankId, setSelectedBankId] = useState<number | null>(null);
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [referenceNo, setReferenceNo] = useState("");
+  const [banksLoading, setBanksLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
+  const { formatPrice } = useLocalCurrency();
+
+  useEffect(() => {
+    fetch("/api/payment-methods")
+      .then((r) => r.json())
+      .then((d) => {
+        const active = (d.methods || []).filter((m: BankMethod) => m.is_active);
+        setBanks(active);
+        setBanksLoading(false);
+      })
+      .catch(() => { setError("Failed to load payment methods."); setBanksLoading(false); });
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!receiptFile) { setError("Please upload your payment receipt screenshot."); return; }
+    if (!referenceNo.trim()) { setError("Please enter the transaction reference number."); return; }
+    if (!selectedBankId) { setError("Please select a bank or payment method."); return; }
+
+    setSubmitting(true);
+    setError("");
+
+    try {
+      const fd = new FormData();
+      fd.append("file", receiptFile);
+      const uploadRes = await fetch("/api/upload", { method: "POST", body: fd });
+      if (!uploadRes.ok) {
+        setError("Failed to upload receipt. Make sure it's under 4.5MB.");
+        setSubmitting(false);
+        return;
+      }
+      const { url } = await uploadRes.json();
+
+      const res = await fetch(`/api/project-requests/${request.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          final_payment_receipt_url: url,
+          final_payment_reference_no: referenceNo.trim(),
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.error || "Failed to submit payment.");
+        setSubmitting(false);
+        return;
+      }
+
+      setSuccess(true);
+      onSuccess(request.id, url, referenceNo.trim());
+    } catch {
+      setError("Something went wrong. Please try again.");
+      setSubmitting(false);
+    }
+  };
+
+  const selectedBank = banks.find((b) => b.id === selectedBankId);
+
+  if (success) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
+        <div className="glass-strong w-full max-w-md rounded-2xl p-6 text-center" onClick={(e) => e.stopPropagation()}>
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-500/20">
+            <Check className="h-8 w-8 text-green-400" />
+          </div>
+          <p className="text-lg text-green-400 font-semibold">Final Payment Submitted!</p>
+          <p className="mt-1 text-sm text-zinc-400">Your final balance receipt has been uploaded. The admin will verify it shortly.</p>
+          <button onClick={onClose} className="mt-6 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-6 py-3 text-sm font-bold text-white transition-opacity hover:opacity-90">
+            Done
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 px-4 overflow-y-auto py-10">
@@ -301,11 +382,81 @@ function FinalPaymentModal({ request, onClose, onSuccess }: FinalPaymentModalPro
           Your project build is completed and staging is ready! Please settle the remaining 50% balance payment to unlock code handover delivery.
         </p>
 
-        <div className="rounded-xl border border-white/5 bg-zinc-950/40 p-5 mb-6 text-left space-y-4">
-          <p className="text-xs text-zinc-400 leading-relaxed">
-            Please contact the developer for payment instructions for the remaining balance. Bank transfer details will be provided.
-          </p>
-        </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="rounded-xl border border-white/5 bg-zinc-950/40 p-3 text-xs text-zinc-300">
+            <p className="font-semibold text-white">{request.project_name}</p>
+            {request.package_tier && (
+              <p className="mt-1 text-cyan-400">{request.package_tier} — {formatPrice(request.project_baseline || "")}</p>
+            )}
+            {request.project_baseline && (
+              <p className="text-yellow-400 font-semibold mt-0.5">Final Balance (50%): {formatPrice(request.project_baseline)}</p>
+            )}
+          </div>
+
+          <div className="rounded-xl border border-white/5 bg-zinc-950/40 p-4">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-500 flex items-center gap-1.5">
+              <Building2 className="h-3.5 w-3.5 text-cyan-400" />
+              Select Payment Method
+            </p>
+            {banksLoading ? (
+              <p className="text-xs text-zinc-500">Loading payment methods...</p>
+            ) : banks.length === 0 ? (
+              <p className="text-xs text-zinc-500">No payment methods available yet. Please contact the developer.</p>
+            ) : (
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {banks.map((bank) => (
+                  <label key={bank.id} className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition-all ${selectedBankId === bank.id ? "border-cyan-500/50 bg-cyan-500/10" : "border-white/5 bg-zinc-950 hover:border-white/10"}`}>
+                    <input type="radio" name="finalBank" value={bank.id} checked={selectedBankId === bank.id} onChange={() => setSelectedBankId(bank.id)} className="h-4 w-4 text-cyan-500 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-white">{bank.provider_name}</p>
+                      <p className="text-xs text-zinc-400 truncate">{bank.account_name}</p>
+                      <p className="text-xs font-mono text-zinc-500">{bank.account_number}</p>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {selectedBank && (
+            <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-4 text-center">
+              <CreditCard className="mx-auto mb-2 h-6 w-6 text-cyan-400" />
+              <p className="text-sm font-bold text-white">{selectedBank.provider_name}</p>
+              <p className="text-xs text-zinc-400">Account: <span className="font-semibold text-white">{selectedBank.account_name}</span></p>
+              <p className="text-xs text-zinc-400">Number: <span className="font-mono font-bold text-cyan-400">{selectedBank.account_number}</span></p>
+              {selectedBank.qr_code_url && (
+                <div className="mt-3 inline-block rounded-xl border border-white/5 bg-white p-1.5">
+                  <Image src={selectedBank.qr_code_url} alt="QR" width={120} height={120} className="rounded-lg" />
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="rounded-xl border border-white/5 bg-zinc-950/40 p-4 space-y-3">
+            <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500 flex items-center gap-1.5">
+              <Upload className="h-3.5 w-3.5 text-cyan-400" />
+              Upload Payment Receipt
+            </p>
+            <div>
+              <label className="mb-1 block text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">Receipt Screenshot</label>
+              <input type="file" onChange={(e) => setReceiptFile(e.target.files?.[0] || null)} accept="image/*" className="glass w-full rounded-xl px-4 py-2.5 text-xs text-white file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-cyan-500/20 file:text-cyan-400 hover:file:bg-cyan-500/30" />
+            </div>
+            {receiptFile && <p className="text-[10px] text-green-400">Selected: {receiptFile.name}</p>}
+            <div>
+              <label className="mb-1 block text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">Transaction Reference No.</label>
+              <input type="text" placeholder="e.g. 1234567890 or REF-ABC-123" value={referenceNo} onChange={(e) => setReferenceNo(e.target.value)} required className="glass w-full rounded-xl px-4 py-2.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-cyan-500/50 bg-zinc-950" />
+            </div>
+          </div>
+
+          <div className="flex gap-3 pt-2 border-t border-white/5">
+            <button type="button" onClick={onClose} className="flex-1 rounded-xl border border-white/10 px-4 py-3 text-sm font-medium text-zinc-400 transition-colors hover:border-white/20 hover:text-white">
+              Cancel
+            </button>
+            <button type="submit" disabled={submitting || !receiptFile || !referenceNo.trim() || !selectedBankId} className="flex-1 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-3 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+              {submitting ? "Submitting..." : <><Upload className="h-4 w-4" /> Submit Final Payment Receipt</>}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
@@ -679,132 +830,126 @@ function ContractModal({ request, onClose, onSuccess }: ContractModalProps) {
   };
 
   const printContract = () => {
-    const w = window.open("", "_blank");
-    if (!w) return;
     const brandName = settings.web_name || "Dee Jay.";
     const deliverablesHtml = request.deliverables
       ? request.deliverables.split("\n").map((d: string) => `<li>${d.replace(/^-\s*/, "").trim()}</li>`).join("")
       : "<li>Custom project specification deliverables</li>";
-    
+
     const formatApprovalDate = (dateVal: any) => {
       const d = dateVal ? new Date(dateVal) : new Date();
       const day = d.getDate();
       const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
       const month = monthNames[d.getMonth()];
       const year = d.getFullYear();
-
       let suffix = "th";
       if (day === 1 || day === 21 || day === 31) suffix = "st";
       else if (day === 2 || day === 22) suffix = "nd";
       else if (day === 3 || day === 23) suffix = "rd";
-
       return `${day}${suffix} day of ${month}, ${year}`;
     };
 
     const currentYear = request.created_at ? new Date(request.created_at).getFullYear() : 2026;
     const approvalDateFormatted = formatApprovalDate(request.contract_signed_at);
-    
-    w.document.write(`
-      <html>
-        <head>
-          <title>Agreement Contract - ${request.project_name}</title>
-          <style>
-            ${settings.logo_font_file ? `@font-face { font-family: 'UploadedCustomFont'; src: url('${settings.logo_font_file}'); }` : ""}
-            body { font-family: 'Georgia', serif; padding: 60px 50px; color: #111; line-height: 1.6; max-width: 800px; margin: 0 auto; background: #fff; }
-            .logo-header { font-size: 11px; font-style: italic; color: #666; margin-bottom: 30px; text-align: center; }
-            h1.agreement-title { text-align: center; font-size: 18px; font-weight: bold; text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.5px; }
-            .series-subtitle { text-align: center; font-weight: bold; font-size: 13px; margin-bottom: 30px; text-transform: uppercase; }
-            .legal-statement { font-weight: bold; text-align: justify; font-size: 12px; line-height: 1.6; margin-bottom: 25px; text-transform: uppercase; border-bottom: 1.5px solid #111; border-top: 1.5px solid #111; padding: 15px 0; }
-            p.whereas-clause { text-align: justify; font-size: 12.5px; text-indent: 30px; margin-bottom: 15px; }
-            p.whereas-clause span.whereas-bold { font-weight: bold; }
-            .whereas-list { list-style-type: disc; margin-left: 55px; margin-bottom: 20px; font-size: 12.5px; }
-            .whereas-list li { margin-bottom: 6px; }
-            .resolving-clause { font-size: 12.5px; margin-bottom: 20px; text-align: justify; }
-            .resolving-clause span.bold { font-weight: bold; }
-            ol.deliverables-list { margin-left: 55px; margin-bottom: 25px; font-size: 12.5px; }
-            ol.deliverables-list li { margin-bottom: 8px; line-height: 1.5; }
-            .approved-statement { font-size: 12.5px; font-weight: bold; margin-top: 40px; margin-bottom: 60px; text-transform: uppercase; }
-            .signatures-row { display: flex; justify-content: space-between; margin-top: 70px; }
-            .sig-line-container { width: 42%; text-align: center; }
-            .sig-underline { border-bottom: 1.5px solid #111; margin-bottom: 8px; height: 35px; font-style: italic; font-size: 17px; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 2px; }
-            .sig-label-title { font-weight: bold; font-size: 12px; }
-            .sig-sub-label { font-size: 11px; color: #555; margin-top: 2px; }
-            .actions-bar { margin-top: 40px; text-align: center; border-top: 1px solid #eee; padding-top: 20px; }
-            @media print {
-              .actions-bar { display: none; }
-              body { padding: 30px 10px; }
-            }
-          </style>
-        </head>
-        <body>
-          <div class="logo-header">${settings.logo_type === "image" && settings.logo_image ? `<img src="${settings.logo_image}" alt="${brandName}" style="height:28px;max-width:200px;object-fit:contain;display:inline-block;vertical-align:middle" />` : `<span style="font-family:${settings.logo_font_file ? 'UploadedCustomFont' : settings.logo_font};color:${settings.logo_color || '#111'};font-weight:bold;font-size:15px">${brandName}</span>`}</div>
-          
-          <h1 class="agreement-title">Project Development Agreement</h1>
-          <div class="series-subtitle">Series of ${currentYear}</div>
-          
-          <div class="legal-statement">
-            A TERMS AUTHORIZING THE COMMENCEMENT AND EXECUTION OF THE PROJECT DEVELOPMENT AGREEMENT FOR THE APPLICATION "${request.project_name.toUpperCase()}" BETWEEN THE CLIENT, MR/MS. ${request.client_name?.toUpperCase() || "CLIENT"}, AND THE DEVELOPER, MR. DEE JAY CRISTOBAL, OUTLINING THE SCOPE, DELIVERABLES, AND FINANCES UNDER THE ${request.package_tier?.toUpperCase() || "STANDARD PACK"} ARRANGEMENT.
-          </div>
 
-          <p class="whereas-clause"><span class="whereas-bold">WHEREAS</span>, the Client, ${request.client_name || "Client Name"}, requires high-level professional technical software development services for the implementation and execution of the digital project specified as "${request.project_name}";</p>
-          
-          <p class="whereas-clause"><span class="whereas-bold">WHEREAS</span>, the Developer, Dee Jay Cristobal, possesses the requisite full-stack engineering expertise to deliver the comprehensive technical scope required by the Client;</p>
-          
-          <p class="whereas-clause"><span class="whereas-bold">WHEREAS</span>, both parties have mutually established and finalized the key technical parameters, project specifications, and milestones required for a successful launch;</p>
-          
-          <p class="whereas-clause"><span class="whereas-bold">WHEREAS</span>, the parameters, finances, and execution terms agreed upon under the "${request.package_tier || "Standard Pack"}" are designated as follows:</p>
-          
-          <ul class="whereas-list">
-            <li><strong>Project Specification:</strong> ${request.project_name}</li>
-            <li><strong>Project Package:</strong> ${request.package_tier || "Custom Services"}</li>
-            <li><strong>Baseline Budget / Price Range:</strong> ${request.project_baseline || "Custom baseline"}</li>
-            <li><strong>Estimated Timeline:</strong> ${request.est_timeline || "3 – 5 Weeks"}</li>
-          </ul>
+    const fontFace = settings.logo_font_file
+      ? `@font-face { font-family: 'UploadedCustomFont'; src: url('${settings.logo_font_file}'); }`
+      : "";
+    const logoHtml = settings.logo_type === "image" && settings.logo_image
+      ? `<img src="${settings.logo_image}" alt="${brandName}" style="height:28px;max-width:200px;object-fit:contain;display:inline-block;vertical-align:middle" />`
+      : `<span style="font-family:${settings.logo_font_file ? 'UploadedCustomFont' : settings.logo_font};color:${settings.logo_color || '#111'};font-weight:bold;font-size:15px">${brandName}</span>`;
 
-          <p class="resolving-clause">
-            <span class="bold">NOW, THEREFORE</span>, upon the mutual understanding, consent, and execution of the terms detailed herein,
-          </p>
-          
-          <p class="resolving-clause">
-            <span class="bold">BE IT RESOLVED, AS IT IS HEREBY RESOLVED</span>, that the Developer shall execute and deliver the following Key Deliverables & Included Features:
-          </p>
+    const devSigHtml = adminSignatureUrl
+      ? `<img src="${adminSignatureUrl}" style="max-height:45px;max-width:140px;object-fit:contain;" />`
+      : "Dee Jay Cristobal";
+    const clientSigHtml = request.contract_signed && request.contract_signature_url
+      ? `<img src="${request.contract_signature_url}" style="max-height:45px;max-width:140px;object-fit:contain;" />`
+      : (request.contract_signed ? (request.contract_signed_name || "Signed") : "");
 
-          <ol class="deliverables-list">
-            ${deliverablesHtml}
-          </ol>
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+  <title>Agreement Contract - ${request.project_name}</title>
+  <style>
+    ${fontFace}
+    body { font-family: 'Georgia', serif; padding: 60px 50px; color: #111; line-height: 1.6; max-width: 800px; margin: 0 auto; background: #fff; }
+    .logo-header { font-size: 11px; font-style: italic; color: #666; margin-bottom: 30px; text-align: center; }
+    h1.agreement-title { text-align: center; font-size: 18px; font-weight: bold; text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.5px; }
+    .series-subtitle { text-align: center; font-weight: bold; font-size: 13px; margin-bottom: 30px; text-transform: uppercase; }
+    .legal-statement { font-weight: bold; text-align: justify; font-size: 12px; line-height: 1.6; margin-bottom: 25px; text-transform: uppercase; border-bottom: 1.5px solid #111; border-top: 1.5px solid #111; padding: 15px 0; }
+    p.whereas-clause { text-align: justify; font-size: 12.5px; text-indent: 30px; margin-bottom: 15px; }
+    p.whereas-clause span.whereas-bold { font-weight: bold; }
+    .whereas-list { list-style-type: disc; margin-left: 55px; margin-bottom: 20px; font-size: 12.5px; }
+    .whereas-list li { margin-bottom: 6px; }
+    .resolving-clause { font-size: 12.5px; margin-bottom: 20px; text-align: justify; }
+    .resolving-clause span.bold { font-weight: bold; }
+    ol.deliverables-list { margin-left: 55px; margin-bottom: 25px; font-size: 12.5px; }
+    ol.deliverables-list li { margin-bottom: 8px; line-height: 1.5; }
+    .approved-statement { font-size: 12.5px; font-weight: bold; margin-top: 40px; margin-bottom: 60px; text-transform: uppercase; }
+    .signatures-row { display: flex; justify-content: space-between; margin-top: 70px; }
+    .sig-line-container { width: 42%; text-align: center; }
+    .sig-underline { border-bottom: 1.5px solid #111; margin-bottom: 8px; min-height: 50px; display: flex; align-items: center; justify-content: center; padding: 4px; }
+    .sig-label-title { font-weight: bold; font-size: 12px; }
+    .sig-sub-label { font-size: 11px; color: #555; margin-top: 2px; }
+    .actions-bar { margin-top: 40px; text-align: center; border-top: 1px solid #eee; padding-top: 20px; }
+    @media print { .actions-bar { display: none; } body { padding: 30px 10px; } }
+  </style>
+</head>
+<body>
+  <div class="logo-header">${logoHtml}</div>
 
-          <p class="resolving-clause">
-            <span class="bold">RESOLVED FURTHER</span>, that upon receipt of the full payment balance due for the development services, all title, copyrights, and intellectual property ownership rights to the final code, assets, and builds shall transfer exclusively to the Client.
-          </p>
+  <h1 class="agreement-title">Project Development Agreement</h1>
+  <div class="series-subtitle">Series of ${currentYear}</div>
 
-          <div class="approved-statement">
-            APPROVED on this ${approvalDateFormatted}.
-          </div>
+  <div class="legal-statement">
+    A TERMS AUTHORIZING THE COMMENCEMENT AND EXECUTION OF THE PROJECT DEVELOPMENT AGREEMENT FOR THE APPLICATION "${request.project_name.toUpperCase()}" BETWEEN THE CLIENT, MR/MS. ${request.client_name?.toUpperCase() || "CLIENT"}, AND THE DEVELOPER, MR. DEE JAY CRISTOBAL, OUTLINING THE SCOPE, DELIVERABLES, AND FINANCES UNDER THE ${request.package_tier?.toUpperCase() || "STANDARD PACK"} ARRANGEMENT.
+  </div>
 
-          <div class="signatures-row">
-            <div class="sig-line-container">
-              <div class="sig-underline" style="height:50px;display:flex;align-items:center;justify-content:center;border-bottom:1.5px solid #111;margin-bottom:8px;">
-                ${adminSignatureUrl ? `<img src="${adminSignatureUrl}" style="max-height:45px;max-width:140px;object-fit:contain;" />` : "Dee Jay Cristobal"}
-              </div>
-              <div class="sig-label-title">Dee Jay Cristobal</div>
-              <div class="sig-sub-label">Developer Signature</div>
-            </div>
-            <div class="sig-line-container">
-              <div class="sig-underline" style="height:50px;display:flex;align-items:center;justify-content:center;border-bottom:1.5px solid #111;margin-bottom:8px;">
-                ${request.contract_signed && request.contract_signature_url ? `<img src="${request.contract_signature_url}" style="max-height:45px;max-width:140px;object-fit:contain;" />` : (request.contract_signed ? (request.contract_signed_name || "Signed") : "")}
-              </div>
-              <div class="sig-label-title">${request.contract_signed ? (request.contract_signed_name || "Client") : "(Unsigned)"}</div>
-              <div class="sig-sub-label">Client Signature</div>
-            </div>
-          </div>
-          
-          <div class="actions-bar">
-            <button onclick="window.print()" style="padding: 12px 24px; font-weight: bold; background: #111; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 14px;">Print Contract / Save PDF</button>
-          </div>
-        </body>
-      </html>
-    `);
-    w.document.close();
+  <p class="whereas-clause"><span class="whereas-bold">WHEREAS</span>, the Client, ${request.client_name || "Client Name"}, requires high-level professional technical software development services for the implementation and execution of the digital project specified as "${request.project_name}";</p>
+  <p class="whereas-clause"><span class="whereas-bold">WHEREAS</span>, the Developer, Dee Jay Cristobal, possesses the requisite full-stack engineering expertise to deliver the comprehensive technical scope required by the Client;</p>
+  <p class="whereas-clause"><span class="whereas-bold">WHEREAS</span>, both parties have mutually established and finalized the key technical parameters, project specifications, and milestones required for a successful launch;</p>
+  <p class="whereas-clause"><span class="whereas-bold">WHEREAS</span>, the parameters, finances, and execution terms agreed upon under the "${request.package_tier || "Standard Pack"}" are designated as follows:</p>
+
+  <ul class="whereas-list">
+    <li><strong>Project Specification:</strong> ${request.project_name}</li>
+    <li><strong>Project Package:</strong> ${request.package_tier || "Custom Services"}</li>
+    <li><strong>Baseline Budget / Price Range:</strong> ${request.project_baseline || "Custom baseline"}</li>
+    <li><strong>Estimated Timeline:</strong> ${request.est_timeline || "3 – 5 Weeks"}</li>
+  </ul>
+
+  <p class="resolving-clause"><span class="bold">NOW, THEREFORE</span>, upon the mutual understanding, consent, and execution of the terms detailed herein,</p>
+  <p class="resolving-clause"><span class="bold">BE IT RESOLVED, AS IT IS HEREBY RESOLVED</span>, that the Developer shall execute and deliver the following Key Deliverables &amp; Included Features:</p>
+
+  <ol class="deliverables-list">${deliverablesHtml}</ol>
+
+  <p class="resolving-clause"><span class="bold">RESOLVED FURTHER</span>, that upon receipt of the full payment balance due for the development services, all title, copyrights, and intellectual property ownership rights to the final code, assets, and builds shall transfer exclusively to the Client.</p>
+
+  <div class="approved-statement">APPROVED on this ${approvalDateFormatted}.</div>
+
+  <div class="signatures-row">
+    <div class="sig-line-container">
+      <div class="sig-underline">${devSigHtml}</div>
+      <div class="sig-label-title">Dee Jay Cristobal</div>
+      <div class="sig-sub-label">Developer Signature</div>
+    </div>
+    <div class="sig-line-container">
+      <div class="sig-underline">${clientSigHtml}</div>
+      <div class="sig-label-title">${request.contract_signed ? (request.contract_signed_name || "Client") : "(Unsigned)"}</div>
+      <div class="sig-sub-label">Client Signature</div>
+    </div>
+  </div>
+
+  <div class="actions-bar">
+    <button onclick="window.print()" style="padding:12px 24px;font-weight:bold;background:#111;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px">Print Contract / Save PDF</button>
+  </div>
+</body>
+</html>`;
+
+    const blob = new Blob([html], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    const w = window.open(url, "_blank");
+    if (w) {
+      w.onload = () => URL.revokeObjectURL(url);
+    }
   };
 
   return (
