@@ -29,7 +29,39 @@ export async function PATCH(
         return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
       }
 
-      const { contract_signed, contract_signed_name, final_payment_receipt_url, final_payment_reference_no } = body;
+      const { contract_signed, contract_signed_name, final_payment_receipt_url, final_payment_reference_no, payment_receipt_url, payment_reference_no, payment_method_id } = body;
+
+      // Downpayment receipt upload (client pays after submitting request)
+      if (payment_receipt_url !== undefined) {
+        if (!payment_receipt_url || !payment_reference_no) {
+          return NextResponse.json({ error: "Receipt image and reference number are required" }, { status: 400 });
+        }
+
+        await execute(
+          `UPDATE project_requests 
+           SET payment_receipt_url = $1, 
+               payment_reference_no = $2, 
+               payment_method_id = $3,
+               receipt_verified = FALSE,
+               updated_at = NOW() 
+           WHERE id = $4`,
+          [payment_receipt_url, payment_reference_no.trim(), payment_method_id || null, Number(id)]
+        );
+
+        if (request.conversation_id) {
+          const msg = `💰 Downpayment receipt uploaded! Transaction reference: "${payment_reference_no.trim()}".`;
+          await execute(
+            "INSERT INTO messages (conversation_id, sender_id, content) VALUES ($1, $2, $3)",
+            [request.conversation_id, user.id, msg]
+          );
+          await execute(
+            "UPDATE conversations SET last_message = $1, last_message_at = NOW() WHERE id = $2",
+            [msg, request.conversation_id]
+          );
+        }
+
+        return NextResponse.json({ success: true });
+      }
 
       // Final payment receipt upload
       if (final_payment_receipt_url !== undefined) {

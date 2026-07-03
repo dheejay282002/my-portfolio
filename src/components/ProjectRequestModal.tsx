@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
-import { X, Check, AlertCircle, Upload } from "lucide-react";
+import { useEffect, useState } from "react";
+import { X, Check, AlertCircle, CreditCard } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 interface Product {
@@ -27,10 +27,8 @@ export default function ProjectRequestModal({ open, onClose, conversationId, inv
   const [projectForm, setProjectForm] = useState({ project_name: "", description: "", tech_stack: "", product_id: "" as string | number });
   const [submitting, setSubmitting] = useState(false);
   const [projectSubmitted, setProjectSubmitted] = useState(false);
+  const [submittedId, setSubmittedId] = useState<number | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
-  const [receiptFile, setReceiptFile] = useState<File | null>(null);
-  const [referenceNo, setReferenceNo] = useState("");
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -48,14 +46,6 @@ export default function ProjectRequestModal({ open, onClose, conversationId, inv
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!projectForm.project_name.trim() || !projectForm.description.trim()) return;
-    if (!receiptFile) {
-      setErrorMsg("Please upload your downpayment receipt screenshot.");
-      return;
-    }
-    if (!referenceNo.trim()) {
-      setErrorMsg("Please enter the transaction reference number.");
-      return;
-    }
     if (!user) {
       const pending = JSON.stringify({ productName: projectForm.project_name, productId: projectForm.product_id });
       localStorage.setItem("pending_package_request", pending);
@@ -64,26 +54,13 @@ export default function ProjectRequestModal({ open, onClose, conversationId, inv
     }
     setSubmitting(true);
     setErrorMsg("");
-    try {
-      // 1. Upload receipt
-      const fd = new FormData();
-      fd.append("file", receiptFile);
-      const uploadRes = await fetch("/api/upload", { method: "POST", body: fd });
-      if (!uploadRes.ok) {
-        setErrorMsg("Failed to upload receipt. Make sure it's under 4.5MB.");
-        setSubmitting(false);
-        return;
-      }
-      const { url } = await uploadRes.json();
 
-      // 2. Create project request
+    try {
       const createRes = await fetch("/api/project-requests", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...projectForm,
-          payment_receipt_url: url,
-          payment_reference_no: referenceNo.trim(),
           conversation_id: conversationId || undefined,
         }),
       });
@@ -94,7 +71,10 @@ export default function ProjectRequestModal({ open, onClose, conversationId, inv
         return;
       }
 
+      const data = await createRes.json();
+      setSubmittedId(data.id);
       setProjectSubmitted(true);
+      if (inviteMsgId && onSubmitted) onSubmitted(inviteMsgId);
     } catch {
       setErrorMsg("Something went wrong. Please try again.");
       setSubmitting(false);
@@ -123,7 +103,18 @@ export default function ProjectRequestModal({ open, onClose, conversationId, inv
               <Check className="h-8 w-8 text-green-400" />
             </div>
             <p className="text-lg text-green-400 font-semibold">Project Request Submitted!</p>
-            <p className="mt-1 text-sm text-zinc-500">The admin will review it shortly.</p>
+            <p className="mt-1 text-sm text-zinc-500">Now proceed to payment to complete your downpayment.</p>
+            <button
+              onClick={() => {
+                onClose();
+                setProjectSubmitted(false);
+                setErrorMsg("");
+                if (submittedId) router.push(`/dashboard/client/payment/${submittedId}`);
+              }}
+              className="mt-4 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-6 py-3 text-sm font-bold text-white transition-opacity hover:opacity-90"
+            >
+              Proceed to Payment
+            </button>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -179,39 +170,6 @@ export default function ProjectRequestModal({ open, onClose, conversationId, inv
               className="glass w-full rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-500 outline-none focus:border-cyan-500/50 bg-zinc-950 text-left"
             />
 
-            {/* Bank Transfer Upload */}
-            <div className="rounded-xl border border-white/5 bg-zinc-950 p-4 text-xs text-zinc-400 space-y-3 text-left">
-              <p className="font-bold text-white uppercase text-[10px] tracking-wider flex items-center gap-1">
-                <Upload className="h-3.5 w-3.5 text-cyan-400" />
-                Upload Downpayment Receipt
-              </p>
-              <p>Transfer your downpayment to any of the developer's bank accounts found in the payment methods page, then upload your receipt screenshot below.</p>
-              <div>
-                <label className="mb-1 block text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">Receipt Screenshot</label>
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={(e) => setReceiptFile(e.target.files?.[0] || null)}
-                  accept="image/*"
-                  className="glass w-full rounded-xl px-4 py-2.5 text-xs text-white file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-cyan-500/20 file:text-cyan-400 hover:file:bg-cyan-500/30"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">Transaction Reference No.</label>
-                <input
-                  type="text"
-                  placeholder="e.g. 1234567890 or REF-ABC-123"
-                  value={referenceNo}
-                  onChange={(e) => setReferenceNo(e.target.value)}
-                  required
-                  className="glass w-full rounded-xl px-4 py-2.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-cyan-500/50 bg-zinc-950"
-                />
-              </div>
-              {receiptFile && (
-                <p className="text-[10px] text-green-400">Selected: {receiptFile.name}</p>
-              )}
-            </div>
-
             <div className="flex gap-3 pt-2 border-t border-white/5">
               <button
                 type="button"
@@ -222,14 +180,14 @@ export default function ProjectRequestModal({ open, onClose, conversationId, inv
               </button>
               <button
                 type="submit"
-                disabled={submitting || !projectForm.project_name.trim() || !projectForm.description.trim() || !receiptFile || !referenceNo.trim()}
+                disabled={submitting || !projectForm.project_name.trim() || !projectForm.description.trim()}
                 className="flex-1 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-3 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {submitting ? (
                   "Processing..."
                 ) : (
                   <>
-                    <Upload className="h-4 w-4" />
+                    <CreditCard className="h-4 w-4" />
                     Submit Request
                   </>
                 )}

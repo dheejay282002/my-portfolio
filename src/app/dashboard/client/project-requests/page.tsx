@@ -4,6 +4,7 @@ import { Fragment, useEffect, useState } from "react";
 import { Star, X, Upload, AlertCircle, Check, CreditCard, Clock } from "lucide-react";
 import Skeleton from "@/components/Skeleton";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useWebSettings } from "@/hooks/useWebSettings";
 
 interface ProjectRequest {
@@ -781,6 +782,7 @@ function ContractModal({ request, onClose, onSuccess }: ContractModalProps) {
 }
 
 export default function ClientProjectRequests() {
+  const router = useRouter();
   const [requests, setRequests] = useState<ProjectRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [dodoMessage, setDodoMessage] = useState("");
@@ -925,6 +927,18 @@ export default function ClientProjectRequests() {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right flex gap-3 justify-end items-center flex-wrap">
+
+                        {req.status === "pending" && !req.payment_receipt_url && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              router.push(`/dashboard/client/payment/${req.id}`);
+                            }}
+                            className="bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30 border border-yellow-500/10 shadow-[0_0_15px_rgba(234,179,8,0.12)] inline-flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-lg transition-all leading-none"
+                          >
+                            💰 Complete Payment
+                          </button>
+                        )}
 
                         {req.status === "accepted" && (
                           <button

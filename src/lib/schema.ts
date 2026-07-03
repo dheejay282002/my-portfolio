@@ -139,6 +139,10 @@ export async function ensureProductsTable() {
       created_at TIMESTAMP DEFAULT NOW()
     )
   `);
+  await execute(`
+    ALTER TABLE project_requests
+    ADD COLUMN IF NOT EXISTS payment_method_id INTEGER REFERENCES payment_methods(id) ON DELETE SET NULL
+  `);
 
   await execute(`
     CREATE TABLE IF NOT EXISTS payment_gateways (
