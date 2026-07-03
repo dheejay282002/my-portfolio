@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Upload, Check, AlertCircle, CreditCard, Building2 } from "lucide-react";
 import Image from "next/image";
+import { useLocalCurrency } from "@/hooks/useLocalCurrency";
 
 interface BankMethod {
   id: number;
@@ -29,6 +30,7 @@ interface ProjectRequest {
 export default function PaymentPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const { formatPrice, formatDownpayment, currency } = useLocalCurrency();
 
   const [request, setRequest] = useState<ProjectRequest | null>(null);
   const [banks, setBanks] = useState<BankMethod[]>([]);
@@ -117,15 +119,6 @@ export default function PaymentPage() {
 
   const selectedBank = banks.find((b) => b.id === selectedBankId);
 
-  const getDownpaymentAmount = (baseline?: string) => {
-    if (!baseline) return null;
-    const nums = baseline.replace(/[$,]/g, "").match(/\d+/g);
-    if (!nums) return null;
-    const minPrice = parseInt(nums[0], 10);
-    const half = Math.round(minPrice / 2);
-    return `$${half.toLocaleString()}`;
-  };
-
   return (
     <div className="min-h-screen px-4 py-12 sm:px-6">
       <div className="mx-auto max-w-2xl">
@@ -155,11 +148,16 @@ export default function PaymentPage() {
           </div>
         ) : (
           <>
-            <div className="mb-8">
-              <h1 className="text-2xl font-bold text-white">Complete Your Payment</h1>
-              <p className="mt-1 text-sm text-zinc-400">
-                Select a payment method, transfer the downpayment, then upload your receipt.
-              </p>
+            <div className="mb-8 flex items-start justify-between">
+              <div>
+                <h1 className="text-2xl font-bold text-white">Complete Your Payment</h1>
+                <p className="mt-1 text-sm text-zinc-400">
+                  Select a payment method, transfer the downpayment, then upload your receipt.
+                </p>
+              </div>
+              <span className="rounded-full bg-cyan-500/10 px-3 py-1 text-[10px] font-semibold text-cyan-400">
+                {currency}
+              </span>
             </div>
 
             {request && (
@@ -174,10 +172,10 @@ export default function PaymentPage() {
                     <div className="h-px bg-white/5" />
                     <p className="text-xs text-cyan-400 font-semibold">{request.package_tier}</p>
                     <p className="text-xs text-zinc-300">
-                      Package Price: <span className="font-semibold text-white">{request.project_baseline}</span>
+                      Package Price: <span className="font-semibold text-white">{formatPrice(request.project_baseline || "")}</span>
                     </p>
                     <p className="text-xs text-yellow-400 font-semibold">
-                      Downpayment (50%): <span className="text-white">{getDownpaymentAmount(request.project_baseline) || request.project_baseline}</span>
+                      Downpayment (50%): <span className="text-white">{formatDownpayment(request.project_baseline || "") || formatPrice(request.project_baseline || "")}</span>
                     </p>
                   </>
                 )}

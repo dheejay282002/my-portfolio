@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { X, Check, AlertCircle, CreditCard } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useLocalCurrency } from "@/hooks/useLocalCurrency";
 
 interface Product {
   id: number;
@@ -22,6 +23,7 @@ interface Props {
 
 export default function ProjectRequestModal({ open, onClose, conversationId, inviteMsgId, onSubmitted }: Props) {
   const router = useRouter();
+  const { formatPrice, formatDownpayment, loaded, currency } = useLocalCurrency();
   const [user, setUser] = useState<{ id: number; name: string; email: string } | null>(null);
   const [availableProducts, setAvailableProducts] = useState<Product[]>([]);
   const [projectForm, setProjectForm] = useState({ project_name: "", description: "", tech_stack: "", product_id: "" as string | number });
@@ -41,15 +43,7 @@ export default function ProjectRequestModal({ open, onClose, conversationId, inv
       .catch(() => {});
   }, [open]);
 
-  const formatPrice = (baseline: string) => baseline;
-
-  const getDownpaymentAmount = (baseline: string) => {
-    const nums = baseline.replace(/[$,]/g, "").match(/\d+/g);
-    if (!nums) return null;
-    const minPrice = parseInt(nums[0], 10);
-    const half = Math.round(minPrice / 2);
-    return `$${half.toLocaleString()}`;
-  };
+  const getDownpaymentAmount = (baseline: string) => formatDownpayment(baseline);
 
   const selectedProduct = availableProducts.find((p) => p.id === projectForm.product_id);
 
@@ -102,9 +96,14 @@ export default function ProjectRequestModal({ open, onClose, conversationId, inv
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-white">New Project Request</h3>
-          <button onClick={onClose} className="text-zinc-500 transition-colors hover:text-white">
-            <X className="h-5 w-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <span className="rounded-full bg-cyan-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-cyan-400">
+              {currency}
+            </span>
+            <button onClick={onClose} className="text-zinc-500 transition-colors hover:text-white">
+              <X className="h-5 w-5" />
+            </button>
+          </div>
         </div>
 
         {projectSubmitted ? (

@@ -6,6 +6,7 @@ import Skeleton from "@/components/Skeleton";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useWebSettings } from "@/hooks/useWebSettings";
+import { useLocalCurrency } from "@/hooks/useLocalCurrency";
 
 interface ProjectRequest {
   id: number;
@@ -374,6 +375,7 @@ interface DetailsModalProps {
 }
 
 function DetailsModal({ request, onClose }: DetailsModalProps) {
+  const { formatPrice } = useLocalCurrency();
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
       <div 
@@ -400,6 +402,9 @@ function DetailsModal({ request, onClose }: DetailsModalProps) {
             <div>
               <p className="text-xs text-zinc-500">Selected Package</p>
               <p className="mt-1 text-sm font-semibold text-cyan-400">{request.package_tier}</p>
+              {request.project_baseline && (
+                <p className="mt-0.5 text-xs text-zinc-400">{formatPrice(request.project_baseline)}</p>
+              )}
             </div>
           )}
 

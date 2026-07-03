@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { X, Check, XCircle, ChevronDown } from "lucide-react";
 import Skeleton from "@/components/Skeleton";
 import { useWebSettings } from "@/hooks/useWebSettings";
+import { useLocalCurrency } from "@/hooks/useLocalCurrency";
 
 interface ProjectRequest {
   id: number;
@@ -59,6 +60,7 @@ export default function ProjectRequestsPage() {
   const [rejectingId, setRejectingId] = useState<number | null>(null);
   const [rejectionReasonInput, setRejectionReasonInput] = useState("");
   const { settings } = useWebSettings();
+  const { formatPrice } = useLocalCurrency();
 
   const printContract = (request: ProjectRequest) => {
     const w = window.open("", "_blank");
@@ -441,6 +443,9 @@ export default function ProjectRequestsPage() {
                 <div>
                   <p className="text-xs text-zinc-500">Selected Package</p>
                   <p className="text-sm font-semibold text-cyan-400">{selected.package_tier}</p>
+                  {selected.project_baseline && (
+                    <p className="text-xs text-zinc-400 mt-0.5">{formatPrice(selected.project_baseline)}</p>
+                  )}
                 </div>
               )}
               <div>
