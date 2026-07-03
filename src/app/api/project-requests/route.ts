@@ -46,22 +46,9 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    const { project_name, description, tech_stack, conversation_id, product_id, payment_receipt_url, payment_reference_no, dodo_payment } = await req.json();
+    const { project_name, description, tech_stack, conversation_id, product_id, payment_receipt_url, payment_reference_no } = await req.json();
     if (!project_name || !description) {
       return NextResponse.json({ error: "Project name and description are required" }, { status: 400 });
-    }
-
-    // DODO payment flow: create request in pending_payment state
-    if (dodo_payment) {
-      const result = await queryOne(
-        `INSERT INTO project_requests 
-         (client_id, project_name, description, tech_stack, conversation_id, product_id, status) 
-         VALUES ($1, $2, $3, $4, $5, $6, 'pending_payment') 
-         RETURNING id`,
-        [user.id, project_name, description, tech_stack || "", conversation_id || null, product_id || null]
-      ) as { id: number };
-
-      return NextResponse.json({ id: result.id }, { status: 201 });
     }
 
     if (!payment_receipt_url || !payment_reference_no) {

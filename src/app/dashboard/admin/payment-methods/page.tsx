@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { Plus, Edit, Trash2, AlertCircle, Check, CreditCard, ToggleLeft, ToggleRight, Globe, Key, Shield, Link } from "lucide-react";
+import { Plus, Edit, Trash2, AlertCircle, Check, CreditCard, ToggleLeft, ToggleRight } from "lucide-react";
 import Skeleton from "@/components/Skeleton";
 import Image from "next/image";
 
@@ -34,95 +34,6 @@ export default function PaymentMethodsPage() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [dodoForm, setDodoForm] = useState({
-    is_enabled: false,
-    api_key: "",
-    webhook_key: "",
-    product_id: "",
-    downpayment_product_id: "",
-    return_url: "",
-    environment: "test",
-  });
-  const [dodoSaving, setDodoSaving] = useState(false);
-  const [dodoTesting, setDodoTesting] = useState(false);
-  const [dodoSuccess, setDodoSuccess] = useState("");
-  const [dodoError, setDodoError] = useState("");
-
-  const fetchDodoConfig = async () => {
-    try {
-      const res = await fetch("/api/payment-gateways");
-      if (res.ok) {
-        const { gateways } = await res.json();
-        const dodo = gateways?.find((g: any) => g.provider === "dodo");
-        if (dodo) {
-          const cfg = typeof dodo.config === "string" ? JSON.parse(dodo.config) : dodo.config;
-          setDodoForm({
-            is_enabled: dodo.is_enabled,
-            api_key: cfg.api_key || "",
-            webhook_key: cfg.webhook_key || "",
-            product_id: cfg.product_id || "",
-            downpayment_product_id: cfg.downpayment_product_id || "",
-            return_url: cfg.return_url || "",
-            environment: cfg.environment || "test",
-          });
-        }
-      }
-    } catch {}
-  };
-
-  const handleTestDodo = async () => {
-    setDodoTesting(true);
-    setDodoError("");
-    setDodoSuccess("");
-    try {
-      const res = await fetch("/api/dodo/test-connection", { method: "POST" });
-      const data = await res.json();
-      if (res.ok) {
-        setDodoSuccess(data.message || "Connection successful!");
-      } else {
-        setDodoError(data.error || "Connection failed");
-      }
-    } catch {
-      setDodoError("Could not reach server");
-    } finally {
-      setDodoTesting(false);
-    }
-  };
-
-  const handleSaveDodo = async () => {
-    setDodoSaving(true);
-    setDodoError("");
-    setDodoSuccess("");
-    try {
-      const res = await fetch("/api/payment-gateways", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          provider: "dodo",
-          is_enabled: dodoForm.is_enabled,
-          config: {
-            api_key: dodoForm.api_key,
-            webhook_key: dodoForm.webhook_key,
-            product_id: dodoForm.product_id,
-            downpayment_product_id: dodoForm.downpayment_product_id,
-            return_url: dodoForm.return_url,
-            environment: dodoForm.environment,
-          },
-        }),
-      });
-      if (res.ok) {
-        setDodoSuccess("DODO configuration saved!");
-      } else {
-        const data = await res.json();
-        setDodoError(data.error || "Failed to save.");
-      }
-    } catch {
-      setDodoError("Something went wrong.");
-    } finally {
-      setDodoSaving(false);
-    }
-  };
-
   const fetchMethods = async () => {
     try {
       const res = await fetch("/api/payment-methods");
@@ -136,7 +47,6 @@ export default function PaymentMethodsPage() {
 
   useEffect(() => {
     fetchMethods();
-    fetchDodoConfig();
   }, []);
 
   const handleQRUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -448,135 +358,6 @@ export default function PaymentMethodsPage() {
         </div>
       </div>
 
-      {/* DODO Payments Configuration */}
-      <div className="glass rounded-2xl p-6 space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-sm font-semibold text-white uppercase tracking-wider flex items-center gap-2">
-              <CreditCard className="h-4 w-4 text-cyan-400" />
-              DODO Payments Gateway
-            </h2>
-            <p className="text-xs text-zinc-500 mt-1">Configure online payment processing via DODO Payments (credit/debit cards, etc.)</p>
-          </div>
-          <button
-            onClick={() => {
-              setDodoForm((prev) => ({ ...prev, is_enabled: !dodoForm.is_enabled }));
-            }}
-            className={`inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-medium transition-colors ${
-              dodoForm.is_enabled
-                ? "bg-green-500/20 text-green-400 hover:bg-green-500/30"
-                : "bg-zinc-500/10 text-zinc-400 hover:bg-zinc-500/20"
-            }`}
-          >
-            {dodoForm.is_enabled ? <ToggleRight className="h-4 w-4" /> : <ToggleLeft className="h-4 w-4" />}
-            {dodoForm.is_enabled ? "Enabled" : "Disabled"}
-          </button>
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <label className="mb-1.5 block text-[10px] font-semibold text-zinc-500 uppercase tracking-wider flex items-center gap-1">
-              <Key className="h-3 w-3" /> API Key
-            </label>
-            <input
-              type="password"
-              placeholder="sk_live_... or sk_test_..."
-              value={dodoForm.api_key}
-              onChange={(e) => setDodoForm((prev) => ({ ...prev, api_key: e.target.value }))}
-              className="glass w-full rounded-xl px-4 py-2.5 text-xs text-white placeholder-zinc-500 outline-none focus:border-cyan-500/50 bg-zinc-950 font-mono"
-            />
-          </div>
-          <div>
-            <label className="mb-1.5 block text-[10px] font-semibold text-zinc-500 uppercase tracking-wider flex items-center gap-1">
-              <Shield className="h-3 w-3" /> Webhook Secret Key
-            </label>
-            <input
-              type="password"
-              placeholder="whsec_..."
-              value={dodoForm.webhook_key}
-              onChange={(e) => setDodoForm((prev) => ({ ...prev, webhook_key: e.target.value }))}
-              className="glass w-full rounded-xl px-4 py-2.5 text-xs text-white placeholder-zinc-500 outline-none focus:border-cyan-500/50 bg-zinc-950 font-mono"
-            />
-          </div>
-          <div>
-            <label className="mb-1.5 block text-[10px] font-semibold text-zinc-500 uppercase tracking-wider flex items-center gap-1">
-              <Globe className="h-3 w-3" /> Product ID (Final Payment)
-            </label>
-            <input
-              type="text"
-              placeholder="prod_..."
-              value={dodoForm.product_id}
-              onChange={(e) => setDodoForm((prev) => ({ ...prev, product_id: e.target.value }))}
-              className="glass w-full rounded-xl px-4 py-2.5 text-xs text-white placeholder-zinc-500 outline-none focus:border-cyan-500/50 bg-zinc-950 font-mono"
-            />
-          </div>
-          <div>
-            <label className="mb-1.5 block text-[10px] font-semibold text-zinc-500 uppercase tracking-wider flex items-center gap-1">
-              <Globe className="h-3 w-3" /> Product ID (50% Downpayment)
-            </label>
-            <input
-              type="text"
-              placeholder="prod_..."
-              value={dodoForm.downpayment_product_id}
-              onChange={(e) => setDodoForm((prev) => ({ ...prev, downpayment_product_id: e.target.value }))}
-              className="glass w-full rounded-xl px-4 py-2.5 text-xs text-white placeholder-zinc-500 outline-none focus:border-cyan-500/50 bg-zinc-950 font-mono"
-            />
-          </div>
-          <div>
-            <label className="mb-1.5 block text-[10px] font-semibold text-zinc-500 uppercase tracking-wider flex items-center gap-1">
-              <Link className="h-3 w-3" /> Return URL
-            </label>
-            <input
-              type="text"
-              placeholder="https://yoursite.com/dashboard/client/project-requests"
-              value={dodoForm.return_url}
-              onChange={(e) => setDodoForm((prev) => ({ ...prev, return_url: e.target.value }))}
-              className="glass w-full rounded-xl px-4 py-2.5 text-xs text-white placeholder-zinc-500 outline-none focus:border-cyan-500/50 bg-zinc-950 font-mono"
-            />
-          </div>
-        </div>
-
-        <div className="flex items-center gap-4 pt-2">
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-semibold text-zinc-500 uppercase">Environment</span>
-            <select
-              value={dodoForm.environment}
-              onChange={(e) => setDodoForm((prev) => ({ ...prev, environment: e.target.value }))}
-              className="glass rounded-xl px-3 py-1.5 text-xs text-white outline-none focus:border-cyan-500/50 bg-zinc-950"
-            >
-              <option value="test">Test (Sandbox)</option>
-              <option value="live">Live (Production)</option>
-            </select>
-          </div>
-          <button
-            onClick={handleTestDodo}
-            disabled={dodoTesting || dodoSaving}
-            className="rounded-xl border border-cyan-500/30 px-4 py-2 text-xs font-semibold text-cyan-400 transition-colors hover:bg-cyan-500/10 disabled:opacity-50"
-          >
-            {dodoTesting ? "Testing..." : "Test Connection"}
-          </button>
-          <button
-            onClick={handleSaveDodo}
-            disabled={dodoSaving}
-            className="rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-6 py-2 text-xs font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-          >
-            {dodoSaving ? "Saving..." : "Save Configuration"}
-          </button>
-        </div>
-        {dodoSuccess && (
-          <p className="text-xs text-green-400 flex items-center gap-1"><Check className="h-3 w-3" /> {dodoSuccess}</p>
-        )}
-        {dodoError && (
-          <p className="text-xs text-red-400 flex items-center gap-1"><AlertCircle className="h-3 w-3" /> {dodoError}</p>
-        )}
-        {dodoForm.api_key && (
-          <div className="border-t border-white/5 pt-3 mt-2">
-            <p className="text-[10px] text-zinc-600">
-              Webhook URL for DODO Dashboard: <code className="text-cyan-400 bg-white/5 px-1.5 py-0.5 rounded">{typeof window !== "undefined" ? window.location.origin : ""}/api/dodo/webhook</code>
-            </p>
-          </div>
-        )}
-      </div>
     </div>
   );
 }

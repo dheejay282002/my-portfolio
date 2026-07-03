@@ -137,7 +137,7 @@ export async function PATCH(
         if (!request.contract_signed) {
           return NextResponse.json({ error: "Contract unsigned: Client must sign the contract before project handover." }, { status: 400 });
         }
-        if (!request.final_payment_receipt_url && !request.dodo_final_payment_id) {
+        if (!request.final_payment_receipt_url) {
           return NextResponse.json({ error: "Final payment pending: Client must complete final payment before marking as delivered." }, { status: 400 });
         }
       }

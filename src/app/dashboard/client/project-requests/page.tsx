@@ -29,8 +29,6 @@ interface ProjectRequest {
   payment_reference_no?: string | null;
   final_payment_receipt_url?: string | null;
   final_payment_reference_no?: string | null;
-  dodo_downpayment_id?: string | null;
-  dodo_final_payment_id?: string | null;
 }
 
 const statusColors: Record<string, string> = {
@@ -927,35 +925,7 @@ export default function ClientProjectRequests() {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right flex gap-3 justify-end items-center flex-wrap">
-                        {req.status === "pending_payment" && (
-                          <button
-                            onClick={async (e) => {
-                              e.stopPropagation();
-                              try {
-                                const res = await fetch("/api/dodo/create-checkout", {
-                                  method: "POST",
-                                  headers: { "Content-Type": "application/json" },
-                                  body: JSON.stringify({
-                                    type: "downpayment",
-                                    projectRequestId: req.id,
-                                  }),
-                                });
-                                if (!res.ok) {
-                                  const err = await res.json();
-                                  alert(err.error || "Payment gateway not configured");
-                                  return;
-                                }
-                                const { checkout_url } = await res.json();
-                                if (checkout_url) window.location.href = checkout_url;
-                              } catch {
-                                alert("Something went wrong. Please try again.");
-                              }
-                            }}
-                            className="bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30 border border-cyan-500/10 inline-flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-lg transition-all leading-none"
-                          >
-                            <CreditCard className="h-3.5 w-3.5" /> Pay Now
-                          </button>
-                        )}
+
                         {req.status === "accepted" && (
                           <button
                             onClick={(e) => {
@@ -973,7 +943,7 @@ export default function ClientProjectRequests() {
                         )}
 
                         {req.status === "completed" && (
-                          req.final_payment_receipt_url || req.dodo_final_payment_id ? (
+                          req.final_payment_receipt_url ? (
                             <span className="text-[10px] text-zinc-500 italic">Payment Pending Verification</span>
                           ) : (
                             <button

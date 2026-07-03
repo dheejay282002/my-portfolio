@@ -28,8 +28,6 @@ interface ProjectRequest {
   payment_reference_no?: string | null;
   final_payment_receipt_url?: string | null;
   final_payment_reference_no?: string | null;
-  dodo_downpayment_id?: string | null;
-  dodo_final_payment_id?: string | null;
 }
 
 const formatDate = (dateVal: any) => {
@@ -429,16 +427,8 @@ export default function ProjectRequestsPage() {
                 </div>
               )}
 
-              {/* Downpayment Receipt / DODO */}
-              {selected.dodo_downpayment_id ? (
-                <div className="border-t border-white/5 pt-4 space-y-1.5 text-left">
-                  <p className="text-xs text-zinc-500">50% Downpayment (via DODO)</p>
-                  <p className="text-xs text-green-400 font-semibold flex items-center gap-1">
-                    <Check className="h-3 w-3" /> Paid
-                  </p>
-                  <p className="text-xs text-zinc-400 font-mono">ID: {selected.dodo_downpayment_id}</p>
-                </div>
-              ) : selected.payment_receipt_url ? (
+              {/* Downpayment Receipt */}
+              {selected.payment_receipt_url ? (
                 <div className="border-t border-white/5 pt-4 space-y-1.5 text-left">
                   <p className="text-xs text-zinc-500">50% Downpayment Receipt</p>
                   <p className="text-xs text-zinc-300">
@@ -455,16 +445,8 @@ export default function ProjectRequestsPage() {
                 </div>
               ) : null}
 
-              {/* Final Payment Receipt / DODO */}
-              {selected.dodo_final_payment_id ? (
-                <div className="border-t border-white/5 pt-4 space-y-1.5 text-left">
-                  <p className="text-xs text-zinc-500">Final 50% Payment (via DODO)</p>
-                  <p className="text-xs text-green-400 font-semibold flex items-center gap-1">
-                    <Check className="h-3 w-3" /> Paid
-                  </p>
-                  <p className="text-xs text-zinc-400 font-mono">ID: {selected.dodo_final_payment_id}</p>
-                </div>
-              ) : selected.final_payment_receipt_url ? (
+              {/* Final Payment Receipt */}
+              {selected.final_payment_receipt_url ? (
                 <div className="border-t border-white/5 pt-4 space-y-1.5 text-left">
                   <p className="text-xs text-zinc-500">Final 50% Payment Receipt</p>
                   <p className="text-xs text-zinc-300">
@@ -567,7 +549,7 @@ export default function ProjectRequestsPage() {
                     {openDropdown === selected.id && (
                       <div className="absolute right-0 top-full z-10 mt-1 w-40 overflow-hidden rounded-xl glass-strong">
                         {progressOptions.map((opt) => {
-                          const isDeliveredDisabled = opt === "delivered" && !selected.final_payment_receipt_url && !selected.dodo_final_payment_id;
+                          const isDeliveredDisabled = opt === "delivered" && !selected.final_payment_receipt_url;
                           return (
                             <button
                               key={opt}

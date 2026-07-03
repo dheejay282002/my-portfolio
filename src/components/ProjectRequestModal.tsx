@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { X, Check, AlertCircle, CreditCard } from "lucide-react";
+import { useEffect, useState, useRef } from "react";
+import { X, Check, AlertCircle, Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 interface Product {
@@ -24,13 +24,13 @@ export default function ProjectRequestModal({ open, onClose, conversationId, inv
   const router = useRouter();
   const [user, setUser] = useState<{ id: number; name: string; email: string } | null>(null);
   const [availableProducts, setAvailableProducts] = useState<Product[]>([]);
-  const [currency, setCurrency] = useState("USD");
-  const [rate, setRate] = useState(1);
   const [projectForm, setProjectForm] = useState({ project_name: "", description: "", tech_stack: "", product_id: "" as string | number });
-  const [amount, setAmount] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [projectSubmitted, setProjectSubmitted] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [referenceNo, setReferenceNo] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -41,40 +41,19 @@ export default function ProjectRequestModal({ open, onClose, conversationId, inv
       .then((r) => r.json())
       .then((d) => { if (d.products) setAvailableProducts(d.products); })
       .catch(() => {});
-    fetch("https://ipapi.co/json/")
-      .then((res) => res.json())
-      .then((data) => {
-        const cur = data.currency || "USD";
-        setCurrency(cur);
-        fetch("https://open.er-api.com/v6/latest/USD")
-          .then((r) => r.json())
-          .then((ratesData) => {
-            if (ratesData.rates && ratesData.rates[cur]) setRate(ratesData.rates[cur]);
-          });
-      })
-      .catch(() => {});
   }, [open]);
 
-  const formatPrice = (baseline: string) => {
-    if (currency === "USD" || rate === 1) return baseline;
-    const numbers = baseline.replace(/,/g, "").match(/\d+/g);
-    if (!numbers || numbers.length === 0) return baseline;
-    const convertedNumbers = numbers.map((n) => {
-      const num = Number(n);
-      const converted = Math.round(num * rate);
-      return new Intl.NumberFormat(undefined, { style: "currency", currency, maximumFractionDigits: 0 }).format(converted);
-    });
-    if (convertedNumbers.length === 2) return `${convertedNumbers[0]} – ${convertedNumbers[1]}${baseline.includes("+") ? "+" : ""}`;
-    if (convertedNumbers.length === 1) return `${convertedNumbers[0]}${baseline.includes("+") ? "+" : ""}`;
-    return baseline;
-  };
+  const formatPrice = (baseline: string) => baseline;
 
-  const handleDodoPayment = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!projectForm.project_name.trim() || !projectForm.description.trim()) return;
-    if (!amount || parseFloat(amount) <= 0) {
-      setErrorMsg("Please enter the downpayment amount.");
-      setSubmitting(false);
+    if (!receiptFile) {
+      setErrorMsg("Please upload your downpayment receipt screenshot.");
+      return;
+    }
+    if (!referenceNo.trim()) {
+      setErrorMsg("Please enter the transaction reference number.");
       return;
     }
     if (!user) {
@@ -86,13 +65,25 @@ export default function ProjectRequestModal({ open, onClose, conversationId, inv
     setSubmitting(true);
     setErrorMsg("");
     try {
-      // 1. Create pending project request
+      // 1. Upload receipt
+      const fd = new FormData();
+      fd.append("file", receiptFile);
+      const uploadRes = await fetch("/api/upload", { method: "POST", body: fd });
+      if (!uploadRes.ok) {
+        setErrorMsg("Failed to upload receipt. Make sure it's under 4.5MB.");
+        setSubmitting(false);
+        return;
+      }
+      const { url } = await uploadRes.json();
+
+      // 2. Create project request
       const createRes = await fetch("/api/project-requests", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...projectForm,
-          dodo_payment: true,
+          payment_receipt_url: url,
+          payment_reference_no: referenceNo.trim(),
           conversation_id: conversationId || undefined,
         }),
       });
@@ -102,29 +93,8 @@ export default function ProjectRequestModal({ open, onClose, conversationId, inv
         setSubmitting(false);
         return;
       }
-      const { id } = await createRes.json();
 
-      // 2. Create DODO checkout session
-      const checkoutRes = await fetch("/api/dodo/create-checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "downpayment",
-          projectRequestId: id,
-          amount: amount ? parseFloat(amount) : undefined,
-        }),
-      });
-      if (!checkoutRes.ok) {
-        setErrorMsg("DODO Payments is not configured yet. Please contact the developer.");
-        setSubmitting(false);
-        return;
-      }
-      const { checkout_url } = await checkoutRes.json();
-
-      // 3. Redirect to DODO checkout
-      if (checkout_url) {
-        window.location.href = checkout_url;
-      }
+      setProjectSubmitted(true);
     } catch {
       setErrorMsg("Something went wrong. Please try again.");
       setSubmitting(false);
@@ -156,7 +126,7 @@ export default function ProjectRequestModal({ open, onClose, conversationId, inv
             <p className="mt-1 text-sm text-zinc-500">The admin will review it shortly.</p>
           </div>
         ) : (
-          <form onSubmit={handleDodoPayment} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             {errorMsg && (
               <div className="rounded-xl bg-red-500/10 border border-red-500/20 p-3 text-xs text-red-400 flex items-start gap-2 text-left">
                 <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
@@ -164,28 +134,14 @@ export default function ProjectRequestModal({ open, onClose, conversationId, inv
               </div>
             )}
 
-              <select
+                <select
                 value={projectForm.product_id || ""}
                 onChange={(e) => {
                   const val = e.target.value;
-                  const prod = availableProducts.find(p => p.id === Number(val));
                   setProjectForm({
                     ...projectForm,
                     product_id: val ? Number(val) : "",
                   });
-                  if (prod) {
-                    const nums = prod.project_baseline.replace(/,/g, "").match(/\d+/g);
-                    if (nums && nums.length > 0) {
-                      const min = Number(nums[0]);
-                      const max = nums.length > 1 ? Number(nums[1]) : min;
-                      const midpoint = (min + max) / 2;
-                      const half = Math.round(midpoint * 0.5);
-                      const converted = currency !== "USD" && rate !== 1 ? Math.round(half * rate) : half;
-                      setAmount(String(converted));
-                    }
-                  } else {
-                    setAmount("");
-                  }
                 }}
               className="glass w-full rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-500 outline-none focus:border-cyan-500/50 bg-zinc-950 text-left"
             >
@@ -223,26 +179,37 @@ export default function ProjectRequestModal({ open, onClose, conversationId, inv
               className="glass w-full rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-500 outline-none focus:border-cyan-500/50 bg-zinc-950 text-left"
             />
 
-            {/* DODO Payment Section */}
+            {/* Bank Transfer Upload */}
             <div className="rounded-xl border border-white/5 bg-zinc-950 p-4 text-xs text-zinc-400 space-y-3 text-left">
               <p className="font-bold text-white uppercase text-[10px] tracking-wider flex items-center gap-1">
-                <CreditCard className="h-3.5 w-3.5 text-cyan-400" />
-                Secure Checkout
+                <Upload className="h-3.5 w-3.5 text-cyan-400" />
+                Upload Downpayment Receipt
               </p>
-              <p>A 50% downpayment is required to start your project. Pay securely via DODO Payments using credit/debit card or any supported payment method.</p>
+              <p>Transfer your downpayment to any of the developer's bank accounts found in the payment methods page, then upload your receipt screenshot below.</p>
               <div>
-                <label className="mb-1 block text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">Amount to Pay ({currency})</label>
+                <label className="mb-1 block text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">Receipt Screenshot</label>
                 <input
-                  type="number"
-                  min="1"
-                  step="0.01"
-                  placeholder="e.g. 250"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={(e) => setReceiptFile(e.target.files?.[0] || null)}
+                  accept="image/*"
+                  className="glass w-full rounded-xl px-4 py-2.5 text-xs text-white file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-cyan-500/20 file:text-cyan-400 hover:file:bg-cyan-500/30"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">Transaction Reference No.</label>
+                <input
+                  type="text"
+                  placeholder="e.g. 1234567890 or REF-ABC-123"
+                  value={referenceNo}
+                  onChange={(e) => setReferenceNo(e.target.value)}
                   required
                   className="glass w-full rounded-xl px-4 py-2.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-cyan-500/50 bg-zinc-950"
                 />
               </div>
+              {receiptFile && (
+                <p className="text-[10px] text-green-400">Selected: {receiptFile.name}</p>
+              )}
             </div>
 
             <div className="flex gap-3 pt-2 border-t border-white/5">
@@ -255,15 +222,15 @@ export default function ProjectRequestModal({ open, onClose, conversationId, inv
               </button>
               <button
                 type="submit"
-                disabled={submitting || !projectForm.project_name.trim() || !projectForm.description.trim()}
+                disabled={submitting || !projectForm.project_name.trim() || !projectForm.description.trim() || !receiptFile || !referenceNo.trim()}
                 className="flex-1 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-3 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {submitting ? (
                   "Processing..."
                 ) : (
                   <>
-                    <CreditCard className="h-4 w-4" />
-                    Pay 50% Downpayment
+                    <Upload className="h-4 w-4" />
+                    Submit Request
                   </>
                 )}
               </button>
