@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Upload, X, Save, Eye, EyeOff, Lock, CheckCircle } from "lucide-react";
 import Image from "next/image";
 import Skeleton from "@/components/Skeleton";
+import SignaturePad from "@/components/SignaturePad";
 
 export default function ProfileForm() {
   const router = useRouter();
@@ -35,6 +36,7 @@ export default function ProfileForm() {
     linkedin_url: "",
     twitter_url: "",
     email: "",
+    admin_signature_url: "",
   });
 
   useEffect(() => {
@@ -53,6 +55,7 @@ export default function ProfileForm() {
             linkedin_url: d.user.linkedin_url || "",
             twitter_url: d.user.twitter_url || "",
             email: d.user.email || "",
+            admin_signature_url: d.user.admin_signature_url || "",
           });
           setLoading(false);
         }
@@ -76,6 +79,7 @@ export default function ProfileForm() {
           linkedin_url: form.linkedin_url,
           twitter_url: form.twitter_url,
           email: user?.role === "admin" ? form.email : undefined,
+          admin_signature_url: form.admin_signature_url || undefined,
         }),
       });
       
@@ -296,6 +300,16 @@ export default function ProfileForm() {
                     className="glass w-full rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-600 outline-none focus:border-cyan-500/50"
                   />
                 </div>
+              </div>
+
+              <div className="border-t border-white/5 pt-6">
+                <h3 className="text-sm font-semibold text-zinc-300 mb-3">Signature for Contracts</h3>
+                <p className="text-[11px] text-zinc-500 mb-4">Draw your signature below. This will appear on all project agreement contracts.</p>
+                <SignaturePad
+                  onSave={(dataUrl) => setForm({ ...form, admin_signature_url: dataUrl || "" })}
+                  defaultImage={form.admin_signature_url}
+                  label="Developer Signature"
+                />
               </div>
             </div>
           )}

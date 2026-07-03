@@ -2,6 +2,43 @@ import { NextResponse } from "next/server";
 import { queryOne, execute } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 
+export async function DELETE(
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const user = await getSession();
+  if (!user || user.role !== "admin") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const { ensureProductsTable } = await import("@/lib/schema");
+    await ensureProductsTable();
+    const { id } = await params;
+
+    const request = await queryOne("SELECT * FROM project_requests WHERE id = $1", [id]) as Record<string, any> | null;
+    if (!request) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
+    const conversationId = request.conversation_id;
+
+    // Delete associated messages first if conversation exists
+    if (conversationId) {
+      await execute("DELETE FROM messages WHERE conversation_id = $1", [conversationId]);
+      await execute("DELETE FROM conversations WHERE id = $1", [conversationId]);
+    }
+
+    // Delete the project request
+    await execute("DELETE FROM project_requests WHERE id = $1", [Number(id)]);
+
+    return NextResponse.json({ success: true });
+  } catch (err: any) {
+    console.error("[DELETE PROJECT REQUEST ERROR]", err?.message || err);
+    return NextResponse.json({ error: `Something went wrong: ${err?.message || "Unknown"}` }, { status: 500 });
+  }
+}
+
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -117,15 +154,17 @@ export async function PATCH(
 
       // Contract signature
       if (contract_signed !== undefined) {
+        const { contract_signature_url } = body;
         await execute(
           `UPDATE project_requests 
            SET contract_signed = $1, 
                contract_signed_name = $2, 
+               contract_signature_url = $3,
                contract_signed_at = CASE WHEN $1 = TRUE THEN NOW() ELSE NULL END,
                contract_signed_acknowledged = FALSE,
                updated_at = NOW() 
-           WHERE id = $3`,
-          [!!contract_signed, contract_signed_name || null, Number(id)]
+           WHERE id = $4`,
+          [!!contract_signed, contract_signed_name || null, contract_signature_url || null, Number(id)]
         );
 
         // Send chat message on contract signature

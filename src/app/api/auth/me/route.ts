@@ -11,9 +11,10 @@ export async function GET() {
   const { execute } = await import("@/lib/db");
   await execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS cups_of_coffee VARCHAR(50) DEFAULT '0'");
   await execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS contributions VARCHAR(50) DEFAULT '1k+'");
+  await execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS admin_signature_url TEXT");
 
   const user = await queryOne(
-    "SELECT id, name, email, role, last_name, profile_photo, bio, github_url, linkedin_url, twitter_url, cups_of_coffee, contributions FROM users WHERE id = $1",
+    "SELECT id, name, email, role, last_name, profile_photo, bio, github_url, linkedin_url, twitter_url, cups_of_coffee, contributions, admin_signature_url FROM users WHERE id = $1",
     [session.id]
   );
 

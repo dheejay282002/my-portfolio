@@ -21,6 +21,7 @@ export async function PATCH(req: Request) {
       current_password,
       cups_of_coffee,
       contributions,
+      admin_signature_url,
     } = await req.json();
 
     if (user.role === "admin") {
@@ -53,9 +54,10 @@ export async function PATCH(req: Request) {
     
     await execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS cups_of_coffee VARCHAR(50) DEFAULT '0'");
     await execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS contributions VARCHAR(50) DEFAULT '1k+'");
+    await execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS admin_signature_url TEXT");
 
     await execute(
-      "UPDATE users SET name = COALESCE($1, name), last_name = COALESCE($2, last_name), bio = COALESCE($3, bio), profile_photo = COALESCE($4, profile_photo), github_url = COALESCE($5, github_url), linkedin_url = COALESCE($6, linkedin_url), twitter_url = COALESCE($7, twitter_url), cups_of_coffee = COALESCE($8, cups_of_coffee), contributions = COALESCE($9, contributions) WHERE id = $10",
+      "UPDATE users SET name = COALESCE($1, name), last_name = COALESCE($2, last_name), bio = COALESCE($3, bio), profile_photo = COALESCE($4, profile_photo), github_url = COALESCE($5, github_url), linkedin_url = COALESCE($6, linkedin_url), twitter_url = COALESCE($7, twitter_url), cups_of_coffee = COALESCE($8, cups_of_coffee), contributions = COALESCE($9, contributions), admin_signature_url = COALESCE($10, admin_signature_url) WHERE id = $11",
       [
         name ?? null,
         last_name ?? null,
@@ -66,12 +68,13 @@ export async function PATCH(req: Request) {
         twitter_url ?? null,
         cups_of_coffee ?? null,
         contributions ?? null,
+        admin_signature_url ?? null,
         user.id
       ]
     );
 
     const updated = await queryOne(
-      "SELECT id, name, email, role, last_name, profile_photo, bio, github_url, linkedin_url, twitter_url, cups_of_coffee, contributions FROM users WHERE id = $1",
+      "SELECT id, name, email, role, last_name, profile_photo, bio, github_url, linkedin_url, twitter_url, cups_of_coffee, contributions, admin_signature_url FROM users WHERE id = $1",
       [user.id]
     ) as Record<string, unknown>;
 

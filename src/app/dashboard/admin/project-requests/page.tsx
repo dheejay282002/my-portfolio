@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { X, Check, XCircle, ChevronDown } from "lucide-react";
+import { X, Check, XCircle, ChevronDown, Trash2 } from "lucide-react";
 import Skeleton from "@/components/Skeleton";
 import { useWebSettings } from "@/hooks/useWebSettings";
 import { useLocalCurrency } from "@/hooks/useLocalCurrency";
@@ -24,6 +24,7 @@ interface ProjectRequest {
   contract_signed?: boolean;
   contract_signed_name?: string | null;
   contract_signed_at?: string | null;
+  contract_signature_url?: string | null;
   rejection_reason?: string | null;
   payment_receipt_url?: string | null;
   payment_reference_no?: string | null;
@@ -59,8 +60,18 @@ export default function ProjectRequestsPage() {
   const [openDropdown, setOpenDropdown] = useState<number | null>(null);
   const [rejectingId, setRejectingId] = useState<number | null>(null);
   const [rejectionReasonInput, setRejectionReasonInput] = useState("");
+  const [adminSignatureUrl, setAdminSignatureUrl] = useState<string | null>(null);
   const { settings } = useWebSettings();
   const { formatPrice } = useLocalCurrency();
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => {
+        if (d?.user?.admin_signature_url) setAdminSignatureUrl(d.user.admin_signature_url);
+      })
+      .catch(() => {});
+  }, []);
 
   const printContract = (request: ProjectRequest) => {
     const w = window.open("", "_blank");
@@ -167,12 +178,16 @@ export default function ProjectRequestsPage() {
 
           <div class="signatures-row">
             <div class="sig-line-container">
-              <div class="sig-underline">Dee Jay Cristobal</div>
+              <div class="sig-underline" style="height:50px;display:flex;align-items:center;justify-content:center;border-bottom:1.5px solid #111;margin-bottom:8px;">
+                ${adminSignatureUrl ? `<img src="${adminSignatureUrl}" style="max-height:45px;max-width:140px;object-fit:contain;" />` : "Dee Jay Cristobal"}
+              </div>
               <div class="sig-label-title">Dee Jay Cristobal</div>
               <div class="sig-sub-label">Developer Signature</div>
             </div>
             <div class="sig-line-container">
-              <div class="sig-underline">${request.contract_signed ? (request.contract_signed_name || "Signed") : ""}</div>
+              <div class="sig-underline" style="height:50px;display:flex;align-items:center;justify-content:center;border-bottom:1.5px solid #111;margin-bottom:8px;">
+                ${request.contract_signed && request.contract_signature_url ? `<img src="${request.contract_signature_url}" style="max-height:45px;max-width:140px;object-fit:contain;" />` : (request.contract_signed ? (request.contract_signed_name || "Signed") : "")}
+              </div>
               <div class="sig-label-title">${request.contract_signed ? (request.contract_signed_name || "Client") : "(Unsigned)"}</div>
               <div class="sig-sub-label">Client Signature</div>
             </div>
@@ -254,6 +269,18 @@ export default function ProjectRequestsPage() {
     }
     setRejectingId(null);
     setRejectionReasonInput("");
+  };
+
+  const deleteRequest = async (id: number) => {
+    if (!confirm("Are you sure you want to delete this project request? This action cannot be undone.")) return;
+    const res = await fetch(`/api/project-requests/${id}`, { method: "DELETE" });
+    if (res.ok) {
+      setRequests((prev) => prev.filter((r) => r.id !== id));
+      setSelected(null);
+    } else {
+      const err = await res.json().catch(() => ({ error: "Unknown error" }));
+      alert(`Failed to delete: ${err.error}`);
+    }
   };
 
   const submitRejection = async (id: number) => {
@@ -521,24 +548,29 @@ export default function ProjectRequestsPage() {
                 </div>
               ) : null}
 
-              {selected.status === "accepted" && (
+              {(selected.status === "accepted" || selected.status === "in_progress" || selected.status === "testing" || selected.status === "completed" || selected.status === "delivered") && (
                 <div>
                   <p className="text-xs text-zinc-500">Contract Agreement Status</p>
-                  {selected.contract_signed ? (
-                    <div className="mt-1.5 space-y-2 text-left">
-                      <p className="text-xs text-green-400 font-semibold">
-                        ✓ Signed by <span className="underline font-bold text-white">{selected.contract_signed_name}</span> on {new Date(selected.contract_signed_at || "").toLocaleDateString()}
-                      </p>
-                      <button
-                        onClick={() => printContract(selected)}
-                        className="rounded-lg border border-white/10 px-3 py-1.5 text-[10px] font-bold text-zinc-300 transition-colors hover:border-white/20 hover:text-white"
-                      >
-                        Print / Download Signed Contract
-                      </button>
-                    </div>
-                  ) : (
-                    <p className="mt-1 text-xs text-yellow-500 italic">Pending Client Signature</p>
-                  )}
+                  <div className="mt-1.5 space-y-2 text-left">
+                    {selected.contract_signed ? (
+                      <div>
+                        <p className="text-xs text-green-400 font-semibold">
+                          ✓ Signed by <span className="underline font-bold text-white">{selected.contract_signed_name}</span> on {new Date(selected.contract_signed_at || "").toLocaleDateString()}
+                        </p>
+                        {selected.contract_signature_url && (
+                          <img src={selected.contract_signature_url} alt="Client signature" className="mt-2 h-10 w-auto rounded-lg border border-white/5 bg-white p-1" />
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-yellow-500 italic">Pending Client Signature</p>
+                    )}
+                    <button
+                      onClick={() => printContract(selected)}
+                      className="rounded-lg border border-white/10 px-3 py-1.5 text-[10px] font-bold text-zinc-300 transition-colors hover:border-white/20 hover:text-white"
+                    >
+                      Print / Download Contract
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -685,6 +717,14 @@ export default function ProjectRequestsPage() {
                   </div>
                 );
               })()}
+
+              {/* Delete */}
+              <button
+                onClick={() => deleteRequest(selected.id)}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-red-500/10 px-4 py-2 text-xs font-medium text-red-400 transition-colors hover:bg-red-500/20 ml-auto"
+              >
+                <Trash2 className="h-3.5 w-3.5" /> Delete
+              </button>
             </div>
           </div>
         </div>

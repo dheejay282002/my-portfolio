@@ -112,6 +112,9 @@ export async function ensureProductsTable() {
     ALTER TABLE project_requests ADD COLUMN IF NOT EXISTS contract_signed_acknowledged BOOLEAN DEFAULT FALSE
   `);
   await execute(`
+    ALTER TABLE project_requests ADD COLUMN IF NOT EXISTS contract_signature_url TEXT
+  `);
+  await execute(`
     ALTER TABLE project_requests ADD COLUMN IF NOT EXISTS rejection_reason TEXT
   `);
   await execute(`
