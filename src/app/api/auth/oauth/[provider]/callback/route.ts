@@ -147,10 +147,10 @@ export async function GET(
 
     if (existing) {
       await execute(
-        "UPDATE users SET oauth_provider = $1, oauth_id = $2, avatar_url = COALESCE(avatar_url, $3) WHERE id = $4",
-        [provider, oauthUser.id, oauthUser.avatar_url || null, existing.id]
+        "UPDATE users SET oauth_provider = $1, oauth_id = $2, avatar_url = COALESCE(avatar_url, $3), name = CASE WHEN name = email OR name LIKE '%@%' THEN COALESCE($5, name) ELSE name END WHERE id = $4",
+        [provider, oauthUser.id, oauthUser.avatar_url || null, existing.id, oauthUser.name]
       );
-      user = existing;
+      user = { ...existing, name: (existing.name === existing.email || existing.name.includes("@")) && oauthUser.name ? oauthUser.name : existing.name };
     } else {
       const result = await queryOne(
         `INSERT INTO users (name, email, password, role, oauth_provider, oauth_id, avatar_url)
