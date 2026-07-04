@@ -99,6 +99,7 @@ export default function LoginPage() {
         oauth_failed: "Authentication failed. Please try again or use email sign in.",
         google_not_configured: "Google OAuth is not configured yet. Set it up in the admin panel.",
         github_not_configured: "GitHub OAuth is not configured yet. Set it up in the admin panel.",
+        account_exists: "An account with this email already exists. Please sign in with your password instead.",
       };
       setLoginError(messages[oauthError] || "Authentication failed. Please try again.");
       window.history.replaceState({}, "", window.location.pathname);

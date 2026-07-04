@@ -154,12 +154,13 @@ export async function GET(
       );
       user = { ...existing, name: newName, avatar_url: newAvatar };
     } else {
+      const placeholderPw = `oauth_${provider}_${Date.now()}`;
       const result = await queryOne(
         `INSERT INTO users (name, email, password, role, oauth_provider, oauth_id, avatar_url)
          VALUES ($1, $2, $3, 'client', $4, $5, $6) RETURNING id`,
-        [oauthUser.name || oauthUser.email.split("@")[0], oauthUser.email, null, provider, oauthUser.id, oauthUser.avatar_url || null]
+        [oauthUser.name || oauthUser.email.split("@")[0], oauthUser.email, placeholderPw, provider, oauthUser.id, oauthUser.avatar_url || null]
       ) as { id: number };
-      user = { id: result.id, name: oauthUser.name || oauthUser.email.split("@")[0], email: oauthUser.email, role: "client" };
+      user = { id: result.id, name: oauthUser.name || oauthUser.email.split("@")[0], email: oauthUser.email, role: "client", avatar_url: oauthUser.avatar_url || null };
     }
 
     const token = signToken(user);
@@ -178,8 +179,9 @@ export async function GET(
     });
 
     return response;
-  } catch (err) {
-    console.error(`[OAUTH CALLBACK ERROR]`, err);
-    return NextResponse.redirect(new URL("/login?error=oauth_failed", req.url));
+  } catch (err: any) {
+    console.error(`[OAUTH CALLBACK ERROR]`, err?.message || err);
+    const msg = err?.message?.includes("duplicate") ? "account_exists" : "oauth_failed";
+    return NextResponse.redirect(new URL(`/login?error=${msg}`, req.url));
   }
 }
