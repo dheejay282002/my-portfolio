@@ -20,26 +20,15 @@ export default function PublicPortfolioPage() {
   useEffect(() => {
     if (!slug) return;
     fetch(`/api/portfolio/${slug}`)
-      .then((r) => {
-        if (!r.ok) throw new Error("Not found");
-        return r.json();
-      })
-      .then(() => {
-        setLoading(false);
-      })
-      .catch(() => {
-        setNotFound(true);
-        setLoading(false);
-      });
+      .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
+      .then(() => setLoading(false))
+      .catch(() => { setNotFound(true); setLoading(false); });
   }, [slug]);
 
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="h-10 w-10 animate-spin rounded-full border-2 border-cyan-500 border-t-transparent" />
-          <p className="text-sm text-zinc-400">Loading portfolio...</p>
-        </div>
+        <div className="h-10 w-10 animate-spin rounded-full border-2 border-cyan-500 border-t-transparent" />
       </div>
     );
   }
@@ -50,10 +39,7 @@ export default function PublicPortfolioPage() {
         <div className="text-center">
           <h1 className="text-6xl font-bold text-white mb-4">404</h1>
           <p className="text-lg text-zinc-400 mb-6">This portfolio doesn&apos;t exist or isn&apos;t published yet.</p>
-          <a
-            href="/"
-            className="rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 px-6 py-3 text-sm font-medium text-white transition-opacity hover:opacity-90"
-          >
+          <a href="/" className="rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 px-6 py-3 text-sm font-medium text-white hover:opacity-90">
             Go Home
           </a>
         </div>
