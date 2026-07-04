@@ -41,6 +41,15 @@ export async function GET() {
       ADD COLUMN IF NOT EXISTS body_font_file TEXT DEFAULT '';
     `);
 
+    // Ensure OAuth columns exist
+    await execute(`
+      ALTER TABLE web_settings
+      ADD COLUMN IF NOT EXISTS google_client_id TEXT DEFAULT '',
+      ADD COLUMN IF NOT EXISTS google_client_secret TEXT DEFAULT '',
+      ADD COLUMN IF NOT EXISTS github_client_id TEXT DEFAULT '',
+      ADD COLUMN IF NOT EXISTS github_client_secret TEXT DEFAULT '';
+    `);
+
     let settings = await queryOne("SELECT * FROM web_settings WHERE id = 1");
     if (!settings) {
       await execute(`

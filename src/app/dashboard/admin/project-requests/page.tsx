@@ -688,10 +688,10 @@ export default function ProjectRequestsPage() {
               {selected.status !== "pending" && selected.status !== "rejected" && (() => {
                 const isProgressDisabled = !selected.contract_signed;
                 return (
-                  <div className="relative ml-auto">
+                  <div className="ml-auto">
                     <button
                       disabled={isProgressDisabled}
-                      onClick={() => setOpenDropdown(openDropdown === selected.id ? null : selected.id)}
+                      onClick={() => setOpenDropdown(selected.id)}
                       className={`inline-flex items-center gap-1.5 rounded-xl bg-cyan-500/20 px-4 py-2 text-xs font-medium text-cyan-400 transition-colors hover:bg-cyan-500/30 ${
                         isProgressDisabled ? "opacity-40 cursor-not-allowed" : ""
                       }`}
@@ -699,26 +699,6 @@ export default function ProjectRequestsPage() {
                     >
                       Set Progress <ChevronDown className="h-3 w-3" />
                     </button>
-                    {openDropdown === selected.id && (
-                      <div className="absolute right-0 top-full z-10 mt-1 w-40 overflow-hidden rounded-xl glass-strong">
-                        {progressOptions.map((opt) => {
-                          const isDeliveredDisabled = opt === "delivered" && !selected.final_payment_receipt_url;
-                          return (
-                            <button
-                              key={opt}
-                              disabled={isDeliveredDisabled}
-                              onClick={() => updateStatus(selected.id, opt)}
-                              className={`flex w-full px-4 py-2.5 text-left text-xs transition-colors hover:bg-white/5 ${
-                                selected.status === opt ? "text-cyan-400" : "text-zinc-400"
-                              } ${isDeliveredDisabled ? "opacity-30 cursor-not-allowed" : ""}`}
-                              title={isDeliveredDisabled ? "Final payment receipt screenshot is required before delivery." : undefined}
-                            >
-                              {opt.replace("_", " ")} {isDeliveredDisabled && "🔒"}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
                   </div>
                 );
               })()}
@@ -730,6 +710,54 @@ export default function ProjectRequestsPage() {
               >
                 <Trash2 className="h-3.5 w-3.5" /> Delete
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Progress Modal */}
+      {openDropdown && selected && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 px-4"
+          onClick={() => setOpenDropdown(null)}
+        >
+          <div
+            className="glass-strong w-full max-w-sm rounded-2xl p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-white">Set Progress</h3>
+              <button onClick={() => setOpenDropdown(null)} className="text-zinc-500 transition-colors hover:text-white">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <p className="text-xs text-zinc-500 mb-4">
+              {selected.project_name}
+            </p>
+            <div className="space-y-2">
+              {progressOptions.map((opt) => {
+                const isDeliveredDisabled = opt === "delivered" && !selected.final_payment_receipt_url;
+                const isCurrent = selected.status === opt;
+                return (
+                  <button
+                    key={opt}
+                    disabled={isDeliveredDisabled || isCurrent}
+                    onClick={() => updateStatus(selected.id, opt)}
+                    className={`flex w-full items-center justify-between rounded-xl px-4 py-3 text-left text-sm transition-colors ${
+                      isCurrent
+                        ? "bg-cyan-500/20 text-cyan-400 cursor-default"
+                        : isDeliveredDisabled
+                          ? "bg-zinc-800/50 text-zinc-600 opacity-40 cursor-not-allowed"
+                          : "bg-white/5 text-zinc-300 hover:bg-white/10 hover:text-white"
+                    }`}
+                    title={isDeliveredDisabled ? "Final payment receipt screenshot is required before delivery." : undefined}
+                  >
+                    <span className="font-medium capitalize">{opt.replace("_", " ")}</span>
+                    {isCurrent && <Check className="h-4 w-4 text-cyan-400" />}
+                    {isDeliveredDisabled && <span className="text-[10px] text-zinc-600">Locked</span>}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
