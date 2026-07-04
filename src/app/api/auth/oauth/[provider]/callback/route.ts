@@ -143,14 +143,16 @@ export async function GET(
       [oauthUser.email]
     ) as { id: number; name: string; email: string; role: "admin" | "client" } | null;
 
-    let user: { id: number; name: string; email: string; role: "admin" | "client" };
+    let user: { id: number; name: string; email: string; role: "admin" | "client"; avatar_url?: string | null };
 
     if (existing) {
+      const newName = oauthUser.name || existing.name;
+      const newAvatar = oauthUser.avatar_url || existing.avatar_url || null;
       await execute(
-        "UPDATE users SET oauth_provider = $1, oauth_id = $2, avatar_url = COALESCE(avatar_url, $3), name = CASE WHEN name = email OR name LIKE '%@%' THEN COALESCE($5, name) ELSE name END WHERE id = $4",
-        [provider, oauthUser.id, oauthUser.avatar_url || null, existing.id, oauthUser.name]
+        "UPDATE users SET oauth_provider = $1, oauth_id = $2, avatar_url = $3, name = $4 WHERE id = $5",
+        [provider, oauthUser.id, newAvatar, newName, existing.id]
       );
-      user = { ...existing, name: (existing.name === existing.email || existing.name.includes("@")) && oauthUser.name ? oauthUser.name : existing.name };
+      user = { ...existing, name: newName, avatar_url: newAvatar };
     } else {
       const result = await queryOne(
         `INSERT INTO users (name, email, password, role, oauth_provider, oauth_id, avatar_url)
