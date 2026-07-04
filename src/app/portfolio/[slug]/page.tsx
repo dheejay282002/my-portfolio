@@ -11,32 +11,9 @@ import ProjectsSection from "@/components/ProjectsSection";
 import ContactSection from "@/components/ContactSection";
 import Footer from "@/components/Footer";
 
-interface PortfolioSettings {
-  slug: string;
-  title: string;
-  tagline: string;
-  bio: string;
-  skills: { name: string; level: string }[];
-  social_github: string;
-  social_linkedin: string;
-  social_facebook: string;
-  social_twitter: string;
-  contact_email: string;
-  contact_phone: string;
-  contact_location: string;
-  hero_visible: boolean;
-  about_visible: boolean;
-  skills_visible: boolean;
-  projects_visible: boolean;
-  services_visible: boolean;
-  contact_visible: boolean;
-  is_published: boolean;
-}
-
 export default function PublicPortfolioPage() {
   const params = useParams();
   const slug = params?.slug as string;
-  const [settings, setSettings] = useState<PortfolioSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
@@ -47,8 +24,7 @@ export default function PublicPortfolioPage() {
         if (!r.ok) throw new Error("Not found");
         return r.json();
       })
-      .then((d) => {
-        setSettings(d.settings);
+      .then(() => {
         setLoading(false);
       })
       .catch(() => {
@@ -68,7 +44,7 @@ export default function PublicPortfolioPage() {
     );
   }
 
-  if (notFound || !settings) {
+  if (notFound) {
     return (
       <div className="flex min-h-screen items-center justify-center px-6">
         <div className="text-center">
@@ -88,17 +64,13 @@ export default function PublicPortfolioPage() {
   return (
     <>
       <main>
-        {settings.hero_visible && <HeroSection />}
-        {settings.about_visible && <AboutSection />}
-        {settings.skills_visible && <SkillsSection />}
-        {settings.services_visible && (
-          <>
-            <MyServicesSection />
-            <ServicesSection />
-          </>
-        )}
-        {settings.projects_visible && <ProjectsSection />}
-        {settings.contact_visible && <ContactSection />}
+        <HeroSection />
+        <AboutSection />
+        <SkillsSection />
+        <MyServicesSection />
+        <ServicesSection />
+        <ProjectsSection />
+        <ContactSection />
       </main>
       <Footer />
     </>

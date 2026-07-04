@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import {
-  Layout, Link2, Copy, Check, Eye, EyeOff, Plus, X, Trash2,
-  Globe, User, Code2, Briefcase, Mail, Wrench
+  Layout, Link2, Copy, Check, Plus, Trash2,
+  Globe, User, Code2, Mail
 } from "lucide-react";
 import Skeleton from "@/components/Skeleton";
 
@@ -20,12 +20,6 @@ interface PortfolioSettings {
   contact_email: string;
   contact_phone: string;
   contact_location: string;
-  hero_visible: boolean;
-  about_visible: boolean;
-  skills_visible: boolean;
-  projects_visible: boolean;
-  services_visible: boolean;
-  contact_visible: boolean;
   is_published: boolean;
 }
 
@@ -42,12 +36,6 @@ const defaultSettings: PortfolioSettings = {
   contact_email: "",
   contact_phone: "",
   contact_location: "",
-  hero_visible: true,
-  about_visible: true,
-  skills_visible: true,
-  projects_visible: true,
-  services_visible: true,
-  contact_visible: true,
   is_published: false,
 };
 
@@ -143,10 +131,6 @@ export default function PortfolioSettingsPage() {
       ...prev,
       skills: prev.skills.filter((_, i) => i !== index),
     }));
-  };
-
-  const toggleSection = (key: keyof PortfolioSettings) => {
-    setSettings((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
   if (loading) {
@@ -400,45 +384,6 @@ export default function PortfolioSettingsPage() {
               className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-cyan-500/50"
             />
           </div>
-        </div>
-      </div>
-
-      {/* Section Visibility */}
-      <div className="glass rounded-2xl p-6 mb-6">
-        <div className="flex items-center gap-2 mb-4">
-          <Briefcase className="h-4 w-4 text-cyan-400" />
-          <h2 className="text-sm font-semibold text-white">Section Visibility</h2>
-        </div>
-
-        <div className="space-y-3">
-          {[
-            { key: "hero_visible" as const, label: "Hero / Intro", icon: "🏠" },
-            { key: "about_visible" as const, label: "About Me", icon: "👤" },
-            { key: "skills_visible" as const, label: "Skills", icon: "⚡" },
-            { key: "projects_visible" as const, label: "Projects", icon: "💼" },
-            { key: "services_visible" as const, label: "Services", icon: "🛠" },
-            { key: "contact_visible" as const, label: "Contact", icon: "📧" },
-          ].map(({ key, label, icon }) => (
-            <div
-              key={key}
-              className="flex items-center justify-between rounded-xl border border-white/5 bg-white/5 px-4 py-3"
-            >
-              <div className="flex items-center gap-3">
-                <span className="text-base">{icon}</span>
-                <span className="text-sm text-white">{label}</span>
-              </div>
-              <button
-                onClick={() => toggleSection(key)}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  settings[key] ? "bg-cyan-500" : "bg-zinc-700"
-                }`}
-              >
-                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  settings[key] ? "translate-x-6" : "translate-x-1"
-                }`} />
-              </button>
-            </div>
-          ))}
         </div>
       </div>
 

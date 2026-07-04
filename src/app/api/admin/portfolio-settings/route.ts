@@ -24,12 +24,6 @@ export async function GET() {
         contact_email VARCHAR(255) DEFAULT '',
         contact_phone VARCHAR(50) DEFAULT '',
         contact_location VARCHAR(255) DEFAULT '',
-        hero_visible BOOLEAN DEFAULT true,
-        about_visible BOOLEAN DEFAULT true,
-        skills_visible BOOLEAN DEFAULT true,
-        projects_visible BOOLEAN DEFAULT true,
-        services_visible BOOLEAN DEFAULT true,
-        contact_visible BOOLEAN DEFAULT true,
         is_published BOOLEAN DEFAULT false,
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW()
@@ -62,9 +56,7 @@ export async function POST(req: Request) {
     const {
       slug, title, tagline, bio, skills,
       social_github, social_linkedin, social_facebook, social_twitter,
-      contact_email, contact_phone, contact_location,
-      hero_visible, about_visible, skills_visible, projects_visible,
-      services_visible, contact_visible, is_published,
+      contact_email, contact_phone, contact_location, is_published,
     } = body;
 
     await execute(`
@@ -82,12 +74,6 @@ export async function POST(req: Request) {
         contact_email VARCHAR(255) DEFAULT '',
         contact_phone VARCHAR(50) DEFAULT '',
         contact_location VARCHAR(255) DEFAULT '',
-        hero_visible BOOLEAN DEFAULT true,
-        about_visible BOOLEAN DEFAULT true,
-        skills_visible BOOLEAN DEFAULT true,
-        projects_visible BOOLEAN DEFAULT true,
-        services_visible BOOLEAN DEFAULT true,
-        contact_visible BOOLEAN DEFAULT true,
         is_published BOOLEAN DEFAULT false,
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW()
@@ -95,7 +81,6 @@ export async function POST(req: Request) {
     `);
 
     await execute(`ALTER TABLE portfolio_settings ADD COLUMN IF NOT EXISTS social_twitter TEXT DEFAULT ''`);
-
     await execute(`INSERT INTO portfolio_settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING`);
 
     await execute(
@@ -103,17 +88,13 @@ export async function POST(req: Request) {
         slug = $1, title = $2, tagline = $3, bio = $4, skills = $5,
         social_github = $6, social_linkedin = $7, social_facebook = $8, social_twitter = $9,
         contact_email = $10, contact_phone = $11, contact_location = $12,
-        hero_visible = $13, about_visible = $14, skills_visible = $15, projects_visible = $16,
-        services_visible = $17, contact_visible = $18, is_published = $19,
-        updated_at = NOW()
+        is_published = $13, updated_at = NOW()
       WHERE id = 1`,
       [
         slug || "", title || "My Portfolio", tagline || "Web Developer & Designer", bio || "",
         JSON.stringify(skills || []),
         social_github || "", social_linkedin || "", social_facebook || "", social_twitter || "",
         contact_email || "", contact_phone || "", contact_location || "",
-        hero_visible !== false, about_visible !== false, skills_visible !== false,
-        projects_visible !== false, services_visible !== false, contact_visible !== false,
         is_published === true,
       ]
     );
