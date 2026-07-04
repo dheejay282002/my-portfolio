@@ -21,6 +21,7 @@ import {
   CreditCard,
   CheckCircle,
   LogIn,
+  Layout,
 } from "lucide-react";
 
 const navItems = [
@@ -34,6 +35,7 @@ const navItems = [
   { label: "Payment Methods", href: "/dashboard/admin/payment-methods", icon: CreditCard },
   { label: "Email Config", href: "/dashboard/admin/email-config", icon: Mail },
   { label: "OAuth", href: "/dashboard/admin/oauth", icon: LogIn },
+  { label: "Portfolio Settings", href: "/dashboard/admin/portfolio-settings", icon: Layout },
   { label: "Web Settings", href: "/dashboard/admin/web-settings", icon: Globe },
   { label: "Profile Settings", href: "/dashboard/admin/profile", icon: Settings },
 ];

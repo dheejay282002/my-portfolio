@@ -381,7 +381,7 @@ export default function MessengerWidget() {
   const hideChat = pathname === "/" && !user;
 
   return (<>
-    <div className={`fixed bottom-6 right-6 z-[100] ${hideChat ? "hidden" : ""}`}>
+    <div className={`fixed bottom-6 right-6 z-[100] max-sm:bottom-4 max-sm:right-4 ${hideChat ? "hidden" : ""}`}>
       {!open ? (
         <button
           onClick={() => { setOpen(true); setUnreadCount(0); prevUnreadRef.current = 0; }}
@@ -395,7 +395,7 @@ export default function MessengerWidget() {
           )}
         </button>
       ) : !user ? (
-        <div className="glass-strong flex h-[420px] w-[340px] flex-col justify-between overflow-hidden rounded-2xl p-6 shadow-2xl max-sm:h-[380px] max-sm:w-[calc(100vw-48px)]">
+        <div className="glass-strong flex h-[60vh] w-[340px] max-sm:h-[70vh] max-sm:w-[calc(100vw-32px)] max-sm:min-w-[300px] flex-col justify-between overflow-hidden rounded-2xl p-6 shadow-2xl sm:h-[420px]">
           {/* Header */}
           <div className="flex items-center justify-between border-b border-white/10 pb-4">
             <h3 className="text-sm font-semibold text-white">Get Started</h3>
@@ -434,7 +434,7 @@ export default function MessengerWidget() {
           </div>
         </div>
       ) : (
-        <div className="glass-strong flex h-[520px] w-[380px] flex-col overflow-hidden rounded-2xl shadow-2xl max-sm:h-[480px] max-sm:w-[calc(100vw-48px)]">
+        <div className="glass-strong flex h-[70vh] w-[calc(100vw-32px)] max-w-[400px] flex-col overflow-hidden rounded-2xl shadow-2xl sm:h-[520px] sm:w-[380px]">
           {/* Header */}
           <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
             <div className="flex items-center gap-3">

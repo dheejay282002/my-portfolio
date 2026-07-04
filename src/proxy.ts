@@ -5,6 +5,7 @@ import { verifyToken } from "@/lib/auth";
 const publicPaths = [
   "/",
   "/login",
+  "/portfolio",
   "/api/auth/login",
   "/api/auth/signup",
   "/api/auth/signup/request-otp",
@@ -12,6 +13,7 @@ const publicPaths = [
   "/api/auth/reset-password",
   "/api/auth/me",
   "/api/auth/oauth",
+  "/api/portfolio",
 ];
 
 export function proxy(req: NextRequest) {
