@@ -15,6 +15,8 @@ import {
   AlertTriangle,
   Activity,
   ShoppingBag,
+  DollarSign,
+  CheckCircle,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -82,6 +84,7 @@ const quickLinks = [
   { label: "Services", href: "/dashboard/admin/services", icon: Wrench, desc: "Manage offered services" },
   { label: "Skills", href: "/dashboard/admin/skills", icon: BarChart3, desc: "Manage skill sets" },
   { label: "Project Requests", href: "/dashboard/admin/project-requests", icon: ClipboardList, desc: "Review client requests" },
+  { label: "Delivered Projects", href: "/dashboard/admin/delivered-projects", icon: CheckCircle, desc: "View delivered projects" },
   { label: "Email Config", href: "/dashboard/admin/email-config", icon: Mail, desc: "Configure email settings" },
   { label: "Web Settings", href: "/dashboard/admin/web-settings", icon: Globe, desc: "Customize site appearance" },
   { label: "Profile Settings", href: "/dashboard/admin/profile", icon: Settings, desc: "Update your profile" },
@@ -99,6 +102,7 @@ export default function AdminDashboard() {
   const [securityEvents, setSecurityEvents] = useState<SecurityEvent[]>([]);
   const [securitySummary, setSecuritySummary] = useState<SecuritySummary[]>([]);
   const [securityLast24h, setSecurityLast24h] = useState(0);
+  const [revenue, setRevenue] = useState<{ totalRevenue: number; deliveredCount: number; totalCompletedDelivered: number } | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -111,8 +115,9 @@ export default function AdminDashboard() {
       fetch("/api/skills").then((r) => r.json()),
       fetch("/api/admin/security-events").then((r) => r.json()),
       fetch("/api/products").then((r) => r.json()),
+      fetch("/api/admin/revenue").then((r) => r.json()),
     ])
-      .then(([me, reqData, usersData, projData, svcData, skillData, secData, prodData]) => {
+      .then(([me, reqData, usersData, projData, svcData, skillData, secData, prodData, revData]) => {
         setAdminName(me.user?.name || "Admin");
         setRequests(reqData.requests || []);
         setUsersCount(usersData.users?.length || 0);
@@ -124,6 +129,7 @@ export default function AdminDashboard() {
         setSecuritySummary(secData.summary || []);
         setSecurityLast24h(secData.last24h || 0);
         setProductsCount(prodData.products?.length || 0);
+        if (revData?.totalRevenue !== undefined) setRevenue(revData);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -140,6 +146,7 @@ export default function AdminDashboard() {
     { label: "Projects", value: projectsCount, icon: FolderKanban, color: "from-blue-500 to-purple-600" },
     { label: "Services", value: servicesCount, icon: Wrench, color: "from-purple-500 to-indigo-600" },
     { label: "Skills", value: skillsCount, icon: BarChart3, color: "from-pink-500 to-rose-600" },
+    { label: "Revenue", value: revenue ? `$${revenue.totalRevenue.toLocaleString()}` : "$0", icon: DollarSign, color: "from-green-500 to-emerald-600" },
   ];
 
   if (loading) {
@@ -149,8 +156,8 @@ export default function AdminDashboard() {
           <Skeleton className="h-8 w-64" />
           <Skeleton className="h-4 w-96" />
         </div>
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
-          {Array.from({ length: 5 }).map((_, i) => (
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-7">
+          {Array.from({ length: 7 }).map((_, i) => (
             <div key={i} className="glass rounded-2xl p-5">
               <div className="flex items-center gap-3">
                 <Skeleton className="h-10 w-10 rounded-xl" />

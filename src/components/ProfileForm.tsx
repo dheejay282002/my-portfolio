@@ -6,6 +6,7 @@ import { Upload, X, Save, Eye, EyeOff, Lock, CheckCircle, PenLine, ImageIcon } f
 import Image from "next/image";
 import Skeleton from "@/components/Skeleton";
 import SignaturePad from "@/components/SignaturePad";
+import { removeSignatureBackground } from "@/lib/removeBg";
 
 export default function ProfileForm() {
   const router = useRouter();
@@ -376,20 +377,26 @@ function SignatureModal({ currentSignature, onSave, onClose }: { currentSignatur
     if (file.size > 2 * 1024 * 1024) { setError("Image must be under 2MB."); return; }
     setUploading(true);
     setError("");
-    const fd = new FormData();
-    fd.append("file", file);
     try {
-      const res = await fetch("/api/upload", { method: "POST", body: fd });
-      const data = await res.json();
-      if (res.ok) { setUploadedUrl(data.url); }
-      else { setError("Upload failed."); }
-    } catch { setError("Upload failed."); }
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = () => reject(new Error("Failed to read file"));
+        reader.readAsDataURL(file);
+      });
+      const cleaned = await removeSignatureBackground(dataUrl);
+      setUploadedUrl(cleaned);
+    } catch { setError("Failed to process image."); }
     finally { setUploading(false); }
   };
 
-  const handleSave = () => {
-    const finalUrl = mode === "draw" ? drawnDataUrl : uploadedUrl;
+  const handleSave = async () => {
+    let finalUrl = mode === "draw" ? drawnDataUrl : uploadedUrl;
     if (!finalUrl) { setError("Please provide a signature first."); return; }
+    if (mode === "draw") {
+      finalUrl = await removeSignatureBackground(finalUrl);
+      setDrawnDataUrl(finalUrl);
+    }
     onSave(finalUrl);
   };
 

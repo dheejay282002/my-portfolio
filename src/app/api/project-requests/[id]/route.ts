@@ -21,6 +21,10 @@ export async function DELETE(
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
+    if (request.status === "delivered") {
+      return NextResponse.json({ error: "Delivered projects cannot be deleted. They are archived in the Delivered Projects page." }, { status: 400 });
+    }
+
     const conversationId = request.conversation_id;
 
     // Nullify conversation FK on project request first, then delete conversation tree
