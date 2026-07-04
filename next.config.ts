@@ -8,6 +8,7 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: path.resolve(__dirname),
   },
+  cacheHandler: undefined,
 };
 
 export default nextConfig;
