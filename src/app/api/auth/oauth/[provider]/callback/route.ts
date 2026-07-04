@@ -139,9 +139,9 @@ export async function GET(
     `);
 
     const existing = await queryOne(
-      "SELECT id, name, email, role FROM users WHERE email = $1",
+      "SELECT id, name, email, role, avatar_url FROM users WHERE email = $1",
       [oauthUser.email]
-    ) as { id: number; name: string; email: string; role: "admin" | "client" } | null;
+    ) as { id: number; name: string; email: string; role: "admin" | "client"; avatar_url?: string | null } | null;
 
     let user: { id: number; name: string; email: string; role: "admin" | "client"; avatar_url?: string | null };
 
