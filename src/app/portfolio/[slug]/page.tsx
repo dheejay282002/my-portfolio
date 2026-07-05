@@ -5,8 +5,6 @@ import { useParams } from "next/navigation";
 import HeroSection from "@/components/HeroSection";
 import AboutSection from "@/components/AboutSection";
 import SkillsSection from "@/components/SkillsSection";
-import MyServicesSection from "@/components/MyServicesSection";
-import ServicesSection from "@/components/ServicesSection";
 import ProjectsSection from "@/components/ProjectsSection";
 import ContactSection from "@/components/ContactSection";
 import Footer from "@/components/Footer";
@@ -53,8 +51,6 @@ export default function PublicPortfolioPage() {
         <HeroSection />
         <AboutSection />
         <SkillsSection />
-        <MyServicesSection />
-        <ServicesSection />
         <ProjectsSection />
         <ContactSection />
       </main>
