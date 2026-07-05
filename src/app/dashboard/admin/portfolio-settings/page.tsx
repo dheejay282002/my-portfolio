@@ -11,12 +11,9 @@ export default function PortfolioSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [copied, setCopied] = useState(false);
-  const [baseUrl, setBaseUrl] = useState("");
+  const [baseUrl] = useState(typeof window !== "undefined" ? window.location.origin : "");
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      setBaseUrl(window.location.origin);
-    }
     fetch("/api/admin/portfolio-settings")
       .then((r) => r.json())
       .then((d) => {
