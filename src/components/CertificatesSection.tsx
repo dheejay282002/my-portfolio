@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import ScrollReveal from "./ScrollReveal";
 
 interface Certificate {
@@ -16,9 +16,20 @@ interface Certificate {
   credly_host: string;
 }
 
+function CredlyBadge({ badgeId, host }: { badgeId: string; host: string }) {
+  const containerId = `credly-${badgeId}`;
+  const snippet = `<div id="${containerId}" data-iframe-width="270" data-iframe-height="320" data-share-badge-id="${badgeId}" data-share-badge-host="${host}"></div><script type="text/javascript" async src="//cdn.credly.com/assets/utilities/embed.js"><\/script>`;
+
+  return (
+    <div
+      className="glass rounded-2xl overflow-hidden"
+      dangerouslySetInnerHTML={{ __html: snippet }}
+    />
+  );
+}
+
 export default function CertificatesSection() {
   const [certs, setCerts] = useState<Certificate[]>([]);
-  const sectionRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetch("/api/certificates/public", { cache: "no-store" })
@@ -27,25 +38,10 @@ export default function CertificatesSection() {
       .catch(() => {});
   }, []);
 
-  useEffect(() => {
-    if (certs.length === 0) return;
-    const hasCredly = certs.some((c) => c.credly_badge_id);
-    if (!hasCredly) return;
-
-    const scriptId = "credly-embed-script";
-    if (!document.getElementById(scriptId)) {
-      const script = document.createElement("script");
-      script.id = scriptId;
-      script.src = "//cdn.credly.com/assets/utilities/embed.js";
-      script.async = true;
-      document.body.appendChild(script);
-    }
-  }, [certs]);
-
   if (certs.length === 0) return null;
 
   return (
-    <section ref={sectionRef} id="certificates" className="border-t border-white/5 px-6 py-24">
+    <section id="certificates" className="border-t border-white/5 px-6 py-24">
       <ScrollReveal className="mx-auto max-w-7xl">
         <div className="text-center">
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
@@ -60,14 +56,12 @@ export default function CertificatesSection() {
         </div>
 
         <div className="mt-16 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-          {certs.map((c) => (
-            <ScrollReveal key={c.id} delay={certs.indexOf(c) * 100}>
+          {certs.map((c, i) => (
+            <ScrollReveal key={c.id} delay={i * 100}>
               {c.credly_badge_id ? (
-                <div
-                  data-iframe-width="270"
-                  data-iframe-height="320"
-                  data-share-badge-id={c.credly_badge_id}
-                  data-share-badge-host={c.credly_host || "https://www.credly.com"}
+                <CredlyBadge
+                  badgeId={c.credly_badge_id}
+                  host={c.credly_host || "https://www.credly.com"}
                 />
               ) : (
                 <a
