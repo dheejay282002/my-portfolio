@@ -45,6 +45,8 @@ export async function DELETE(
   }
 
   try {
+    await execute("DELETE FROM messages WHERE conversation_id IN (SELECT id FROM conversations WHERE user1_id = $1 OR user2_id = $1)", [id]);
+    await execute("DELETE FROM conversations WHERE user1_id = $1 OR user2_id = $1", [id]);
     await execute("DELETE FROM users WHERE id = $1", [id]);
     return NextResponse.json({ success: true });
   } catch (err: any) {
