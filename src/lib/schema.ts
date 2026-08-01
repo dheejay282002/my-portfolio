@@ -196,8 +196,12 @@ export async function ensureCertificatesTable() {
       issuer_title VARCHAR(255) DEFAULT '',
       badge_image_url TEXT DEFAULT '',
       certificate_url VARCHAR(255) UNIQUE NOT NULL,
+      credly_badge_id TEXT DEFAULT '',
+      credly_host TEXT DEFAULT 'https://www.credly.com',
       is_public BOOLEAN DEFAULT TRUE,
       created_at TIMESTAMP DEFAULT NOW()
     )
   `);
+  await execute(`ALTER TABLE certificates ADD COLUMN IF NOT EXISTS credly_badge_id TEXT DEFAULT ''`);
+  await execute(`ALTER TABLE certificates ADD COLUMN IF NOT EXISTS credly_host TEXT DEFAULT 'https://www.credly.com'`);
 }

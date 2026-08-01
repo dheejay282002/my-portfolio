@@ -14,6 +14,8 @@ interface Certificate {
   issuer_title: string;
   badge_image_url: string;
   certificate_url: string;
+  credly_badge_id: string;
+  credly_host: string;
   is_public: boolean;
   created_at: string;
 }
@@ -34,6 +36,8 @@ export default function CertificatesPage() {
     issuer_name: "",
     issuer_title: "",
     badge_image_url: "",
+    credly_badge_id: "",
+    credly_host: "https://www.credly.com",
   });
 
   useEffect(() => {
@@ -48,6 +52,7 @@ export default function CertificatesPage() {
       recipient_name: "", course_title: "", description: "",
       issued_date: new Date().toISOString().split("T")[0],
       issuer_name: "", issuer_title: "", badge_image_url: "",
+      credly_badge_id: "", credly_host: "https://www.credly.com",
     });
     setShowModal(true);
   };
@@ -62,6 +67,8 @@ export default function CertificatesPage() {
       issuer_name: c.issuer_name || "",
       issuer_title: c.issuer_title || "",
       badge_image_url: c.badge_image_url || "",
+      credly_badge_id: c.credly_badge_id || "",
+      credly_host: c.credly_host || "https://www.credly.com",
     });
     setShowModal(true);
   };
@@ -137,6 +144,10 @@ export default function CertificatesPage() {
   };
 
   const getEmbedCode = (c: Certificate) => {
+    if (c.credly_badge_id) {
+      const host = c.credly_host || "https://www.credly.com";
+      return `<div data-iframe-width="150" data-iframe-height="270" data-share-badge-id="${c.credly_badge_id}" data-share-badge-host="${host}"></div>\n<script type="text/javascript" async src="//cdn.credly.com/assets/utilities/embed.js"></script>`;
+    }
     const base = window.location.origin;
     return `<iframe src="${base}/certificates/${c.certificate_url}" width="800" height="600" frameborder="0"></iframe>`;
   };
@@ -269,6 +280,11 @@ export default function CertificatesPage() {
                     <input type="file" accept="image/*" onChange={handleBadgeUpload} className="hidden" disabled={uploading} />
                   </label>
                 </div>
+              </div>
+              <div className="border-t border-white/5 pt-4">
+                <p className="text-xs text-zinc-500 mb-3">Credly Badge Embed (optional)</p>
+                <input type="text" placeholder="Credly Badge ID" value={form.credly_badge_id} onChange={(e) => setForm({ ...form, credly_badge_id: e.target.value })} className="glass w-full rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-500 outline-none focus:border-cyan-500/50" />
+                <input type="text" placeholder="Credly Host (default: https://www.credly.com)" value={form.credly_host} onChange={(e) => setForm({ ...form, credly_host: e.target.value })} className="glass mt-3 w-full rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-500 outline-none focus:border-cyan-500/50" />
               </div>
               <div className="flex justify-end gap-3 pt-2">
                 <button type="button" onClick={() => setShowModal(false)} className="rounded-xl border border-white/10 px-6 py-2.5 text-sm font-medium text-zinc-400 transition-colors hover:border-white/20 hover:text-white">Cancel</button>
