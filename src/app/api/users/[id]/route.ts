@@ -45,8 +45,13 @@ export async function DELETE(
   }
 
   try {
+    await execute("DELETE FROM call_signals WHERE call_id IN (SELECT id FROM calls WHERE caller_id = $1 OR callee_id = $1)", [id]);
+    await execute("DELETE FROM calls WHERE caller_id = $1 OR callee_id = $1", [id]);
+    await execute("DELETE FROM typing_status WHERE user_id = $1", [id]);
     await execute("DELETE FROM messages WHERE conversation_id IN (SELECT id FROM conversations WHERE user1_id = $1 OR user2_id = $1)", [id]);
     await execute("DELETE FROM conversations WHERE user1_id = $1 OR user2_id = $1", [id]);
+    await execute("DELETE FROM reviews WHERE client_id = $1", [id]);
+    await execute("UPDATE project_requests SET conversation_id = NULL WHERE client_id = $1", [id]);
     await execute("DELETE FROM users WHERE id = $1", [id]);
     return NextResponse.json({ success: true });
   } catch (err: any) {
