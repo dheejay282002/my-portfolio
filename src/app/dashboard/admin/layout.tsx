@@ -22,6 +22,7 @@ import {
   CheckCircle,
   LogIn,
   Layout,
+  Award,
 } from "lucide-react";
 
 const navItems = [
@@ -32,6 +33,7 @@ const navItems = [
   { label: "Skills", href: "/dashboard/admin/skills", icon: BarChart3 },
   { label: "Project Requests", href: "/dashboard/admin/project-requests", icon: ClipboardList },
   { label: "Delivered Projects", href: "/dashboard/admin/delivered-projects", icon: CheckCircle },
+  { label: "Certificates", href: "/dashboard/admin/certificates", icon: Award },
   { label: "Payment Methods", href: "/dashboard/admin/payment-methods", icon: CreditCard },
   { label: "Email Config", href: "/dashboard/admin/email-config", icon: Mail },
   { label: "OAuth", href: "/dashboard/admin/oauth", icon: LogIn },

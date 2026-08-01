@@ -183,3 +183,21 @@ export async function ensureProductsTable() {
     `);
   }
 }
+
+export async function ensureCertificatesTable() {
+  await execute(`
+    CREATE TABLE IF NOT EXISTS certificates (
+      id SERIAL PRIMARY KEY,
+      recipient_name VARCHAR(255) NOT NULL,
+      course_title VARCHAR(255) NOT NULL,
+      description TEXT DEFAULT '',
+      issued_date DATE DEFAULT CURRENT_DATE,
+      issuer_name VARCHAR(255) DEFAULT '',
+      issuer_title VARCHAR(255) DEFAULT '',
+      badge_image_url TEXT DEFAULT '',
+      certificate_url VARCHAR(255) UNIQUE NOT NULL,
+      is_public BOOLEAN DEFAULT TRUE,
+      created_at TIMESTAMP DEFAULT NOW()
+    )
+  `);
+}
