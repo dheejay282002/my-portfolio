@@ -26,6 +26,7 @@ export default function UserManagement() {
   const [viewLoading, setViewLoading] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const fetchUsers = () => {
     fetch("/api/users")
@@ -48,13 +49,19 @@ export default function UserManagement() {
 
   const handleDelete = async (id: number) => {
     setDeleting(true);
+    setDeleteError(null);
     try {
       const res = await fetch(`/api/users/${id}`, { method: "DELETE" });
+      const data = await res.json();
       if (res.ok) {
         setUsers((prev) => prev.filter((u) => u.id !== id));
         setDeleteConfirm(null);
+      } else {
+        setDeleteError(data.error || "Failed to delete user");
       }
-    } catch {}
+    } catch (e: any) {
+      setDeleteError(e.message || "Network error");
+    }
     setDeleting(false);
   };
 
@@ -237,7 +244,7 @@ export default function UserManagement() {
 
       {/* Delete Confirmation Modal */}
       {deleteConfirm !== null && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setDeleteConfirm(null)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => { setDeleteConfirm(null); setDeleteError(null); }}>
           <div className="glass-strong mx-4 w-full max-w-sm rounded-2xl p-6 text-center shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-500/10 text-red-500">
               <Trash2 className="h-6 w-6" />
@@ -246,9 +253,12 @@ export default function UserManagement() {
             <p className="mt-2 text-sm text-zinc-400">
               This action cannot be undone. The user will lose access to their account.
             </p>
+            {deleteError && (
+              <p className="mt-2 text-sm text-red-400">{deleteError}</p>
+            )}
             <div className="mt-6 flex gap-3">
               <button
-                onClick={() => setDeleteConfirm(null)}
+                onClick={() => { setDeleteConfirm(null); setDeleteError(null); }}
                 className="flex-1 rounded-xl border border-white/10 px-4 py-2.5 text-sm font-medium text-zinc-300 transition-colors hover:bg-white/5"
                 disabled={deleting}
               >
