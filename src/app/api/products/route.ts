@@ -31,13 +31,13 @@ export async function POST(req: Request) {
 
   try {
     await ensureProductsTable();
-    const { package_tier, project_baseline, est_timeline, deliverables } = await req.json();
+    const { package_tier, project_baseline, est_timeline, deliverables, display_on_homepage } = await req.json();
     if (!package_tier || !project_baseline || !est_timeline || !deliverables)
       return NextResponse.json({ error: "Required fields missing" }, { status: 400 });
 
     const result = await queryOne(
-      "INSERT INTO products (package_tier, project_baseline, est_timeline, deliverables) VALUES ($1, $2, $3, $4) RETURNING id",
-      [package_tier, project_baseline, est_timeline, deliverables]
+      "INSERT INTO products (package_tier, project_baseline, est_timeline, deliverables, display_on_homepage) VALUES ($1, $2, $3, $4, $5) RETURNING id",
+      [package_tier, project_baseline, est_timeline, deliverables, display_on_homepage ?? true]
     ) as { id: number };
 
     return NextResponse.json({ id: result.id }, { status: 201 });

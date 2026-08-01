@@ -13,14 +13,15 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   try {
     await ensureProductsTable();
     const { id } = await params;
-    const { package_tier, project_baseline, est_timeline, deliverables } = await req.json();
+    const { package_tier, project_baseline, est_timeline, deliverables, display_on_homepage } = await req.json();
     const fields: string[] = [];
-    const values: (string | number)[] = [];
+    const values: (string | number | boolean)[] = [];
     let idx = 1;
     if (package_tier !== undefined) { fields.push(`package_tier = $${idx++}`); values.push(package_tier); }
     if (project_baseline !== undefined) { fields.push(`project_baseline = $${idx++}`); values.push(project_baseline); }
     if (est_timeline !== undefined) { fields.push(`est_timeline = $${idx++}`); values.push(est_timeline); }
     if (deliverables !== undefined) { fields.push(`deliverables = $${idx++}`); values.push(deliverables); }
+    if (display_on_homepage !== undefined) { fields.push(`display_on_homepage = $${idx++}`); values.push(display_on_homepage); }
     if (fields.length === 0)
       return NextResponse.json({ error: "No fields to update" }, { status: 400 });
     values.push(Number(id));

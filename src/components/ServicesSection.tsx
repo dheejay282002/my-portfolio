@@ -10,6 +10,7 @@ interface Product {
   project_baseline: string;
   est_timeline: string;
   deliverables: string;
+  display_on_homepage: boolean;
 }
 
 export default function ServicesSection() {
@@ -45,7 +46,7 @@ export default function ServicesSection() {
       .then((r) => r.json())
       .then((d) => {
         if (d.products) {
-          setProducts(d.products);
+          setProducts(d.products.filter((p: Product) => p.display_on_homepage));
         }
       })
       .catch(() => {});

@@ -93,8 +93,12 @@ export async function ensureProductsTable() {
       project_baseline TEXT NOT NULL,
       est_timeline TEXT NOT NULL,
       deliverables TEXT NOT NULL,
+      display_on_homepage BOOLEAN DEFAULT TRUE,
       created_at TIMESTAMP DEFAULT NOW()
     )
+  `);
+  await execute(`
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS display_on_homepage BOOLEAN DEFAULT TRUE
   `);
   await execute(`
     ALTER TABLE project_requests ADD COLUMN IF NOT EXISTS product_id INTEGER REFERENCES products(id) ON DELETE SET NULL

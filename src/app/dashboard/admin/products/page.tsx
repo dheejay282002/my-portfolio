@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Pencil, Trash2, X, ShoppingBag, Clock, DollarSign, ListTodo } from "lucide-react";
+import { Plus, Pencil, Trash2, X, ShoppingBag, Clock, DollarSign, ListTodo, Eye, EyeOff } from "lucide-react";
 import Skeleton from "@/components/Skeleton";
 
 interface Product {
@@ -10,6 +10,7 @@ interface Product {
   project_baseline: string;
   est_timeline: string;
   deliverables: string;
+  display_on_homepage: boolean;
 }
 
 export default function ProductsPage() {
@@ -22,6 +23,7 @@ export default function ProductsPage() {
     project_baseline: "",
     est_timeline: "",
     deliverables: "",
+    display_on_homepage: true,
   });
   const [saving, setSaving] = useState(false);
 
@@ -41,6 +43,7 @@ export default function ProductsPage() {
       project_baseline: "",
       est_timeline: "",
       deliverables: "",
+      display_on_homepage: true,
     });
     setShowModal(true);
   };
@@ -52,6 +55,7 @@ export default function ProductsPage() {
       project_baseline: p.project_baseline,
       est_timeline: p.est_timeline,
       deliverables: p.deliverables,
+      display_on_homepage: p.display_on_homepage,
     });
     setShowModal(true);
   };
@@ -88,6 +92,18 @@ export default function ProductsPage() {
     if (!confirm("Delete this product package?")) return;
     const res = await fetch(`/api/products/${id}`, { method: "DELETE" });
     if (res.ok) setProducts((p) => p.filter((prod) => prod.id !== id));
+  };
+
+  const toggleHomepage = async (p: Product) => {
+    const newValue = !p.display_on_homepage;
+    await fetch(`/api/products/${p.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ display_on_homepage: newValue }),
+    });
+    setProducts((prev) =>
+      prev.map((prod) => (prod.id === p.id ? { ...prod, display_on_homepage: newValue } : prod))
+    );
   };
 
   if (loading) {
@@ -156,6 +172,17 @@ export default function ProductsPage() {
                       <ShoppingBag className="h-5 w-5 text-cyan-400" />
                     </div>
                     <div className="flex gap-1">
+                      <button
+                        onClick={() => toggleHomepage(p)}
+                        title={p.display_on_homepage ? "Hide from homepage" : "Show on homepage"}
+                        className={`rounded-lg p-1.5 transition-colors ${
+                          p.display_on_homepage
+                            ? "text-emerald-400 hover:text-emerald-300"
+                            : "text-zinc-500 hover:text-zinc-300"
+                        }`}
+                      >
+                        {p.display_on_homepage ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                      </button>
                       <button onClick={() => openEdit(p)} className="rounded-lg p-1.5 text-zinc-500 transition-colors hover:text-cyan-400">
                         <Pencil className="h-4 w-4" />
                       </button>
@@ -165,6 +192,15 @@ export default function ProductsPage() {
                     </div>
                   </div>
                   <h3 className="mt-4 text-lg font-bold text-white">{p.package_tier}</h3>
+                  <div className="mt-1 flex items-center gap-1.5">
+                    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                      p.display_on_homepage
+                        ? "bg-emerald-500/10 text-emerald-400"
+                        : "bg-zinc-500/10 text-zinc-500"
+                    }`}>
+                      {p.display_on_homepage ? "Shown on homepage" : "Hidden from homepage"}
+                    </span>
+                  </div>
                   <div className="mt-4 space-y-2">
                     <div className="flex items-center gap-2 text-zinc-400">
                       <DollarSign className="h-4 w-4 text-cyan-400/80" />
@@ -259,6 +295,33 @@ export default function ProductsPage() {
                   required
                   className="glass w-full resize-none rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-500 outline-none focus:border-cyan-500/50"
                 />
+              </div>
+
+              <div className="flex items-center justify-between rounded-xl border border-white/10 px-4 py-3">
+                <div className="flex items-center gap-3">
+                  {form.display_on_homepage ? (
+                    <Eye className="h-4 w-4 text-emerald-400" />
+                  ) : (
+                    <EyeOff className="h-4 w-4 text-zinc-500" />
+                  )}
+                  <div>
+                    <span className="text-sm font-medium text-white">Display on Homepage</span>
+                    <p className="text-xs text-zinc-500">Show this package in the "What I Offer" section</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setForm({ ...form, display_on_homepage: !form.display_on_homepage })}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+                    form.display_on_homepage ? "bg-emerald-500" : "bg-zinc-600"
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                      form.display_on_homepage ? "translate-x-5" : "translate-x-0"
+                    }`}
+                  />
+                </button>
               </div>
 
               <div className="flex justify-end gap-3 pt-2">
