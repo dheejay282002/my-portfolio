@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { X } from "lucide-react";
+import { X, ShieldCheck } from "lucide-react";
 import ScrollReveal from "./ScrollReveal";
 
 interface Certificate {
@@ -50,16 +50,26 @@ export default function CertificatesSection() {
             <ScrollReveal key={c.id} delay={i * 100}>
               <button
                 onClick={() => setSelected(c)}
-                className="w-full text-left glass rounded-2xl overflow-hidden transition-all duration-300 glass-hover cursor-pointer"
+                className="w-full text-left rounded-2xl overflow-hidden transition-all duration-300 glass-hover cursor-pointer group"
               >
-                {c.badge_image_url ? (
-                  <img src={c.badge_image_url} alt={c.course_title} className="w-full h-48 object-cover" />
-                ) : (
-                  <div className="w-full h-48 flex items-center justify-center bg-gradient-to-br from-cyan-500/10 to-blue-600/10 text-4xl">
-                    🎓
+                <div className="relative">
+                  {c.certificate_image_url || c.badge_image_url ? (
+                    <img
+                      src={c.certificate_image_url || c.badge_image_url}
+                      alt={c.course_title}
+                      className="w-full h-52 object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-52 flex items-center justify-center bg-gradient-to-br from-cyan-500/10 to-blue-600/10 text-4xl">
+                      🎓
+                    </div>
+                  )}
+                  <div className="absolute top-3 left-3 inline-flex items-center gap-1.5 rounded-lg bg-cyan-500/90 backdrop-blur-sm px-2.5 py-1 text-[11px] font-bold text-white shadow-lg">
+                    <ShieldCheck className="h-3.5 w-3.5" />
+                    Verified
                   </div>
-                )}
-                <div className="p-6">
+                </div>
+                <div className="p-5 bg-zinc-900/80">
                   <h3 className="font-semibold text-white truncate">{c.course_title}</h3>
                   <p className="mt-1 text-sm text-zinc-400">{c.recipient_name}</p>
                   <p className="mt-1 text-xs text-zinc-500">
