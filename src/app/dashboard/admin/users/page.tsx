@@ -52,7 +52,9 @@ export default function UserManagement() {
     setDeleteError(null);
     try {
       const res = await fetch(`/api/users/${id}`, { method: "DELETE" });
-      const data = await res.json();
+      const text = await res.text();
+      let data: any;
+      try { data = JSON.parse(text); } catch { data = { error: text || "Empty response from server" }; }
       if (res.ok) {
         setUsers((prev) => prev.filter((u) => u.id !== id));
         setDeleteConfirm(null);

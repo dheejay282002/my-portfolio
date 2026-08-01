@@ -44,6 +44,10 @@ export async function DELETE(
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
 
-  await execute("DELETE FROM users WHERE id = $1", [id]);
-  return NextResponse.json({ success: true });
+  try {
+    await execute("DELETE FROM users WHERE id = $1", [id]);
+    return NextResponse.json({ success: true });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message || "Database error" }, { status: 500 });
+  }
 }
