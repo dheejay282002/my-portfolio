@@ -13,6 +13,7 @@ interface Certificate {
   issuer_name: string;
   issuer_title: string;
   badge_image_url: string;
+  certificate_image_url: string;
   certificate_url: string;
   credly_badge_id: string;
   credly_host: string;
@@ -36,6 +37,7 @@ export default function CertificatesPage() {
     issuer_name: "",
     issuer_title: "",
     badge_image_url: "",
+    certificate_image_url: "",
     credly_badge_id: "",
     credly_host: "https://www.credly.com",
   });
@@ -51,7 +53,7 @@ export default function CertificatesPage() {
     setForm({
       recipient_name: "", course_title: "", description: "",
       issued_date: new Date().toISOString().split("T")[0],
-      issuer_name: "", issuer_title: "", badge_image_url: "",
+      issuer_name: "", issuer_title: "", badge_image_url: "", certificate_image_url: "",
       credly_badge_id: "", credly_host: "https://www.credly.com",
     });
     setShowModal(true);
@@ -67,13 +69,14 @@ export default function CertificatesPage() {
       issuer_name: c.issuer_name || "",
       issuer_title: c.issuer_title || "",
       badge_image_url: c.badge_image_url || "",
+      certificate_image_url: c.certificate_image_url || "",
       credly_badge_id: c.credly_badge_id || "",
       credly_host: c.credly_host || "https://www.credly.com",
     });
     setShowModal(true);
   };
 
-  const handleBadgeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleBadgeUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: "badge_image_url" | "certificate_image_url") => {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
@@ -82,7 +85,7 @@ export default function CertificatesPage() {
       fd.append("file", file);
       const res = await fetch("/api/upload", { method: "POST", body: fd });
       const data = await res.json();
-      if (data.url) setForm((p) => ({ ...p, badge_image_url: data.url }));
+      if (data.url) setForm((p) => ({ ...p, [field]: data.url }));
     } catch {}
     setUploading(false);
   };
@@ -269,16 +272,30 @@ export default function CertificatesPage() {
                 <input type="text" placeholder="Issuer Name" value={form.issuer_name} onChange={(e) => setForm({ ...form, issuer_name: e.target.value })} className="glass w-full rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-500 outline-none focus:border-cyan-500/50" />
                 <input type="text" placeholder="Issuer Title" value={form.issuer_title} onChange={(e) => setForm({ ...form, issuer_title: e.target.value })} className="glass w-full rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-500 outline-none focus:border-cyan-500/50" />
               </div>
-              <div>
-                <label className="mb-2 block text-xs text-zinc-500">Badge Image</label>
-                <div className="flex items-center gap-3">
-                  {form.badge_image_url && (
-                    <img src={form.badge_image_url} alt="Badge" className="h-12 w-12 rounded-lg object-cover border border-white/10" />
-                  )}
-                  <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-white/10 px-4 py-2.5 text-sm text-zinc-400 transition-colors hover:border-white/20 hover:text-white">
-                    {uploading ? "Uploading..." : "Upload Badge"}
-                    <input type="file" accept="image/*" onChange={handleBadgeUpload} className="hidden" disabled={uploading} />
-                  </label>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="mb-2 block text-xs text-zinc-500">Badge Image (icon)</label>
+                  <div className="flex items-center gap-3">
+                    {form.badge_image_url && (
+                      <img src={form.badge_image_url} alt="Badge" className="h-12 w-12 rounded-lg object-cover border border-white/10" />
+                    )}
+                    <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-white/10 px-4 py-2.5 text-sm text-zinc-400 transition-colors hover:border-white/20 hover:text-white">
+                      {uploading ? "..." : "Upload Badge"}
+                      <input type="file" accept="image/*" onChange={(e) => handleBadgeUpload(e, "badge_image_url")} className="hidden" disabled={uploading} />
+                    </label>
+                  </div>
+                </div>
+                <div>
+                  <label className="mb-2 block text-xs text-zinc-500">Certificate Image (full doc)</label>
+                  <div className="flex items-center gap-3">
+                    {form.certificate_image_url && (
+                      <img src={form.certificate_image_url} alt="Certificate" className="h-12 w-12 rounded-lg object-cover border border-white/10" />
+                    )}
+                    <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-white/10 px-4 py-2.5 text-sm text-zinc-400 transition-colors hover:border-white/20 hover:text-white">
+                      {uploading ? "..." : "Upload Cert"}
+                      <input type="file" accept="image/*" onChange={(e) => handleBadgeUpload(e, "certificate_image_url")} className="hidden" disabled={uploading} />
+                    </label>
+                  </div>
                 </div>
               </div>
               <div className="border-t border-white/5 pt-4">

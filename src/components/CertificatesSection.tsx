@@ -13,6 +13,7 @@ interface Certificate {
   issuer_name: string;
   issuer_title: string;
   badge_image_url: string;
+  certificate_image_url: string;
   certificate_url: string;
 }
 
@@ -78,7 +79,9 @@ export default function CertificatesSection() {
               <X className="h-5 w-5" />
             </button>
 
-            {selected.badge_image_url ? (
+            {selected.certificate_image_url ? (
+              <img src={selected.certificate_image_url} alt={selected.course_title} className="w-full max-h-[75vh] object-contain bg-black" />
+            ) : selected.badge_image_url ? (
               <img src={selected.badge_image_url} alt={selected.course_title} className="w-full max-h-[75vh] object-contain bg-black" />
             ) : (
               <div className="w-full h-64 flex items-center justify-center bg-gradient-to-br from-cyan-500/10 to-blue-600/10 text-5xl">

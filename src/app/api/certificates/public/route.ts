@@ -8,7 +8,7 @@ export async function GET() {
   try {
     await ensureCertificatesTable();
     const certificates = await queryAll(
-      "SELECT id, recipient_name, course_title, description, issued_date, issuer_name, issuer_title, badge_image_url, certificate_url, credly_badge_id, credly_host FROM certificates WHERE is_public = TRUE ORDER BY issued_date DESC"
+      "SELECT id, recipient_name, course_title, description, issued_date, issuer_name, issuer_title, badge_image_url, certificate_image_url, certificate_url, credly_badge_id, credly_host FROM certificates WHERE is_public = TRUE ORDER BY issued_date DESC"
     );
     return NextResponse.json({ certificates }, {
       headers: { "Cache-Control": "no-cache, no-store, must-revalidate" },

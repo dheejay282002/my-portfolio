@@ -31,7 +31,7 @@ export async function POST(req: Request) {
 
   try {
     await ensureCertificatesTable();
-    const { recipient_name, course_title, description, issued_date, issuer_name, issuer_title, badge_image_url, credly_badge_id, credly_host } = await req.json();
+    const { recipient_name, course_title, description, issued_date, issuer_name, issuer_title, badge_image_url, certificate_image_url, credly_badge_id, credly_host } = await req.json();
     if (!recipient_name || !course_title)
       return NextResponse.json({ error: "Recipient name and course title are required" }, { status: 400 });
 
@@ -45,9 +45,9 @@ export async function POST(req: Request) {
     }
 
     const result = await queryOne(
-      `INSERT INTO certificates (recipient_name, course_title, description, issued_date, issuer_name, issuer_title, badge_image_url, certificate_url, credly_badge_id, credly_host)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
-      [recipient_name, course_title, description || "", issued_date || new Date().toISOString().split("T")[0], issuer_name || "", issuer_title || "", badge_image_url || "", certificate_url, credly_badge_id || "", credly_host || "https://www.credly.com"]
+      `INSERT INTO certificates (recipient_name, course_title, description, issued_date, issuer_name, issuer_title, badge_image_url, certificate_image_url, certificate_url, credly_badge_id, credly_host)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id`,
+      [recipient_name, course_title, description || "", issued_date || new Date().toISOString().split("T")[0], issuer_name || "", issuer_title || "", badge_image_url || "", certificate_image_url || "", certificate_url, credly_badge_id || "", credly_host || "https://www.credly.com"]
     ) as { id: number };
 
     return NextResponse.json({ id: result.id, certificate_url }, { status: 201 });

@@ -26,7 +26,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     await ensureCertificatesTable();
     const { id } = await params;
     const body = await req.json();
-    const allowed = ["recipient_name", "course_title", "description", "issued_date", "issuer_name", "issuer_title", "badge_image_url", "certificate_url", "is_public", "credly_badge_id", "credly_host"];
+    const allowed = ["recipient_name", "course_title", "description", "issued_date", "issuer_name", "issuer_title", "badge_image_url", "certificate_image_url", "certificate_url", "is_public", "credly_badge_id", "credly_host"];
     const fields: string[] = [];
     const values: any[] = [];
     let idx = 1;
