@@ -142,10 +142,10 @@ export default function AdminResumePage() {
           <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-2">
             <p className="mb-2 text-xs text-zinc-500">Preview</p>
             {isPdf ? (
-              <embed
-                src={resume.file_url}
-                type="application/pdf"
+              <iframe
+                src={`/api/pdf-proxy?url=${encodeURIComponent(resume.file_url)}`}
                 className="w-full h-[700px] rounded-xl border border-white/10"
+                title="Resume Preview"
               />
             ) : isImage ? (
               <img

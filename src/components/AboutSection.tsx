@@ -122,10 +122,10 @@ export default function AboutSection() {
             </div>
             <div className="overflow-y-auto p-4 scrollbar-hide" style={{ maxHeight: "calc(90vh - 64px)" }}>
               {resume.file_type === "application/pdf" ? (
-                <embed
-                  src={resume.file_url}
-                  type="application/pdf"
+                <iframe
+                  src={`/api/pdf-proxy?url=${encodeURIComponent(resume.file_url)}`}
                   className="w-full h-[700px] rounded-xl border border-white/10"
+                  title="Resume"
                 />
               ) : (
                 <img
