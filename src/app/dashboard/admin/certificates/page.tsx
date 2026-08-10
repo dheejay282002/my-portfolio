@@ -212,7 +212,7 @@ export default function CertificatesPage() {
             <div key={c.id} className="glass rounded-2xl p-6 transition-all glass-hover group">
               <div className="flex items-start justify-between">
                 {c.badge_image_url ? (
-                  <img src={c.badge_image_url} alt="Badge" className="h-10 w-10 rounded-lg object-cover border border-white/10" />
+                  <img src={c.badge_image_url} alt="Badge" className="h-10 w-10 object-contain" />
                 ) : (
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500/20 to-blue-600/20">
                     <Award className="h-5 w-5 text-cyan-400" />
