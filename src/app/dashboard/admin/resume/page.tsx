@@ -16,6 +16,7 @@ export default function AdminResumePage() {
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [pdfFailed, setPdfFailed] = useState(false);
 
   useEffect(() => {
     fetch("/api/resume")
@@ -142,11 +143,28 @@ export default function AdminResumePage() {
           <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-2">
             <p className="mb-2 text-xs text-zinc-500">Preview</p>
             {isPdf ? (
-              <iframe
-                src={`/api/pdf-proxy?url=${encodeURIComponent(resume.file_url)}`}
-                className="w-full h-[700px] rounded-xl border border-white/10"
-                title="Resume Preview"
-              />
+              pdfFailed ? (
+                <div className="flex flex-col items-center justify-center h-[400px] rounded-xl border border-white/10">
+                  <FileText className="h-12 w-12 text-zinc-600" />
+                  <p className="mt-3 text-sm text-zinc-400">PDF preview not available in this browser</p>
+                  <a
+                    href={resume.file_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-4 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-5 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                    Open PDF in New Tab
+                  </a>
+                </div>
+              ) : (
+                <iframe
+                  src={`/api/pdf-proxy?url=${encodeURIComponent(resume.file_url)}`}
+                  className="w-full h-[700px] rounded-xl border border-white/10"
+                  title="Resume Preview"
+                  onError={() => setPdfFailed(true)}
+                />
+              )
             ) : isImage ? (
               <img
                 src={resume.file_url}

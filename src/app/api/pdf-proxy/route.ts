@@ -10,18 +10,25 @@ export async function GET(req: Request) {
   }
 
   try {
-    const res = await fetch(url);
-    const buffer = await res.arrayBuffer();
+    const res = await fetch(url, { redirect: "follow" });
+    if (!res.ok) {
+      return NextResponse.json({ error: `Upstream returned ${res.status}` }, { status: 502 });
+    }
 
-    return new NextResponse(buffer, {
+    const contentType = res.headers.get("content-type") || "application/pdf";
+    const arrayBuf = await res.arrayBuffer();
+    const uint8 = new Uint8Array(arrayBuf);
+
+    return new NextResponse(uint8, {
+      status: 200,
       headers: {
-        "Content-Type": "application/pdf",
-        "Content-Disposition": "inline",
+        "Content-Type": contentType.includes("pdf") ? "application/pdf" : contentType,
+        "Content-Disposition": "inline; filename=\"resume.pdf\"",
         "Cache-Control": "no-cache, no-store, must-revalidate",
-        "Access-Control-Allow-Origin": "*",
+        "Accept-Ranges": "bytes",
       },
     });
-  } catch {
-    return NextResponse.json({ error: "Failed to fetch PDF" }, { status: 500 });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message || "Failed to proxy PDF" }, { status: 500 });
   }
 }
