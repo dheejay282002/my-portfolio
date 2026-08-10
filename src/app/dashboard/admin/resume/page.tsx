@@ -132,8 +132,8 @@ export default function AdminResumePage() {
             <p className="mb-2 text-xs text-zinc-500">Preview</p>
             {isPdf ? (
               <iframe
-                src={resume.file_url}
-                className="w-full h-[600px] rounded-xl border border-white/10"
+                src={`https://docs.google.com/gview?url=${encodeURIComponent(resume.file_url)}&embedded=true`}
+                className="w-full h-[700px] rounded-xl border border-white/10"
                 title="Resume Preview"
               />
             ) : isImage ? (

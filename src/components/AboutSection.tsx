@@ -112,7 +112,7 @@ export default function AboutSection() {
             <div className="overflow-y-auto p-4" style={{ maxHeight: "calc(90vh - 64px)" }}>
               {resume.file_type === "application/pdf" ? (
                 <iframe
-                  src={resume.file_url}
+                  src={`https://docs.google.com/gview?url=${encodeURIComponent(resume.file_url)}&embedded=true`}
                   className="w-full h-[700px] rounded-xl border border-white/10"
                   title="Resume"
                 />
