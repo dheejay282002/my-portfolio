@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Upload, Trash2, FileText, Image as ImageIcon } from "lucide-react";
+import { Upload, Trash2, FileText, Image as ImageIcon, ExternalLink } from "lucide-react";
 
 interface Resume {
   id: number;
@@ -119,22 +119,33 @@ export default function AdminResumePage() {
                 </p>
               </div>
             </div>
-            <button
-              onClick={handleDelete}
-              className="rounded-lg p-2 text-zinc-500 transition-colors hover:text-red-400"
-              title="Delete Resume"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
+            <div className="flex items-center gap-2">
+              <a
+                href={resume.file_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-lg p-2 text-zinc-500 transition-colors hover:text-cyan-400"
+                title="Open in new tab"
+              >
+                <ExternalLink className="h-4 w-4" />
+              </a>
+              <button
+                onClick={handleDelete}
+                className="rounded-lg p-2 text-zinc-500 transition-colors hover:text-red-400"
+                title="Delete Resume"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
           </div>
 
           <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-2">
             <p className="mb-2 text-xs text-zinc-500">Preview</p>
             {isPdf ? (
-              <iframe
-                src={`https://docs.google.com/gview?url=${encodeURIComponent(resume.file_url)}&embedded=true`}
+              <embed
+                src={resume.file_url}
+                type="application/pdf"
                 className="w-full h-[700px] rounded-xl border border-white/10"
-                title="Resume Preview"
               />
             ) : isImage ? (
               <img

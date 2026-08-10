@@ -105,16 +105,27 @@ export default function AboutSection() {
           <div className="relative w-full max-w-3xl max-h-[90vh] rounded-2xl border border-white/10 bg-zinc-950/95 backdrop-blur-xl shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between border-b border-white/5 px-6 py-4">
               <h3 className="text-lg font-semibold text-white">Resume</h3>
-              <button onClick={() => setShowResumeModal(false)} className="rounded-lg p-1.5 text-zinc-500 transition-colors hover:text-white">
-                <X className="h-5 w-5" />
-              </button>
+              <div className="flex items-center gap-2">
+                <a
+                  href={resume.file_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-lg p-1.5 text-zinc-500 transition-colors hover:text-cyan-400"
+                  title="Open in new tab"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                </a>
+                <button onClick={() => setShowResumeModal(false)} className="rounded-lg p-1.5 text-zinc-500 transition-colors hover:text-white">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
             </div>
-            <div className="overflow-y-auto p-4" style={{ maxHeight: "calc(90vh - 64px)" }}>
+            <div className="overflow-y-auto p-4 scrollbar-hide" style={{ maxHeight: "calc(90vh - 64px)" }}>
               {resume.file_type === "application/pdf" ? (
-                <iframe
-                  src={`https://docs.google.com/gview?url=${encodeURIComponent(resume.file_url)}&embedded=true`}
+                <embed
+                  src={resume.file_url}
+                  type="application/pdf"
                   className="w-full h-[700px] rounded-xl border border-white/10"
-                  title="Resume"
                 />
               ) : (
                 <img
