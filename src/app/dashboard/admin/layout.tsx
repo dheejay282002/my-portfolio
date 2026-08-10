@@ -231,7 +231,7 @@ export default function AdminLayout({
         onMouseLeave={() => setExpanded(false)}
       >
         <div className="flex flex-col h-full overflow-hidden">
-          <nav className="flex flex-col gap-1 px-2 pb-4 mt-3 overflow-y-auto overflow-x-hidden flex-1 min-h-0">
+          <nav className="flex flex-col gap-1 px-2 pb-4 mt-3 overflow-y-auto overflow-x-hidden flex-1 min-h-0 scrollbar-hide">
             {navItems.map((item) => {
               const Icon = item.icon;
               const active = pathname === item.href;
