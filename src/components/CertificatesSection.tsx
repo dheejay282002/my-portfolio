@@ -54,7 +54,7 @@ export default function CertificatesSection() {
               >
                 <div className="flex items-start gap-4">
                   {c.badge_image_url ? (
-                    <img src={c.badge_image_url} alt={c.course_title} className="h-16 w-16 rounded-xl object-cover border border-white/10" />
+                    <img src={c.badge_image_url} alt={c.course_title} className="h-16 w-16 rounded-xl object-contain" />
                   ) : (
                     <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-600/20 text-2xl">
                       🎓

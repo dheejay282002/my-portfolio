@@ -79,6 +79,12 @@ export default function CertificatesPage() {
   const handleBadgeUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: "badge_image_url" | "certificate_image_url") => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const allowed = ["image/png", "image/jpeg", "image/jpg", "image/gif", "image/webp", "application/pdf"];
+    if (!allowed.includes(file.type)) {
+      alert("Only image files (PNG, JPG, GIF, WEBP) and PDF are allowed.");
+      e.target.value = "";
+      return;
+    }
     setUploading(true);
     try {
       const fd = new FormData();
@@ -281,7 +287,7 @@ export default function CertificatesPage() {
                     )}
                     <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-white/10 px-4 py-2.5 text-sm text-zinc-400 transition-colors hover:border-white/20 hover:text-white">
                       {uploading ? "..." : "Upload Badge"}
-                      <input type="file" accept="image/*" onChange={(e) => handleBadgeUpload(e, "badge_image_url")} className="hidden" disabled={uploading} />
+                      <input type="file" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp,.pdf" onChange={(e) => handleBadgeUpload(e, "badge_image_url")} className="hidden" disabled={uploading} />
                     </label>
                   </div>
                 </div>
@@ -293,7 +299,7 @@ export default function CertificatesPage() {
                     )}
                     <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-white/10 px-4 py-2.5 text-sm text-zinc-400 transition-colors hover:border-white/20 hover:text-white">
                       {uploading ? "..." : "Upload Cert"}
-                      <input type="file" accept="image/*" onChange={(e) => handleBadgeUpload(e, "certificate_image_url")} className="hidden" disabled={uploading} />
+                      <input type="file" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp,.pdf" onChange={(e) => handleBadgeUpload(e, "certificate_image_url")} className="hidden" disabled={uploading} />
                     </label>
                   </div>
                 </div>
