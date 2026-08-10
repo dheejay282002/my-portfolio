@@ -23,6 +23,7 @@ import {
   LogIn,
   Layout,
   Award,
+  FileText,
 } from "lucide-react";
 
 const navItems = [
@@ -34,6 +35,7 @@ const navItems = [
   { label: "Project Requests", href: "/dashboard/admin/project-requests", icon: ClipboardList },
   { label: "Delivered Projects", href: "/dashboard/admin/delivered-projects", icon: CheckCircle },
   { label: "Certificates", href: "/dashboard/admin/certificates", icon: Award },
+  { label: "Resume", href: "/dashboard/admin/resume", icon: FileText },
   { label: "Payment Methods", href: "/dashboard/admin/payment-methods", icon: CreditCard },
   { label: "Email Config", href: "/dashboard/admin/email-config", icon: Mail },
   { label: "OAuth", href: "/dashboard/admin/oauth", icon: LogIn },
@@ -228,8 +230,8 @@ export default function AdminLayout({
         onMouseEnter={() => setExpanded(true)}
         onMouseLeave={() => setExpanded(false)}
       >
-        <div className="flex flex-col h-full">
-          <nav className="flex flex-col gap-1 px-2 pb-4 mt-3">
+        <div className="flex flex-col h-full overflow-hidden">
+          <nav className="flex flex-col gap-1 px-2 pb-4 mt-3 overflow-y-auto overflow-x-hidden flex-1 min-h-0">
             {navItems.map((item) => {
               const Icon = item.icon;
               const active = pathname === item.href;
