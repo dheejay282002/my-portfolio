@@ -211,9 +211,13 @@ export default function CertificatesPage() {
           certs.map((c) => (
             <div key={c.id} className="glass rounded-2xl p-6 transition-all glass-hover group">
               <div className="flex items-start justify-between">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500/20 to-blue-600/20">
-                  <Award className="h-5 w-5 text-cyan-400" />
-                </div>
+                {c.badge_image_url ? (
+                  <img src={c.badge_image_url} alt="Badge" className="h-10 w-10 rounded-lg object-cover border border-white/10" />
+                ) : (
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500/20 to-blue-600/20">
+                    <Award className="h-5 w-5 text-cyan-400" />
+                  </div>
+                )}
                 <div className="flex gap-1">
                   <button onClick={() => togglePublic(c)} className="rounded-lg p-1.5 text-zinc-500 transition-colors hover:text-cyan-400" title={c.is_public ? "Public" : "Private"}>
                     {c.is_public ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
