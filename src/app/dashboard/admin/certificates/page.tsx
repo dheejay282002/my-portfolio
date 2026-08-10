@@ -287,7 +287,7 @@ export default function CertificatesPage() {
                   <label className="mb-2 block text-xs text-zinc-500">Badge Image (icon)</label>
                   <div className="flex items-center gap-3">
                     {form.badge_image_url && (
-                      <img src={form.badge_image_url} alt="Badge" className="h-16 w-16 rounded-lg object-cover border border-white/10" />
+                      <img src={form.badge_image_url} alt="Badge" className="h-16 w-16 rounded-lg object-contain border border-white/10" />
                     )}
                     <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-white/10 px-4 py-2.5 text-sm text-zinc-400 transition-colors hover:border-white/20 hover:text-white">
                       {uploading ? "..." : "Upload Badge"}
@@ -301,7 +301,7 @@ export default function CertificatesPage() {
                     {form.certificate_image_url && form.certificate_image_url.includes(".pdf") ? (
                       <object data={form.certificate_image_url} type="application/pdf" className="h-16 w-16 rounded-lg border border-white/10" />
                     ) : form.certificate_image_url ? (
-                      <img src={form.certificate_image_url} alt="Certificate" className="h-16 w-16 rounded-lg object-cover border border-white/10" />
+                      <img src={form.certificate_image_url} alt="Certificate" className="h-16 w-16 rounded-lg object-contain border border-white/10" />
                     ) : null}
                     <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-white/10 px-4 py-2.5 text-sm text-zinc-400 transition-colors hover:border-white/20 hover:text-white">
                       {uploading ? "..." : "Upload Cert"}

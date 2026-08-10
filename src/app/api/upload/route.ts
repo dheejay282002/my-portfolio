@@ -29,6 +29,8 @@ export async function POST(req: Request) {
         {
           folder: "portfolio-uploads",
           resource_type: resourceType,
+          quality: "auto:best",
+          format: "auto",
         },
         (error, result) => {
           if (error || !result) return reject(error);
