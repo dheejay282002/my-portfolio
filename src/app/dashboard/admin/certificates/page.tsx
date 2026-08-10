@@ -294,9 +294,11 @@ export default function CertificatesPage() {
                 <div>
                   <label className="mb-2 block text-xs text-zinc-500">Certificate Image (full doc)</label>
                   <div className="flex items-center gap-3">
-                    {form.certificate_image_url && (
+                    {form.certificate_image_url && form.certificate_image_url.endsWith(".pdf") ? (
+                      <iframe src={form.certificate_image_url} className="h-12 w-12 rounded-lg border border-white/10" title="Certificate Preview" />
+                    ) : form.certificate_image_url ? (
                       <img src={form.certificate_image_url} alt="Certificate" className="h-12 w-12 rounded-lg object-cover border border-white/10" />
-                    )}
+                    ) : null}
                     <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-white/10 px-4 py-2.5 text-sm text-zinc-400 transition-colors hover:border-white/20 hover:text-white">
                       {uploading ? "..." : "Upload Cert"}
                       <input type="file" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp,.pdf" onChange={(e) => handleBadgeUpload(e, "certificate_image_url")} className="hidden" disabled={uploading} />
@@ -304,6 +306,16 @@ export default function CertificatesPage() {
                   </div>
                 </div>
               </div>
+              {form.certificate_image_url && (
+                <div className="mt-2">
+                  <label className="mb-2 block text-xs text-zinc-500">Certificate Preview</label>
+                  {form.certificate_image_url.endsWith(".pdf") ? (
+                    <iframe src={form.certificate_image_url} className="w-full h-64 rounded-xl border border-white/10" title="Certificate Preview" />
+                  ) : (
+                    <img src={form.certificate_image_url} alt="Certificate Preview" className="w-full max-h-64 rounded-xl object-contain border border-white/10" />
+                  )}
+                </div>
+              )}
               <div className="border-t border-white/5 pt-4">
                 <p className="text-xs text-zinc-500 mb-3">Credly Badge Embed (optional)</p>
                 <input type="text" placeholder="Credly Badge ID" value={form.credly_badge_id} onChange={(e) => setForm({ ...form, credly_badge_id: e.target.value })} className="glass w-full rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-500 outline-none focus:border-cyan-500/50" />
