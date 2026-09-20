@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Code2, Coffee, GitCommit, FileText, X } from "lucide-react";
+import { Code2, Coffee, GitCommit, FileText, X, ExternalLink } from "lucide-react";
 import ScrollReveal from "./ScrollReveal";
 
 export default function AboutSection() {
