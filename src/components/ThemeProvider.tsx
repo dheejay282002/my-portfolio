@@ -65,7 +65,7 @@ function LoadingOverlay({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       )}
-      <div style={{ visibility: loading ? "hidden" : "visible" }}>
+      <div style={{ visibility: loading ? "hidden" : "visible", overflowX: "hidden" as const }}>
         {children}
       </div>
     </>
