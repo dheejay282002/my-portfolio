@@ -26,7 +26,7 @@ export default function HeroSection() {
           Web Developer
         </p>
 
-        <h1 className="mt-4 text-5xl font-bold leading-tight tracking-tight sm:text-6xl lg:text-7xl">
+        <h1 className="mt-4 text-3xl font-bold leading-tight tracking-tight sm:text-5xl lg:text-7xl">
           Hi, I&apos;m{" "}
           <span className="bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
             {name}

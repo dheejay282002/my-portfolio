@@ -73,11 +73,11 @@ export default function AboutSection() {
 
           <div className="flex flex-col items-center gap-8">
             {admin?.profile_photo ? (
-              <div className="h-64 w-64 overflow-hidden rounded-3xl border border-white/10">
+              <div className="h-48 w-48 sm:h-64 sm:w-64 overflow-hidden rounded-3xl border border-white/10">
                 <img src={admin.profile_photo} alt="" className="h-full w-full object-cover" />
               </div>
             ) : (
-              <div className="flex h-64 w-64 items-center justify-center rounded-3xl glass">
+              <div className="flex h-48 w-48 sm:h-64 sm:w-64 items-center justify-center rounded-3xl glass">
                 <span className="text-6xl font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
                   {initials}
                 </span>
@@ -91,7 +91,7 @@ export default function AboutSection() {
                   <div key={s.label} className="glass rounded-xl p-4 text-center">
                     <Icon className="mx-auto h-5 w-5 text-cyan-400" />
                     <p className="mt-2 text-lg font-bold text-white">{s.value}</p>
-                    <p className="text-xs text-zinc-500">{s.label}</p>
+                    <p className="text-[10px] sm:text-xs text-zinc-500 truncate">{s.label}</p>
                   </div>
                 );
               })}
