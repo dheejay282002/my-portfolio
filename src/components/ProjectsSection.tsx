@@ -365,7 +365,7 @@ export default function ProjectsSection() {
   if (projects.length === 0) return null;
 
   return (
-    <section id="projects" className="border-t border-white/5 py-24">
+    <section id="projects" className="border-t border-white/5 py-24 overflow-hidden">
       <div className="mx-auto max-w-7xl px-6">
         <div className="text-center">
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
