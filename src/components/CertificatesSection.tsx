@@ -75,24 +75,26 @@ export default function CertificatesSection() {
       </ScrollReveal>
 
       {selected && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4 py-8" onClick={() => setSelected(null)}>
-          <div className="glass-strong relative w-full max-w-3xl max-h-[90vh] overflow-hidden rounded-2xl shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <button onClick={() => setSelected(null)} className="absolute right-4 top-4 z-10 text-zinc-400 hover:text-white transition-colors bg-black/40 rounded-full p-1.5 backdrop-blur-sm">
-              <X className="h-5 w-5" />
-            </button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4 py-4 sm:py-8" onClick={() => setSelected(null)}>
+          <div className="glass-strong relative flex w-full max-w-3xl flex-col overflow-hidden rounded-2xl shadow-2xl sm:max-h-[90vh] max-h-[85vh]" onClick={(e) => e.stopPropagation()}>
+            <div className="relative overflow-y-auto flex-1">
+              <button onClick={() => setSelected(null)} className="sticky float-right top-2 right-2 z-10 m-2 text-zinc-400 hover:text-white transition-colors bg-black/40 rounded-full p-1.5 backdrop-blur-sm">
+                <X className="h-5 w-5" />
+              </button>
 
-            {selected.certificate_image_url ? (
-              <img src={selected.certificate_image_url} alt={selected.course_title} className="w-full max-h-[75vh] object-contain bg-black" />
-            ) : selected.badge_image_url ? (
-              <img src={selected.badge_image_url} alt={selected.course_title} className="w-full max-h-[75vh] object-contain bg-black" />
-            ) : (
-              <div className="w-full h-64 flex items-center justify-center bg-gradient-to-br from-cyan-500/10 to-blue-600/10 text-5xl">
-                🎓
-              </div>
-            )}
+              {selected.certificate_image_url ? (
+                <img src={selected.certificate_image_url} alt={selected.course_title} className="w-full h-auto max-h-[50vh] sm:max-h-[65vh] object-contain bg-black" />
+              ) : selected.badge_image_url ? (
+                <img src={selected.badge_image_url} alt={selected.course_title} className="w-full h-auto max-h-[50vh] sm:max-h-[65vh] object-contain bg-black" />
+              ) : (
+                <div className="w-full h-48 sm:h-64 flex items-center justify-center bg-gradient-to-br from-cyan-500/10 to-blue-600/10 text-5xl">
+                  🎓
+                </div>
+              )}
+            </div>
 
-            <div className="p-6 border-t border-white/5">
-              <h3 className="text-lg font-semibold text-white">{selected.course_title}</h3>
+            <div className="shrink-0 border-t border-white/5 p-4 sm:p-6">
+              <h3 className="text-base sm:text-lg font-semibold text-white">{selected.course_title}</h3>
               <p className="mt-1 text-sm text-zinc-400">{selected.recipient_name}</p>
               <p className="mt-1 text-xs text-zinc-500">
                 {new Date(selected.issued_date).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
