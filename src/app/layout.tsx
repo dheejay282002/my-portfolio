@@ -19,6 +19,7 @@ export const metadata: Metadata = {
   title: "Dee Jay | Web Developer Portfolio",
   description:
     "Web Developer specializing in Python, Django, React, and modern web technologies. I build scalable web solutions with clean code.",
+  icons: { icon: "/api/favicon" },
 };
 
 export default function RootLayout({
