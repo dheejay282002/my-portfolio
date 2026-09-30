@@ -6,6 +6,7 @@ const publicPaths = [
   "/",
   "/login",
   "/portfolio",
+  "/certificates",
   "/api/auth/login",
   "/api/auth/signup",
   "/api/auth/signup/request-otp",

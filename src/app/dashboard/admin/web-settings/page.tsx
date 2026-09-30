@@ -60,6 +60,7 @@ export default function WebSettingsPage() {
     body_font: "Inter",
     body_font_size: "medium",
     body_font_file: "",
+    signup_enabled: true,
   });
 
   const [initialForm, setInitialForm] = useState<typeof form | null>(null);
@@ -136,6 +137,7 @@ export default function WebSettingsPage() {
             body_font: data.settings.body_font || "Inter",
             body_font_size: data.settings.body_font_size || "medium",
             body_font_file: data.settings.body_font_file || "",
+            signup_enabled: data.settings.signup_enabled !== false,
           };
           setForm(fetchedForm);
           setInitialForm(fetchedForm);
@@ -706,6 +708,56 @@ export default function WebSettingsPage() {
                 placeholder="Dee Jay."
                 className="glass w-full rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-500 outline-none focus:border-cyan-500/50"
               />
+            </div>
+          </div>
+
+          {/* Section 1b: Registration Settings */}
+          <div className="glass rounded-2xl p-6 border border-white/5 space-y-6">
+            <h2 className="text-sm font-semibold text-cyan-400 uppercase tracking-wider">Registration</h2>
+
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-sm text-white">Enable Signup Button</p>
+                <p className="mt-1 text-xs text-zinc-500">
+                  When disabled, the Sign Up tab and Create Account buttons are hidden site-wide and new registrations are blocked.
+                </p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={form.signup_enabled}
+                onClick={() => setForm({ ...form, signup_enabled: !form.signup_enabled })}
+                className={`relative h-7 w-13 shrink-0 rounded-full transition-colors ${form.signup_enabled ? "bg-cyan-500" : "bg-white/10"}`}
+              >
+                <span
+                  className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-all ${form.signup_enabled ? "left-7" : "left-1"}`}
+                />
+              </button>
+            </div>
+
+            <div className="flex gap-4">
+              <button
+                type="button"
+                onClick={() => setForm({ ...form, signup_enabled: true })}
+                className={`flex-1 rounded-xl py-2.5 text-xs font-semibold border transition-all ${
+                  form.signup_enabled
+                    ? "border-cyan-500/50 bg-cyan-500/10 text-cyan-400"
+                    : "border-white/5 bg-white/5 text-zinc-400 hover:text-white"
+                }`}
+              >
+                Signups Allowed
+              </button>
+              <button
+                type="button"
+                onClick={() => setForm({ ...form, signup_enabled: false })}
+                className={`flex-1 rounded-xl py-2.5 text-xs font-semibold border transition-all ${
+                  !form.signup_enabled
+                    ? "border-cyan-500/50 bg-cyan-500/10 text-cyan-400"
+                    : "border-white/5 bg-white/5 text-zinc-400 hover:text-white"
+                }`}
+              >
+                Signup Hidden
+              </button>
             </div>
           </div>
 

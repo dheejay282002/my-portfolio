@@ -44,6 +44,12 @@ export default async function CertificatePage({ params }: { params: Promise<{ sl
               {cert.course_title}
             </h2>
 
+            {cert.category && (
+              <span className="mt-3 inline-flex items-center rounded-full border border-cyan-500/20 bg-cyan-500/10 px-3 py-1 text-xs font-medium text-cyan-400">
+                {cert.category}
+              </span>
+            )}
+
             {cert.description && (
               <p className="mt-4 max-w-md mx-auto text-sm leading-relaxed text-zinc-400">
                 {cert.description}

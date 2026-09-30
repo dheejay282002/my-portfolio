@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Code2, Coffee, GitCommit, FileText, X, ExternalLink } from "lucide-react";
+import { Code2, Coffee, GitCommit, FileText, X, ExternalLink, Download } from "lucide-react";
 import ScrollReveal from "./ScrollReveal";
 
 export default function AboutSection() {
@@ -61,13 +61,22 @@ export default function AboutSection() {
               </p>
             ))}
             {resume && (
-              <button
-                onClick={() => setShowResumeModal(true)}
-                className="mt-6 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-5 py-3 text-sm font-medium text-white transition-opacity hover:opacity-90"
-              >
-                <FileText className="h-4 w-4" />
-                View My Resume
-              </button>
+              <div className="mt-6 flex flex-wrap gap-3">
+                <button
+                  onClick={() => setShowResumeModal(true)}
+                  className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-5 py-3 text-sm font-medium text-white transition-opacity hover:opacity-90"
+                >
+                  <FileText className="h-4 w-4" />
+                  View My Resume
+                </button>
+                <a
+                  href={`/api/pdf-proxy?url=${encodeURIComponent(resume.file_url)}&download=1&name=${encodeURIComponent(resume.file_name || "resume.pdf")}`}
+                  className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-5 py-3 text-sm font-medium text-zinc-300 transition-colors hover:border-white/20 hover:text-white"
+                >
+                  <Download className="h-4 w-4" />
+                  Download Resume
+                </a>
+              </div>
             )}
           </div>
 
@@ -106,6 +115,13 @@ export default function AboutSection() {
             <div className="flex items-center justify-between border-b border-white/5 px-6 py-4">
               <h3 className="text-lg font-semibold text-white">Resume</h3>
               <div className="flex items-center gap-2">
+                <a
+                  href={`/api/pdf-proxy?url=${encodeURIComponent(resume.file_url)}&download=1&name=${encodeURIComponent(resume.file_name || "resume.pdf")}`}
+                  className="rounded-lg p-1.5 text-zinc-500 transition-colors hover:text-cyan-400"
+                  title="Download resume"
+                >
+                  <Download className="h-4 w-4" />
+                </a>
                 <a
                   href={resume.file_url}
                   target="_blank"

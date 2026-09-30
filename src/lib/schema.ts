@@ -206,4 +206,38 @@ export async function ensureCertificatesTable() {
   await execute(`ALTER TABLE certificates ADD COLUMN IF NOT EXISTS credly_badge_id TEXT DEFAULT ''`);
   await execute(`ALTER TABLE certificates ADD COLUMN IF NOT EXISTS credly_host TEXT DEFAULT 'https://www.credly.com'`);
   await execute(`ALTER TABLE certificates ADD COLUMN IF NOT EXISTS certificate_image_url TEXT DEFAULT ''`);
+  await execute(`ALTER TABLE certificates ADD COLUMN IF NOT EXISTS category VARCHAR(100) DEFAULT ''`);
+}
+
+export async function ensureEducationsTable() {
+  await execute(`
+    CREATE TABLE IF NOT EXISTS educations (
+      id SERIAL PRIMARY KEY,
+      school_name VARCHAR(255) NOT NULL,
+      degree VARCHAR(255) DEFAULT '',
+      field_of_study VARCHAR(255) DEFAULT '',
+      location VARCHAR(255) DEFAULT '',
+      start_date VARCHAR(50) DEFAULT '',
+      end_date VARCHAR(50) DEFAULT '',
+      is_current BOOLEAN DEFAULT FALSE,
+      description TEXT DEFAULT '',
+      created_at TIMESTAMP DEFAULT NOW()
+    )
+  `);
+}
+
+export async function ensureWorkExperiencesTable() {
+  await execute(`
+    CREATE TABLE IF NOT EXISTS work_experiences (
+      id SERIAL PRIMARY KEY,
+      company_name VARCHAR(255) NOT NULL,
+      position VARCHAR(255) NOT NULL DEFAULT '',
+      location VARCHAR(255) DEFAULT '',
+      start_date VARCHAR(50) DEFAULT '',
+      end_date VARCHAR(50) DEFAULT '',
+      is_current BOOLEAN DEFAULT FALSE,
+      description TEXT DEFAULT '',
+      created_at TIMESTAMP DEFAULT NOW()
+    )
+  `);
 }

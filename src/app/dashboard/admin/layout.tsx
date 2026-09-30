@@ -24,6 +24,8 @@ import {
   Layout,
   Award,
   FileText,
+  GraduationCap,
+  Briefcase,
 } from "lucide-react";
 
 const navItems = [
@@ -32,6 +34,8 @@ const navItems = [
   { label: "Products", href: "/dashboard/admin/products", icon: ShoppingBag },
   { label: "Services", href: "/dashboard/admin/services", icon: Wrench },
   { label: "Skills", href: "/dashboard/admin/skills", icon: BarChart3 },
+  { label: "Education", href: "/dashboard/admin/education", icon: GraduationCap },
+  { label: "Work Experience", href: "/dashboard/admin/work-experience", icon: Briefcase },
   { label: "Project Requests", href: "/dashboard/admin/project-requests", icon: ClipboardList },
   { label: "Delivered Projects", href: "/dashboard/admin/delivered-projects", icon: CheckCircle },
   { label: "Certificates", href: "/dashboard/admin/certificates", icon: Award },

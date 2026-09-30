@@ -19,6 +19,10 @@ export default function LoginPage() {
   const [tab, setTab] = useState<"login" | "signup">("login");
   const [mode, setMode] = useState<Mode>("login");
 
+  const signupEnabled = settings.signup_enabled !== false;
+  // Signup tab is forced closed site-wide when registration is disabled
+  const activeTab: "login" | "signup" = signupEnabled ? tab : "login";
+
   // Show/Hide password toggles
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [showSignupPassword, setShowSignupPassword] = useState(false);
@@ -420,20 +424,20 @@ export default function LoginPage() {
                 )}
               </Link>
               <h2 className="mt-6 text-2xl font-bold text-white">
-                {showOtp ? "Email Verification" : tab === "login" ? "Welcome Back" : "Create Account"}
+                {showOtp ? "Email Verification" : activeTab === "login" ? "Welcome Back" : "Create Account"}
               </h2>
               <p className="mt-2 text-sm text-zinc-400">
-                {showOtp ? "Verify your registration email" : tab === "login" ? "Sign in to your account" : "Join as a client to get started"}
+                {showOtp ? "Verify your registration email" : activeTab === "login" ? "Sign in to your account" : "Join as a client to get started"}
               </p>
             </div>
 
-            {!showOtp && !captchaContext && (
+            {!showOtp && !captchaContext && signupEnabled && (
               <div className="mt-8 relative flex rounded-xl border border-white/10 p-1 bg-white/[0.02]">
                 {/* Sliding active pill indicator */}
                 <div
                   className="absolute top-1 bottom-1 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 transition-all duration-300 ease-out"
                   style={{
-                    left: tab === "login" ? "4px" : "50%",
+                    left: activeTab === "login" ? "4px" : "50%",
                     width: "calc(50% - 4px)",
                   }}
                 />
@@ -448,7 +452,7 @@ export default function LoginPage() {
                       setCaptchaContext(null);
                     }}
                     className={`relative z-10 flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors duration-300 ${
-                      tab === t ? "text-white" : "text-zinc-400 hover:text-white"
+                      activeTab === t ? "text-white" : "text-zinc-400 hover:text-white"
                     }`}
                   >
                     {t === "login" ? "Sign In" : "Sign Up"}
@@ -486,7 +490,7 @@ export default function LoginPage() {
                 {/* Login Form wrapper */}
                 <div
                   className={`transition-all duration-300 transform ${
-                    tab === "login"
+                    activeTab === "login"
                       ? "opacity-100 translate-x-0 relative"
                       : "opacity-0 -translate-x-8 absolute pointer-events-none inset-x-0 top-0"
                   }`}
@@ -518,9 +522,10 @@ export default function LoginPage() {
                 </div>
 
                 {/* Signup Form wrapper */}
+                {signupEnabled && (
                 <div
                   className={`transition-all duration-300 transform ${
-                    tab === "signup"
+                    activeTab === "signup"
                       ? "opacity-100 translate-x-0 relative"
                       : "opacity-0 translate-x-8 absolute pointer-events-none inset-x-0 top-0"
                   }`}
@@ -546,6 +551,7 @@ export default function LoginPage() {
                     </button>
                   </form>
                 </div>
+                )}
               </div>
             )}
 

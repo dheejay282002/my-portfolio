@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { X } from "lucide-react";
+import { X, BadgeCheck, ExternalLink } from "lucide-react";
 import ScrollReveal from "./ScrollReveal";
 
 interface Certificate {
@@ -15,6 +15,7 @@ interface Certificate {
   badge_image_url: string;
   certificate_image_url: string;
   certificate_url: string;
+  category: string;
 }
 
 export default function CertificatesSection() {
@@ -29,6 +30,11 @@ export default function CertificatesSection() {
   }, []);
 
   if (certs.length === 0) return null;
+
+  const isPdf = (url: string) => !!url && (url.toLowerCase().includes(".pdf") || url.toLowerCase().endsWith("/pdf"));
+  const verifyUrl = selected
+    ? `${typeof window !== "undefined" ? window.location.origin : ""}/certificates/${selected.certificate_url}`
+    : "";
 
   return (
     <section id="certificates" className="border-t border-white/5 px-6 py-24">
@@ -63,6 +69,11 @@ export default function CertificatesSection() {
                   <div className="flex-1 min-w-0">
                     <h3 className="font-semibold text-white truncate">{c.course_title}</h3>
                     <p className="mt-1 text-sm text-zinc-400">{c.recipient_name}</p>
+                    {c.category && (
+                      <span className="mt-2 inline-flex items-center rounded-full border border-cyan-500/20 bg-cyan-500/10 px-2.5 py-0.5 text-[11px] font-medium text-cyan-400">
+                        {c.category}
+                      </span>
+                    )}
                     <p className="mt-1 text-xs text-zinc-500">
                       {new Date(c.issued_date).toLocaleDateString("en-US", { year: "numeric", month: "short" })}
                     </p>
@@ -82,7 +93,13 @@ export default function CertificatesSection() {
                 <X className="h-5 w-5" />
               </button>
 
-              {selected.certificate_image_url ? (
+              {selected.certificate_image_url && isPdf(selected.certificate_image_url) ? (
+                <iframe
+                  src={`/api/pdf-proxy?url=${encodeURIComponent(selected.certificate_image_url)}`}
+                  className="w-full h-[50vh] sm:h-[65vh] bg-black"
+                  title={selected.course_title}
+                />
+              ) : selected.certificate_image_url ? (
                 <img src={selected.certificate_image_url} alt={selected.course_title} className="w-full h-auto max-h-[50vh] sm:max-h-[65vh] object-contain bg-black" />
               ) : selected.badge_image_url ? (
                 <img src={selected.badge_image_url} alt={selected.course_title} className="w-full h-auto max-h-[50vh] sm:max-h-[65vh] object-contain bg-black" />
@@ -94,12 +111,39 @@ export default function CertificatesSection() {
             </div>
 
             <div className="shrink-0 border-t border-white/5 p-4 sm:p-6">
-              <h3 className="text-base sm:text-lg font-semibold text-white">{selected.course_title}</h3>
-              <p className="mt-1 text-sm text-zinc-400">{selected.recipient_name}</p>
-              <p className="mt-1 text-xs text-zinc-500">
-                {new Date(selected.issued_date).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
-                {selected.issuer_name && <> &bull; Issued by {selected.issuer_name}</>}
-              </p>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h3 className="text-base sm:text-lg font-semibold text-white">{selected.course_title}</h3>
+                  <p className="mt-1 text-sm text-zinc-400">{selected.recipient_name}</p>
+                  <p className="mt-1 text-xs text-zinc-500">
+                    {new Date(selected.issued_date).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
+                    {selected.issuer_name && <> &bull; Issued by {selected.issuer_name}</>}
+                  </p>
+                </div>
+                {selected.category && (
+                  <span className="shrink-0 rounded-full border border-cyan-500/20 bg-cyan-500/10 px-3 py-1 text-xs font-medium text-cyan-400">
+                    {selected.category}
+                  </span>
+                )}
+              </div>
+
+              {selected.certificate_url && (
+                <a
+                  href={`/certificates/${selected.certificate_url}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-cyan-500/20 bg-cyan-500/5 px-4 py-3 transition-colors hover:bg-cyan-500/10"
+                >
+                  <div className="min-w-0">
+                    <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-cyan-400">
+                      <BadgeCheck className="h-3.5 w-3.5" />
+                      Verify Online
+                    </p>
+                    <p className="truncate text-xs text-zinc-400">{verifyUrl}</p>
+                  </div>
+                  <ExternalLink className="h-4 w-4 shrink-0 text-cyan-400" />
+                </a>
+              )}
             </div>
           </div>
         </div>

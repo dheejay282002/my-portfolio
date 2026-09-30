@@ -1,9 +1,17 @@
 import { NextResponse } from "next/server";
 import { queryOne, execute } from "@/lib/db";
 import nodemailer from "nodemailer";
+import { isSignupEnabled } from "@/lib/settings";
 
 export async function POST(req: Request) {
   try {
+    if (!(await isSignupEnabled())) {
+      return NextResponse.json(
+        { error: "Registration is currently disabled." },
+        { status: 403 }
+      );
+    }
+
     const { name, email } = await req.json();
 
     if (!name || !email) {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Pencil, Trash2, X, Award, Link2, Eye, EyeOff, Copy, Check } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Award, Link2, Eye, EyeOff, Copy, Check, ExternalLink } from "lucide-react";
 import Skeleton from "@/components/Skeleton";
 
 interface Certificate {
@@ -17,9 +17,21 @@ interface Certificate {
   certificate_url: string;
   credly_badge_id: string;
   credly_host: string;
+  category: string;
   is_public: boolean;
   created_at: string;
 }
+
+const categoryOptions = [
+  "Government Exam",
+  "TESDA Certificate",
+  "Workshop Certificate",
+  "University / College Certificate",
+  "Professional License",
+  "Online Course",
+  "Award / Recognition",
+  "Other",
+];
 
 export default function CertificatesPage() {
   const [certs, setCerts] = useState<Certificate[]>([]);
@@ -40,6 +52,7 @@ export default function CertificatesPage() {
     certificate_image_url: "",
     credly_badge_id: "",
     credly_host: "https://www.credly.com",
+    category: "",
   });
 
   useEffect(() => {
@@ -54,7 +67,7 @@ export default function CertificatesPage() {
       recipient_name: "", course_title: "", description: "",
       issued_date: new Date().toISOString().split("T")[0],
       issuer_name: "", issuer_title: "", badge_image_url: "", certificate_image_url: "",
-      credly_badge_id: "", credly_host: "https://www.credly.com",
+      credly_badge_id: "", credly_host: "https://www.credly.com", category: "",
     });
     setShowModal(true);
   };
@@ -72,6 +85,7 @@ export default function CertificatesPage() {
       certificate_image_url: c.certificate_image_url || "",
       credly_badge_id: c.credly_badge_id || "",
       credly_host: c.credly_host || "https://www.credly.com",
+      category: c.category || "",
     });
     setShowModal(true);
   };
@@ -232,11 +246,25 @@ export default function CertificatesPage() {
               </div>
               <h3 className="mt-4 font-semibold text-white">{c.recipient_name}</h3>
               <p className="mt-1 text-sm text-zinc-400">{c.course_title}</p>
+              {c.category && (
+                <span className="mt-2 inline-flex items-center rounded-full border border-cyan-500/20 bg-cyan-500/10 px-2.5 py-0.5 text-[11px] font-medium text-cyan-400">
+                  {c.category}
+                </span>
+              )}
               <p className="mt-1 text-xs text-zinc-500">
                 {new Date(c.issued_date).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}
               </p>
 
-              <div className="mt-4 flex items-center gap-2 border-t border-white/5 pt-3">
+              <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-white/5 pt-3">
+                <a
+                  href={`/certificates/${c.certificate_url}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/20 px-3 py-1.5 text-xs font-medium text-cyan-400 transition-colors hover:bg-cyan-500/20"
+                >
+                  <ExternalLink className="h-3 w-3" />
+                  Verify
+                </a>
                 <button
                   onClick={() => copyLink(c)}
                   className="inline-flex items-center gap-1.5 rounded-lg bg-white/5 px-3 py-1.5 text-xs font-medium text-zinc-400 transition-colors hover:bg-white/10 hover:text-white"
@@ -276,6 +304,22 @@ export default function CertificatesPage() {
             <form onSubmit={handleSave} className="mt-6 space-y-4">
               <input type="text" placeholder="Recipient Name" value={form.recipient_name} onChange={(e) => setForm({ ...form, recipient_name: e.target.value })} required className="glass w-full rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-500 outline-none focus:border-cyan-500/50" />
               <input type="text" placeholder="Course / Program Title" value={form.course_title} onChange={(e) => setForm({ ...form, course_title: e.target.value })} required className="glass w-full rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-500 outline-none focus:border-cyan-500/50" />
+              <div>
+                <label className="mb-2 block text-xs text-zinc-500">Certificate Category</label>
+                <input
+                  type="text"
+                  list="certificate-categories"
+                  value={form.category}
+                  onChange={(e) => setForm({ ...form, category: e.target.value })}
+                  placeholder="e.g. Government Exam, TESDA Certificate, Workshop Certificate..."
+                  className="glass w-full rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-500 outline-none focus:border-cyan-500/50"
+                />
+                <datalist id="certificate-categories">
+                  {categoryOptions.map((c) => (
+                    <option key={c} value={c} />
+                  ))}
+                </datalist>
+              </div>
               <textarea rows={2} placeholder="Description (optional)" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="glass w-full resize-none rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-500 outline-none focus:border-cyan-500/50" />
               <input type="date" value={form.issued_date} onChange={(e) => setForm({ ...form, issued_date: e.target.value })} className="glass w-full rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-cyan-500/50" />
               <div className="grid grid-cols-2 gap-3">

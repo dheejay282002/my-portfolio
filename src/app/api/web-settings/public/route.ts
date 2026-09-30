@@ -36,15 +36,20 @@ export async function GET() {
       ADD COLUMN IF NOT EXISTS body_font_file TEXT DEFAULT '';
     `);
 
+    // Ensure signup toggle column exists
+    await execute(`
+      ALTER TABLE web_settings ADD COLUMN IF NOT EXISTS signup_enabled BOOLEAN DEFAULT TRUE;
+    `);
+
     // Ensure default settings exist
-    let settings = await queryOne("SELECT web_name, logo_type, logo_font, logo_image, logo_font_file, logo_color, accent_color, bg_color, body_font, body_font_size, body_font_file FROM web_settings WHERE id = 1");
+    let settings = await queryOne("SELECT web_name, logo_type, logo_font, logo_image, logo_font_file, logo_color, accent_color, bg_color, body_font, body_font_size, body_font_file, signup_enabled FROM web_settings WHERE id = 1");
     if (!settings) {
       await execute(`
         INSERT INTO web_settings (id, web_name, logo_type, logo_font, logo_image)
         VALUES (1, 'Dee Jay.', 'letter', 'Inter', '')
         ON CONFLICT (id) DO NOTHING
       `);
-      settings = await queryOne("SELECT web_name, logo_type, logo_font, logo_image FROM web_settings WHERE id = 1");
+      settings = await queryOne("SELECT web_name, logo_type, logo_font, logo_image, signup_enabled FROM web_settings WHERE id = 1");
     }
 
     return NextResponse.json({ settings });
@@ -55,7 +60,8 @@ export async function GET() {
         web_name: "Dee Jay.",
         logo_type: "letter",
         logo_font: "Inter",
-        logo_image: ""
+        logo_image: "",
+        signup_enabled: true
       }
     });
   }

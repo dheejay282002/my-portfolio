@@ -14,6 +14,7 @@ export interface WebSettings {
   body_font: string;
   body_font_size: string;
   body_font_file: string;
+  signup_enabled: boolean;
 }
 
 const defaultSettings: WebSettings = {
@@ -28,6 +29,7 @@ const defaultSettings: WebSettings = {
   body_font: "Inter",
   body_font_size: "medium",
   body_font_file: "",
+  signup_enabled: true,
 };
 
 interface WebSettingsContextValue {
@@ -225,8 +227,9 @@ export function WebSettingsProvider({ children }: { children: ReactNode }) {
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (d?.settings) {
-          setSettings(d.settings);
-          applyTheme(d);
+          const merged = { ...defaultSettings, ...d.settings };
+          setSettings(merged);
+          applyTheme({ settings: merged });
         }
         setLoading(false);
       })

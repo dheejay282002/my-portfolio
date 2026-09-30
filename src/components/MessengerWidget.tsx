@@ -5,6 +5,7 @@ import { MessageSquare, X, Send, Plus, ChevronLeft, User, FileText, Camera, Corn
 import { useRouter, usePathname } from "next/navigation";
 import Image from "next/image";
 import ProjectRequestModal from "./ProjectRequestModal";
+import { useWebSettings } from "@/hooks/useWebSettings";
 
 interface OtherUser {
   id: number;
@@ -77,6 +78,8 @@ const PROJECT_REQUEST_PREFIX = "📋 PROJECT_REQUEST_SUBMIT";
 
 export default function MessengerWidget() {
   const router = useRouter();
+  const { settings } = useWebSettings();
+  const signupEnabled = settings.signup_enabled !== false;
   const pathname = usePathname();
   const [user, setUser] = useState<{ id: number; name: string; role: string } | null>(null);
   const [open, setOpen] = useState(false);
@@ -412,7 +415,9 @@ export default function MessengerWidget() {
             <div>
               <h4 className="text-base font-bold text-white">Let&apos;s Collaborate!</h4>
               <p className="mt-2 text-xs text-zinc-400 leading-relaxed px-2">
-                Sign in or create an account to start a live conversation, submit project requests, and track progress in real-time.
+                {signupEnabled
+                  ? "Sign in or create an account to start a live conversation, submit project requests, and track progress in real-time."
+                  : "Sign in to start a live conversation, submit project requests, and track progress in real-time."}
               </p>
             </div>
           </div>
@@ -425,12 +430,14 @@ export default function MessengerWidget() {
             >
               Sign In
             </button>
-            <button
-              onClick={() => { setOpen(false); router.push("/login?tab=signup"); }}
-              className="w-full rounded-xl border border-white/10 py-2.5 text-xs font-semibold text-zinc-300 transition-colors hover:border-white/20 hover:text-white"
-            >
-              Create Account
-            </button>
+            {signupEnabled && (
+              <button
+                onClick={() => { setOpen(false); router.push("/login?tab=signup"); }}
+                className="w-full rounded-xl border border-white/10 py-2.5 text-xs font-semibold text-zinc-300 transition-colors hover:border-white/20 hover:text-white"
+              >
+                Create Account
+              </button>
+            )}
           </div>
         </div>
       ) : (
