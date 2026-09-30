@@ -61,6 +61,7 @@ export default function WebSettingsPage() {
     body_font_size: "medium",
     body_font_file: "",
     signup_enabled: true,
+    favicon_url: "",
   });
 
   const [initialForm, setInitialForm] = useState<typeof form | null>(null);
@@ -138,6 +139,7 @@ export default function WebSettingsPage() {
             body_font_size: data.settings.body_font_size || "medium",
             body_font_file: data.settings.body_font_file || "",
             signup_enabled: data.settings.signup_enabled !== false,
+            favicon_url: data.settings.favicon_url || "",
           };
           setForm(fetchedForm);
           setInitialForm(fetchedForm);
@@ -398,6 +400,77 @@ export default function WebSettingsPage() {
       setSaveStatus({ type: "error", message: "An error occurred while uploading." });
     } finally {
       setUploading(false);
+    }
+  };
+
+  // Crop any uploaded image into a perfect circle, then upload as the favicon
+  const fileToCircularPng = (file: File, size = 512): Promise<Blob> =>
+    new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        if (!img.width || !img.height) {
+          reject(new Error("This image has no dimensions. Please upload a PNG or JPG instead."));
+          return;
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          reject(new Error("Canvas is not supported in this browser."));
+          return;
+        }
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
+        ctx.closePath();
+        ctx.clip();
+        const scale = Math.max(size / img.width, size / img.height);
+        const w = img.width * scale;
+        const h = img.height * scale;
+        ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
+        ctx.restore();
+        canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("Could not convert image"))), "image/png");
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error("Could not read that image file."));
+      };
+      img.src = url;
+    });
+
+  const handleFaviconUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setSaveStatus({ type: "error", message: "Please choose an image file (PNG, JPG, WEBP, SVG...)." });
+      e.target.value = "";
+      return;
+    }
+    setUploading(true);
+    setSaveStatus(null);
+    try {
+      const blob = await fileToCircularPng(file);
+      const formData = new FormData();
+      formData.append("file", blob, "favicon.png");
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      const data = await res.json();
+      if (res.ok && data.url) {
+        setForm((prev) => ({ ...prev, favicon_url: data.url }));
+        setSaveStatus({ type: "success", message: "Favicon uploaded to preview! Click 'Save Settings' to apply." });
+      } else {
+        setSaveStatus({ type: "error", message: data.error || "Upload failed." });
+      }
+    } catch (err) {
+      setSaveStatus({
+        type: "error",
+        message: err instanceof Error && err.message ? err.message : "Could not process that image.",
+      });
+    } finally {
+      setUploading(false);
+      e.target.value = "";
     }
   };
 
@@ -758,6 +831,44 @@ export default function WebSettingsPage() {
               >
                 Signup Hidden
               </button>
+            </div>
+          </div>
+
+          {/* Section 1c: Favicon (Browser Tab Icon) */}
+          <div className="glass rounded-2xl p-6 border border-white/5 space-y-6">
+            <h2 className="text-sm font-semibold text-cyan-400 uppercase tracking-wider">Favicon (Browser Tab Icon)</h2>
+            <div className="flex items-center gap-5">
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-white/5">
+                {form.favicon_url ? (
+                  <img src={form.favicon_url} alt="Favicon preview" className="h-full w-full object-cover" />
+                ) : (
+                  <Globe className="h-7 w-7 text-zinc-600" />
+                )}
+              </div>
+              <div className="flex flex-col items-start gap-2">
+                <label className="inline-flex w-fit cursor-pointer items-center gap-2 rounded-xl border border-white/10 px-4 py-2.5 text-sm text-zinc-400 transition-colors hover:border-white/20 hover:text-white">
+                  {uploading ? "Uploading..." : form.favicon_url ? "Change Image" : "Upload Image"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFaviconUpload}
+                    disabled={uploading}
+                    className="hidden"
+                  />
+                </label>
+                {form.favicon_url && (
+                  <button
+                    type="button"
+                    onClick={() => setForm({ ...form, favicon_url: "" })}
+                    className="rounded-xl border border-white/5 px-4 py-2.5 text-xs text-zinc-500 transition-colors hover:border-red-500/30 hover:text-red-400"
+                  >
+                    Remove
+                  </button>
+                )}
+                <p className="text-xs text-zinc-500">
+                  Any image shape works — it is automatically cropped to a perfect circle.
+                </p>
+              </div>
             </div>
           </div>
 

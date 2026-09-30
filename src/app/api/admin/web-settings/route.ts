@@ -55,6 +55,11 @@ export async function GET() {
       ALTER TABLE web_settings ADD COLUMN IF NOT EXISTS signup_enabled BOOLEAN DEFAULT TRUE;
     `);
 
+    // Ensure favicon column exists
+    await execute(`
+      ALTER TABLE web_settings ADD COLUMN IF NOT EXISTS favicon_url TEXT DEFAULT '';
+    `);
+
     let settings = await queryOne("SELECT * FROM web_settings WHERE id = 1");
     if (!settings) {
       await execute(`
@@ -77,15 +82,18 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
 
   try {
-    const { web_name, logo_type, logo_font, logo_image, logo_font_file, logo_color, accent_color, bg_color, body_font, body_font_size, body_font_file, signup_enabled } = await req.json();
+    const { web_name, logo_type, logo_font, logo_image, logo_font_file, logo_color, accent_color, bg_color, body_font, body_font_size, body_font_file, signup_enabled, favicon_url } = await req.json();
 
     await execute(`
       ALTER TABLE web_settings ADD COLUMN IF NOT EXISTS signup_enabled BOOLEAN DEFAULT TRUE;
     `);
+    await execute(`
+      ALTER TABLE web_settings ADD COLUMN IF NOT EXISTS favicon_url TEXT DEFAULT '';
+    `);
 
     await execute(`
       UPDATE web_settings
-      SET web_name = $1, logo_type = $2, logo_font = $3, logo_image = $4, logo_font_file = $5, logo_color = $6, accent_color = $7, bg_color = $8, body_font = $9, body_font_size = $10, body_font_file = $11, signup_enabled = $12, updated_at = NOW()
+      SET web_name = $1, logo_type = $2, logo_font = $3, logo_image = $4, logo_font_file = $5, logo_color = $6, accent_color = $7, bg_color = $8, body_font = $9, body_font_size = $10, body_font_file = $11, signup_enabled = $12, favicon_url = $13, updated_at = NOW()
       WHERE id = 1
     `, [
       web_name || "Dee Jay.",
@@ -99,7 +107,8 @@ export async function POST(req: Request) {
       body_font || "Inter",
       body_font_size || "medium",
       body_font_file || "",
-      signup_enabled !== false
+      signup_enabled !== false,
+      favicon_url || ""
     ]);
 
     return NextResponse.json({ success: true });

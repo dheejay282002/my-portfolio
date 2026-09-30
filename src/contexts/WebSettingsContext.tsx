@@ -15,6 +15,7 @@ export interface WebSettings {
   body_font_size: string;
   body_font_file: string;
   signup_enabled: boolean;
+  favicon_url: string;
 }
 
 const defaultSettings: WebSettings = {
@@ -30,6 +31,7 @@ const defaultSettings: WebSettings = {
   body_font_size: "medium",
   body_font_file: "",
   signup_enabled: true,
+  favicon_url: "",
 };
 
 interface WebSettingsContextValue {
@@ -167,6 +169,33 @@ function applyTheme(d: { settings: WebSettings }) {
       font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
     }
   `;
+
+  // Browser tab favicon (always rendered from the uploaded circular image)
+  const favicon = d.settings.favicon_url || "";
+  const faviconId = "dynamic-site-favicon";
+  let iconLink = document.getElementById(faviconId) as HTMLLinkElement | null;
+  if (favicon) {
+    if (!iconLink) {
+      iconLink = document.createElement("link");
+      iconLink.id = faviconId;
+      iconLink.rel = "icon";
+      document.head.appendChild(iconLink);
+    }
+    iconLink.href = favicon;
+    const lower = favicon.toLowerCase();
+    const mime = lower.includes(".svg")
+      ? "image/svg+xml"
+      : lower.includes(".ico")
+        ? "image/x-icon"
+        : lower.includes(".jpg") || lower.includes(".jpeg")
+          ? "image/jpeg"
+          : lower.includes(".webp")
+            ? "image/webp"
+            : "image/png";
+    iconLink.type = mime;
+  } else if (iconLink) {
+    iconLink.remove();
+  }
 
   if (d.settings.logo_type === "letter") {
     if (d.settings.logo_font_file) {
