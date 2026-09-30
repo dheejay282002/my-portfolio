@@ -109,7 +109,10 @@ export default function CertificatesPage() {
       const res = await fetch("/api/upload", { method: "POST", body: fd });
       const data = await res.json();
       if (data.url) setForm((p) => ({ ...p, [field]: data.url }));
-    } catch {}
+      else alert(data.error || "Upload failed.");
+    } catch {
+      alert("Upload failed. Please try again.");
+    }
     setUploading(false);
   };
 
