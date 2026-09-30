@@ -3,7 +3,7 @@ import { execute, queryOne } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     await execute(`
       ALTER TABLE web_settings ADD COLUMN IF NOT EXISTS favicon_url TEXT DEFAULT '';
@@ -16,11 +16,14 @@ export async function GET() {
         headers: { "Cache-Control": "public, max-age=300" },
       });
     }
-    return new NextResponse(null, {
-      status: 404,
+    return NextResponse.redirect(new URL("/favicon.ico", req.url), {
+      status: 302,
       headers: { "Cache-Control": "public, max-age=300" },
     });
   } catch {
-    return new NextResponse(null, { status: 404 });
+    return NextResponse.redirect(new URL("/favicon.ico", req.url), {
+      status: 302,
+      headers: { "Cache-Control": "public, max-age=300" },
+    });
   }
 }
