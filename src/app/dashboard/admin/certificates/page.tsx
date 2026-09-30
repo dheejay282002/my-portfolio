@@ -167,7 +167,7 @@ export default function CertificatesPage() {
 
   const copyLink = (c: Certificate) => {
     const base = window.location.origin;
-    navigator.clipboard.writeText(`${base}/certificates/${c.certificate_url}`);
+    navigator.clipboard.writeText(c.verify_url || `${base}/certificates/${c.certificate_url}`);
     setCopied(c.id);
     setTimeout(() => setCopied(null), 2000);
   };
