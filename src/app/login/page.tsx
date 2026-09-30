@@ -104,6 +104,7 @@ export default function LoginPage() {
         google_not_configured: "Google OAuth is not configured yet. Set it up in the admin panel.",
         github_not_configured: "GitHub OAuth is not configured yet. Set it up in the admin panel.",
         account_exists: "An account with this email already exists. Please sign in with your password instead.",
+        signup_disabled: "Registration is currently disabled. Please contact the administrator if you need an account.",
       };
       setLoginError(messages[oauthError] || "Authentication failed. Please try again.");
       window.history.replaceState({}, "", window.location.pathname);
@@ -555,7 +556,7 @@ export default function LoginPage() {
               </div>
             )}
 
-            {!showOtp && !captchaContext && (
+            {!showOtp && !captchaContext && signupEnabled && (
               <div className="mt-6">
                 <div className="relative flex items-center gap-3 mb-4">
                   <div className="flex-1 border-t border-white/10" />

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { queryOne, execute } from "@/lib/db";
 import { signToken } from "@/lib/auth";
+import { isSignupEnabled } from "@/lib/settings";
 
 async function getSettings() {
   const row = await queryOne(
@@ -154,6 +155,9 @@ export async function GET(
       );
       user = { ...existing, name: newName, avatar_url: newAvatar };
     } else {
+      if (!(await isSignupEnabled())) {
+        return NextResponse.redirect(new URL("/login?error=signup_disabled", req.url));
+      }
       const placeholderPw = `oauth_${provider}_${Date.now()}`;
       const result = await queryOne(
         `INSERT INTO users (name, email, password, role, oauth_provider, oauth_id, avatar_url)
