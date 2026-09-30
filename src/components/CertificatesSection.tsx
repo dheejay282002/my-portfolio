@@ -15,6 +15,7 @@ interface Certificate {
   badge_image_url: string;
   certificate_image_url: string;
   certificate_url: string;
+  verify_url?: string;
   category: string;
 }
 
@@ -33,7 +34,8 @@ export default function CertificatesSection() {
 
   const isPdf = (url: string) => !!url && (url.toLowerCase().includes(".pdf") || url.toLowerCase().endsWith("/pdf"));
   const verifyUrl = selected
-    ? `${typeof window !== "undefined" ? window.location.origin : ""}/certificates/${selected.certificate_url}`
+    ? selected.verify_url ||
+      `${typeof window !== "undefined" ? window.location.origin : ""}/certificates/${selected.certificate_url}`
     : "";
 
   return (
@@ -127,9 +129,9 @@ export default function CertificatesSection() {
                 )}
               </div>
 
-              {selected.certificate_url && (
+              {verifyUrl && (
                 <a
-                  href={`/certificates/${selected.certificate_url}`}
+                  href={verifyUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-cyan-500/20 bg-cyan-500/5 px-4 py-3 transition-colors hover:bg-cyan-500/10"

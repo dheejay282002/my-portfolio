@@ -17,6 +17,7 @@ interface Certificate {
   certificate_url: string;
   credly_badge_id: string;
   credly_host: string;
+  verify_url: string;
   category: string;
   is_public: boolean;
   created_at: string;
@@ -52,6 +53,7 @@ export default function CertificatesPage() {
     certificate_image_url: "",
     credly_badge_id: "",
     credly_host: "https://www.credly.com",
+    verify_url: "",
     category: "",
   });
 
@@ -67,7 +69,7 @@ export default function CertificatesPage() {
       recipient_name: "", course_title: "", description: "",
       issued_date: new Date().toISOString().split("T")[0],
       issuer_name: "", issuer_title: "", badge_image_url: "", certificate_image_url: "",
-      credly_badge_id: "", credly_host: "https://www.credly.com", category: "",
+      credly_badge_id: "", credly_host: "https://www.credly.com", verify_url: "", category: "",
     });
     setShowModal(true);
   };
@@ -85,6 +87,7 @@ export default function CertificatesPage() {
       certificate_image_url: c.certificate_image_url || "",
       credly_badge_id: c.credly_badge_id || "",
       credly_host: c.credly_host || "https://www.credly.com",
+      verify_url: c.verify_url || "",
       category: c.category || "",
     });
     setShowModal(true);
@@ -364,6 +367,11 @@ export default function CertificatesPage() {
                   )}
                 </div>
               )}
+              <div className="border-t border-white/5 pt-4">
+                <p className="text-xs text-zinc-500 mb-1">External Verify Link (optional)</p>
+                <p className="text-xs text-zinc-600 mb-3">Opens the VERIFY ONLINE button in the public modal. Leave empty to use the built-in verification page.</p>
+                <input type="url" placeholder="https://appkademiya.online/verify/..." value={form.verify_url} onChange={(e) => setForm({ ...form, verify_url: e.target.value })} className="glass w-full rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-500 outline-none focus:border-cyan-500/50" />
+              </div>
               <div className="border-t border-white/5 pt-4">
                 <p className="text-xs text-zinc-500 mb-3">Credly Badge Embed (optional)</p>
                 <input type="text" placeholder="Credly Badge ID" value={form.credly_badge_id} onChange={(e) => setForm({ ...form, credly_badge_id: e.target.value })} className="glass w-full rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-500 outline-none focus:border-cyan-500/50" />
