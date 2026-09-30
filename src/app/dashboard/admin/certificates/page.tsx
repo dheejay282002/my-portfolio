@@ -263,7 +263,7 @@ export default function CertificatesPage() {
 
               <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-white/5 pt-3">
                 <a
-                  href={`/certificates/${c.certificate_url}`}
+                  href={c.verify_url || `/certificates/${c.certificate_url}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/20 px-3 py-1.5 text-xs font-medium text-cyan-400 transition-colors hover:bg-cyan-500/20"
