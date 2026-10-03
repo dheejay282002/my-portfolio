@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { queryOne, execute } from "@/lib/db";
 import { signToken } from "@/lib/auth";
 import { isSignupEnabled } from "@/lib/settings";
+import { getBaseUrl } from "@/lib/base-url";
 
 async function getSettings() {
   const row = await queryOne(
@@ -15,10 +16,10 @@ async function getSettings() {
   } | null;
 }
 
-async function getGoogleUser(code: string) {
+async function getGoogleUser(code: string, baseUrl: string) {
   const settings = await getSettings();
-  const clientId = settings?.google_client_id || process.env.GOOGLE_CLIENT_ID || "";
-  const clientSecret = settings?.google_client_secret || process.env.GOOGLE_CLIENT_SECRET || "";
+  const clientId = (settings?.google_client_id || process.env.GOOGLE_CLIENT_ID || "").trim();
+  const clientSecret = (settings?.google_client_secret || process.env.GOOGLE_CLIENT_SECRET || "").trim();
 
   const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
@@ -27,7 +28,7 @@ async function getGoogleUser(code: string) {
       code,
       client_id: clientId,
       client_secret: clientSecret,
-      redirect_uri: `${process.env.NEXT_PUBLIC_BASE_URL}/api/auth/oauth/google/callback`,
+      redirect_uri: `${baseUrl}/api/auth/oauth/google/callback`,
       grant_type: "authorization_code",
     }),
   });
@@ -86,7 +87,9 @@ async function getGitHubUser(code: string) {
   if (!emailRes.ok) throw new Error("Failed to fetch GitHub emails");
   const emails = await emailRes.json();
 
-  const primary = emails.find((e: any) => e.primary && e.verified);
+  const primary = emails.find(
+    (e: { primary?: boolean; verified?: boolean; email?: string }) => e.primary && e.verified
+  );
   return {
     id: String(userData.id),
     email: primary?.email || userData.email,
@@ -95,7 +98,7 @@ async function getGitHubUser(code: string) {
   };
 }
 
-const PROVIDER_HANDLERS: Record<string, (code: string) => Promise<{ id: string; email: string; name: string; avatar_url?: string }>> = {
+const PROVIDER_HANDLERS: Record<string, (code: string, baseUrl: string) => Promise<{ id: string; email: string; name: string; avatar_url?: string }>> = {
   google: getGoogleUser,
   github: getGitHubUser,
 };
@@ -123,7 +126,7 @@ export async function GET(
       return NextResponse.redirect(new URL("/login?error=missing_code", req.url));
     }
 
-    const oauthUser = await handler(code);
+    const oauthUser = await handler(code, getBaseUrl(req.url));
 
     if (!oauthUser.email) {
       return NextResponse.redirect(new URL("/login?error=no_email", req.url));
@@ -183,9 +186,10 @@ export async function GET(
     });
 
     return response;
-  } catch (err: any) {
-    console.error(`[OAUTH CALLBACK ERROR]`, err?.message || err);
-    const msg = err?.message?.includes("duplicate") ? "account_exists" : "oauth_failed";
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(`[OAUTH CALLBACK ERROR]`, message);
+    const msg = message.includes("duplicate") ? "account_exists" : "oauth_failed";
     return NextResponse.redirect(new URL(`/login?error=${msg}`, req.url));
   }
 }

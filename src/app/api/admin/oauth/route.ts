@@ -2,6 +2,13 @@ import { NextResponse } from "next/server";
 import { queryOne, execute } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 
+function serverError(err: unknown) {
+  return NextResponse.json(
+    { error: err instanceof Error && err.message ? err.message : "Something went wrong" },
+    { status: 500 }
+  );
+}
+
 export async function GET() {
   const user = await getSession();
   if (!user || user.role !== "admin")
@@ -21,8 +28,8 @@ export async function GET() {
     );
 
     return NextResponse.json({ settings: settings || { google_client_id: "", google_client_secret: "", github_client_id: "", github_client_secret: "" } });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message || "Something went wrong" }, { status: 500 });
+  } catch (err) {
+    return serverError(err);
   }
 }
 
@@ -38,11 +45,16 @@ export async function POST(req: Request) {
       `UPDATE web_settings
        SET google_client_id = $1, google_client_secret = $2, github_client_id = $3, github_client_secret = $4, updated_at = NOW()
        WHERE id = 1`,
-      [google_client_id || "", google_client_secret || "", github_client_id || "", github_client_secret || ""]
+      [
+        String(google_client_id || "").trim(),
+        String(google_client_secret || "").trim(),
+        String(github_client_id || "").trim(),
+        String(github_client_secret || "").trim(),
+      ]
     );
 
     return NextResponse.json({ success: true });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message || "Something went wrong" }, { status: 500 });
+  } catch (err) {
+    return serverError(err);
   }
 }

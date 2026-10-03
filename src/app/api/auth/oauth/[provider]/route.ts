@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { queryOne, execute } from "@/lib/db";
+import { getBaseUrl } from "@/lib/base-url";
 
 async function getClientId(provider: string): Promise<string> {
   try {
@@ -12,19 +13,19 @@ async function getClientId(provider: string): Promise<string> {
       provider === "google"
         ? "SELECT google_client_id FROM web_settings WHERE id = 1"
         : "SELECT github_client_id FROM web_settings WHERE id = 1"
-    ) as any;
-    if (row) return row[`${provider}_client_id`] || "";
+    ) as { google_client_id?: string; github_client_id?: string } | null;
+    if (row) return (provider === "google" ? row.google_client_id : row.github_client_id) || "";
   } catch {}
   return process.env[`${provider.toUpperCase()}_CLIENT_ID`] || "";
 }
 
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ provider: string }> }
 ) {
   try {
     const { provider } = await params;
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
+    const baseUrl = getBaseUrl(req.url);
 
     const clientId = await getClientId(provider);
 
@@ -68,7 +69,6 @@ export async function GET(
 
     return NextResponse.redirect(url.toString());
   } catch {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
-    return NextResponse.redirect(`${baseUrl}/login?error=oauth_failed`);
+    return NextResponse.redirect(`${getBaseUrl(req.url)}/login?error=oauth_failed`);
   }
 }

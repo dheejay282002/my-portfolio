@@ -63,14 +63,19 @@ export default function OAuthSettingsPage() {
     setSaveStatus(null);
 
     try {
+      const payload = Object.fromEntries(
+        Object.entries(form).map(([key, value]) => [key, value.trim()])
+      ) as typeof form;
+
       const res = await fetch("/api/admin/oauth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (res.ok) {
-        setInitialForm(form);
+        setForm(payload);
+        setInitialForm(payload);
         setSaveStatus({ type: "success", message: "OAuth settings saved successfully!" });
       } else {
         setSaveStatus({ type: "error", message: data.error || "Failed to save." });
@@ -140,14 +145,14 @@ export default function OAuthSettingsPage() {
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-3 mt-1">
+            <div className="flex flex-wrap items-center gap-3 mt-1">
               <button type="button" onClick={() => testConnection("google")} disabled={testing === "google" || !form.google_client_id || !form.google_client_secret}
                 className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-1.5 text-[10px] font-semibold text-zinc-300 transition-colors hover:border-white/20 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed">
                 {testing === "google" ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plug className="h-3 w-3" />}
                 Test Connection
               </button>
               {testResults.google && (
-                <span className={`flex items-center gap-1 text-[10px] ${testResults.google.valid ? "text-green-400" : "text-red-400"}`}>
+                <span className={`flex max-w-md items-start gap-1 text-[10px] leading-relaxed break-words ${testResults.google.valid ? "text-green-400" : "text-red-400"}`}>
                   {testResults.google.valid ? <Check className="h-3 w-3" /> : <AlertCircle className="h-3 w-3" />}
                   {testResults.google.message}
                 </span>
@@ -178,14 +183,14 @@ export default function OAuthSettingsPage() {
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-3 mt-1">
+            <div className="flex flex-wrap items-center gap-3 mt-1">
               <button type="button" onClick={() => testConnection("github")} disabled={testing === "github" || !form.github_client_id || !form.github_client_secret}
                 className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-1.5 text-[10px] font-semibold text-zinc-300 transition-colors hover:border-white/20 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed">
                 {testing === "github" ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plug className="h-3 w-3" />}
                 Test Connection
               </button>
               {testResults.github && (
-                <span className={`flex items-center gap-1 text-[10px] ${testResults.github.valid ? "text-green-400" : "text-red-400"}`}>
+                <span className={`flex max-w-md items-start gap-1 text-[10px] leading-relaxed break-words ${testResults.github.valid ? "text-green-400" : "text-red-400"}`}>
                   {testResults.github.valid ? <Check className="h-3 w-3" /> : <AlertCircle className="h-3 w-3" />}
                   {testResults.github.message}
                 </span>
