@@ -3,10 +3,11 @@
 import { useEffect, useState } from "react";
 import { FaGithub, FaLinkedin, FaFacebook } from "react-icons/fa";
 import { useWebSettings } from "@/hooks/useWebSettings";
-import { navLinks } from "@/lib/nav";
+import { useNavLinks } from "@/hooks/useNavLinks";
 
 export default function Footer() {
   const { settings } = useWebSettings();
+  const navLinks = useNavLinks();
   const [links, setLinks] = useState({
     github: "https://github.com/deejay-cristobal",
     linkedin: "https://linkedin.com/in/deejay-cristobal",

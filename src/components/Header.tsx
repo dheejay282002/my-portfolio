@@ -6,7 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useWebSettings } from "@/hooks/useWebSettings";
-import { navLinks } from "@/lib/nav";
+import { useNavLinks } from "@/hooks/useNavLinks";
 
 export default function Header() {
   const [user, setUser] = useState<{ id: number; name: string; role: string; profile_photo?: string } | null>(null);
@@ -15,6 +15,7 @@ export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
   const { settings } = useWebSettings();
+  const navLinks = useNavLinks();
 
   useEffect(() => {
     setMounted(true);
