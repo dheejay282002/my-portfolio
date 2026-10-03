@@ -6,16 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useWebSettings } from "@/hooks/useWebSettings";
-
-const navLinks = [
-  { label: "Home", href: "/#home" },
-  { label: "About", href: "/#about" },
-  { label: "Skills", href: "/#skills" },
-  { label: "Services", href: "/#services" },
-  { label: "What I Offer", href: "/#offers" },
-  { label: "Projects", href: "/#projects" },
-  { label: "Contact", href: "/#contact" },
-];
+import { navLinks } from "@/lib/nav";
 
 export default function Header() {
   const [user, setUser] = useState<{ id: number; name: string; role: string; profile_photo?: string } | null>(null);
@@ -66,7 +57,7 @@ export default function Header() {
             {/* Hamburger for public homepage on mobile */}
             {!isHideNav && (
               <button
-                className="text-zinc-400 md:hidden"
+                className="text-zinc-400 lg:hidden"
                 onClick={() => setMobileMenuOpen((v) => !v)}
                 aria-label="Toggle navigation"
               >
@@ -89,12 +80,12 @@ export default function Header() {
 
           {/* Desktop nav */}
           {!isHideNav && (
-            <nav className="hidden items-center gap-8 md:flex">
+            <nav className="hidden items-center gap-4 lg:flex xl:gap-6">
               {navLinks.map((link) => (
                 <a
                   key={link.label}
                   href={link.href}
-                  className="text-sm text-zinc-400 transition-colors hover:text-white"
+                  className={`text-[13px] text-zinc-400 transition-colors hover:text-white xl:text-sm ${link.desktopClassName || ""}`}
                 >
                   {link.label}
                 </a>
@@ -138,12 +129,12 @@ export default function Header() {
 
       {/* Mobile menu backdrop click to close */}
       {!isHideNav && mobileMenuOpen && (
-        <div className="fixed inset-0 z-30 md:hidden" onClick={() => setMobileMenuOpen(false)} />
+        <div className="fixed inset-0 z-30 lg:hidden" onClick={() => setMobileMenuOpen(false)} />
       )}
 
       {/* Mobile slide-down menu for public homepage */}
       {!isHideNav && mobileMenuOpen && (
-        <div className="fixed top-[65px] left-0 right-0 z-40 glass border-t border-white/10 md:hidden animate-in slide-in-from-top-2 duration-200">
+        <div className="fixed top-[65px] left-0 right-0 z-40 glass border-t border-white/10 lg:hidden animate-in slide-in-from-top-2 duration-200">
           <nav className="flex flex-col px-6 py-4 gap-1">
             {navLinks.map((link) => (
               <a

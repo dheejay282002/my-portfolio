@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { FaGithub, FaLinkedin, FaFacebook } from "react-icons/fa";
 import { useWebSettings } from "@/hooks/useWebSettings";
+import { navLinks } from "@/lib/nav";
 
 export default function Footer() {
   const { settings } = useWebSettings();
@@ -50,18 +51,16 @@ export default function Footer() {
             )}
           </a>
 
-          <nav className="flex gap-6">
-            {["Home", "About", "Skills", "Services", "Projects", "Contact"].map(
-              (label) => (
-                <a
-                  key={label}
-                  href={`#${label.toLowerCase()}`}
-                  className="text-sm text-zinc-500 transition-colors hover:text-white"
-                >
-                  {label}
-                </a>
-              )
-            )}
+          <nav className="flex flex-wrap justify-center gap-x-5 gap-y-2">
+            {navLinks.map((link) => (
+              <a
+                key={link.label}
+                href={link.href}
+                className="text-sm text-zinc-500 transition-colors hover:text-white"
+              >
+                {link.label}
+              </a>
+            ))}
           </nav>
 
           <div className="flex flex-col items-center gap-4 sm:flex-row sm:gap-6">
