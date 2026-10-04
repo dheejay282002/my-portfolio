@@ -12,7 +12,9 @@ export default function HeroSection() {
       .then((d) => setAdmin(d?.admin ?? null));
   }, []);
 
-  const name = admin?.name || "Dee Jay";
+  const name = admin
+    ? [admin.name, admin.last_name].filter(Boolean).join(" ")
+    : "Dee Jay Cristobal";
 
   return (
     <section
