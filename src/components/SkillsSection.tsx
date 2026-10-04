@@ -49,7 +49,7 @@ export default function SkillsSection() {
           </p>
         </div>
 
-        <div className="mt-16 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-16 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
           {Object.entries(groups).map(([category, skills]) => (
             <div key={category}>
               <h3 className="text-sm font-semibold tracking-wider text-zinc-500 uppercase">

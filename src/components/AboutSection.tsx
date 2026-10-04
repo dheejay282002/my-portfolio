@@ -47,7 +47,7 @@ export default function AboutSection() {
   return (
     <section id="about" className="border-t border-white/5 px-6 py-24">
       <ScrollReveal className="mx-auto max-w-7xl">
-        <div className="grid items-center gap-16 lg:grid-cols-2">
+        <div className="grid grid-cols-1 items-center gap-16 lg:grid-cols-2">
           <div>
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
               About{" "}

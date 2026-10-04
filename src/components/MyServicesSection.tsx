@@ -46,7 +46,7 @@ export default function MyServicesSection() {
           </p>
         </div>
 
-        <div className="mt-16 grid gap-8 sm:grid-cols-2 lg:grid-cols-3 items-stretch">
+        <div className="mt-16 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3 items-stretch">
           {services.map((s) => {
             const Icon = iconMap[s.icon] || Code2;
             const parts = s.description.split("|").map(p => p.trim());

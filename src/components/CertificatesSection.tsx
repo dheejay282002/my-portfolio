@@ -53,7 +53,7 @@ export default function CertificatesSection() {
           </p>
         </div>
 
-        <div className="mt-16 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-16 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
           {certs.map((c, i) => (
             <ScrollReveal key={c.id} delay={i * 100}>
               <button
@@ -69,7 +69,7 @@ export default function CertificatesSection() {
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-white truncate">{c.course_title}</h3>
+                    <h3 className="font-semibold text-white break-words sm:truncate">{c.course_title}</h3>
                     <p className="mt-1 text-sm text-zinc-400">{c.recipient_name}</p>
                     {c.category && (
                       <span className="mt-2 inline-flex items-center rounded-full border border-cyan-500/20 bg-cyan-500/10 px-2.5 py-0.5 text-[11px] font-medium text-cyan-400">

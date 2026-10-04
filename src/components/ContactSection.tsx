@@ -73,7 +73,7 @@ export default function ContactSection() {
           </p>
         </div>
 
-        <div className="mt-16 grid gap-12 lg:grid-cols-2">
+        <div className="mt-16 grid grid-cols-1 gap-12 lg:grid-cols-2">
           <div>
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>

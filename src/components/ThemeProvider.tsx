@@ -31,7 +31,7 @@ function LoadingOverlay({ children }: { children: React.ReactNode }) {
               ))}
             </div>
             {/* Content skeletons */}
-            <div className="grid gap-8 lg:grid-cols-2 xl:grid-cols-3">
+            <div className="grid grid-cols-1 gap-8 lg:grid-cols-2 xl:grid-cols-3">
               <div className="xl:col-span-2 space-y-4">
                 <Skeleton className="h-6 w-48" />
                 <div className="glass rounded-2xl divide-y divide-white/5">

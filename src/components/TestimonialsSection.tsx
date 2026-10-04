@@ -60,8 +60,8 @@ export default function TestimonialsSection() {
           reviews.length === 1 
             ? "flex justify-center" 
             : reviews.length === 2 
-              ? "grid gap-6 md:grid-cols-2 max-w-4xl mx-auto" 
-              : "grid gap-6 md:grid-cols-3"
+              ? "grid grid-cols-1 gap-6 md:grid-cols-2 max-w-4xl mx-auto" 
+              : "grid grid-cols-1 gap-6 md:grid-cols-3"
         }`}>
           {reviews.map((r, idx) => (
             <div
