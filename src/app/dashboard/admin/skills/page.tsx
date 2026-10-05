@@ -45,7 +45,7 @@ export default function SkillsPage() {
     setSaving(true);
     try {
       if (editing) {
-        await fetch(`/api/skills/id/${editing.id}`, {
+        await fetch(`/api/skills/${editing.id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(form),
@@ -70,7 +70,7 @@ export default function SkillsPage() {
 
   const handleDelete = async (id: number) => {
     if (!confirm("Delete this skill?")) return;
-    const res = await fetch(`/api/skills/id/${id}`, { method: "DELETE" });
+    const res = await fetch(`/api/skills/${id}`, { method: "DELETE" });
     if (res.ok) setSkills((p) => p.filter((s) => s.id !== id));
   };
 
