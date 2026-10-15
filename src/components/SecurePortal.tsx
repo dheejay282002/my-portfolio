@@ -250,9 +250,6 @@ export default function SecurePortal({ onUnlock }: { onUnlock: () => void }) {
                   <div className="pointer-events-none absolute left-0 top-0 h-2 w-2 rounded-tl border-l border-t border-cyan-500/50" />
                   <div className="pointer-events-none absolute bottom-0 right-0 h-2 w-2 rounded-br border-b border-r border-cyan-500/50" />
                 </div>
-                <p className="mt-1 text-center text-[0.65rem] uppercase tracking-widest text-slate-500">
-                  OVERRIDE CODE: <span className="font-bold text-cyan-400">CLASSIFIED</span>
-                </p>
                 <p
                   className={`mt-2 text-center text-[0.70rem] font-bold uppercase tracking-widest text-red-500 glitch-error ${error ? "" : "hidden"}`}
                   role="alert"
