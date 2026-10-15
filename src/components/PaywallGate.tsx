@@ -9,8 +9,8 @@ import SecurePortal from "@/components/SecurePortal";
  *
  * - Timetopay "unlocked" (admin unlock or any active paid txn for this site)
  *   → site opens directly, no code required.
- * - Timetopay "locked" → Secure Portal code screen; correct code unlocks and
- *   is remembered in localStorage for this browser.
+ * - Timetopay "locked" → Secure Portal code screen, required on every visit
+ *   (nothing is remembered; a reload / new visit re-checks and re-locks).
  * - Status fetch failure fails closed (portal shown); the code still works.
  *
  * The site renders underneath and the portal covers it (fixed overlay), so
@@ -20,7 +20,6 @@ import SecurePortal from "@/components/SecurePortal";
  */
 const STATUS_URL =
   "https://timetosignandpay.vercel.app/api/public/status?ref=txn_deejay_none&scope=portfolio&site=deejay";
-const STORAGE_KEY = "deejay_portal_ok";
 
 const EXEMPT_PREFIXES = ["/login", "/dashboard", "/profile", "/api"];
 
@@ -36,19 +35,6 @@ export default function PaywallGate({ children }: { children: React.ReactNode })
     if (exempt) return;
 
     let cancelled = false;
-
-    // Remembered unlock from a previous visit in this browser.
-    let remembered = false;
-    try {
-      remembered = localStorage.getItem(STORAGE_KEY) === "1";
-    } catch {
-      // localStorage unavailable — always re-check / require code.
-    }
-
-    if (remembered) {
-      setUnlocked(true);
-      return;
-    }
 
     (async () => {
       try {
@@ -70,16 +56,7 @@ export default function PaywallGate({ children }: { children: React.ReactNode })
   return (
     <>
       {children}
-      <SecurePortal
-        onUnlock={() => {
-          try {
-            localStorage.setItem(STORAGE_KEY, "1");
-          } catch {
-            // Ignore — session-only unlock if storage is blocked.
-          }
-          setUnlocked(true);
-        }}
-      />
+      <SecurePortal onUnlock={() => setUnlocked(true)} />
     </>
   );
 }
