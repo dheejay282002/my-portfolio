@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Header from "@/components/Header";
 import MessengerWidget from "@/components/MessengerWidget";
+import PaywallGate from "@/components/PaywallGate";
 import ThemeProvider from "@/components/ThemeProvider";
 import "./globals.css";
 
@@ -35,9 +36,11 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col" style={{ overflowX: "hidden" as const, maxWidth: "100vw" }}>
         <ThemeProvider>
-          <Header />
-          <main className="w-full overflow-x-hidden">{children}</main>
-          <MessengerWidget />
+          <PaywallGate>
+            <Header />
+            <main className="w-full overflow-x-hidden">{children}</main>
+            <MessengerWidget />
+          </PaywallGate>
         </ThemeProvider>
       </body>
     </html>

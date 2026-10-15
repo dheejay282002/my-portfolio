@@ -54,3 +54,170 @@ body {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* Secure Portal (paywall lock screen) */
+@keyframes scan {
+  0% {
+    top: -10%;
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    top: 110%;
+    opacity: 0;
+  }
+}
+
+.scanner-line {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(to right, transparent, rgba(6, 182, 212, 0.8), transparent);
+  box-shadow: 0 0 10px rgba(6, 182, 212, 0.5);
+  animation: scan 4s linear infinite;
+  z-index: 20;
+  pointer-events: none;
+}
+
+@keyframes pulse-glow {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 8px rgba(6, 182, 212, 0.6));
+  }
+  50% {
+    filter: drop-shadow(0 0 16px rgba(6, 182, 212, 0.9));
+  }
+}
+
+.glow-icon {
+  animation: pulse-glow 2s infinite ease-in-out;
+}
+
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+.blink-dot {
+  animation: blink 1.5s infinite;
+}
+
+@keyframes btn-pulse-border {
+  0%,
+  100% {
+    box-shadow:
+      0 0 10px rgba(6, 182, 212, 0.4),
+      inset 0 0 5px rgba(6, 182, 212, 0.2);
+    border-color: rgba(6, 182, 212, 0.5);
+  }
+  50% {
+    box-shadow:
+      0 0 25px rgba(16, 185, 129, 0.6),
+      inset 0 0 10px rgba(16, 185, 129, 0.3);
+    border-color: rgba(16, 185, 129, 0.9);
+  }
+}
+
+@keyframes laser-scan {
+  0% {
+    left: -30%;
+  }
+  60% {
+    left: 130%;
+  }
+  100% {
+    left: 130%;
+  }
+}
+
+@keyframes cyber-sweep {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 200% 50%;
+  }
+}
+
+.cyber-btn {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid transparent;
+  background: linear-gradient(
+    90deg,
+    rgba(6, 182, 212, 0.15) 0%,
+    rgba(16, 185, 129, 0.2) 25%,
+    rgba(6, 182, 212, 0.15) 50%
+  );
+  background-size: 200% auto;
+  animation-name: btn-pulse-border, cyber-sweep;
+  animation-duration: 2s, 4s;
+  animation-iteration-count: infinite, infinite;
+  animation-timing-function: ease-in-out, linear;
+}
+
+.cyber-btn::after {
+  content: "";
+  position: absolute;
+  top: -10%;
+  bottom: -10%;
+  width: 8px;
+  background: #fff;
+  box-shadow:
+    0 0 10px #10b981,
+    0 0 20px #10b981;
+  transform: skewX(-25deg);
+  animation: laser-scan 3s infinite cubic-bezier(0.65, 0, 0.35, 1);
+  z-index: 1;
+  pointer-events: none;
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 30px #0f172a inset !important;
+  -webkit-text-fill-color: #22d3ee !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+@keyframes error-glitch {
+  0%,
+  100% {
+    transform: translate(0);
+  }
+  20% {
+    transform: translate(-2px, 1px);
+  }
+  40% {
+    transform: translate(2px, -1px);
+  }
+  60% {
+    transform: translate(-2px, -1px);
+  }
+  80% {
+    transform: translate(2px, 1px);
+  }
+}
+
+.glitch-error {
+  animation: error-glitch 0.2s linear infinite;
+  text-shadow:
+    2px 0 red,
+    -2px 0 blue;
+}
+
+.shake {
+  animation: error-glitch 0.4s ease-in-out;
+}
