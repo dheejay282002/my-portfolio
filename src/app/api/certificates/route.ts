@@ -2,8 +2,10 @@ import { NextResponse } from "next/server";
 import { queryAll, queryOne } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { ensureCertificatesTable } from "@/lib/schema";
+import { processCertificateById, redactSignatureFields } from "@/lib/certificateSignature";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 function generateUrl(): string {
   const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
@@ -16,7 +18,11 @@ export async function GET() {
   try {
     await ensureCertificatesTable();
     const certificates = await queryAll("SELECT * FROM certificates ORDER BY issued_date DESC");
-    return NextResponse.json({ certificates }, {
+    const user = await getSession();
+    const isAdmin = user?.role === "admin";
+    return NextResponse.json({
+      certificates: certificates.map((c: Record<string, any>) => redactSignatureFields(c, isAdmin)),
+    }, {
       headers: { "Cache-Control": "no-cache, no-store, must-revalidate" },
     });
   } catch (err: any) {
@@ -50,7 +56,17 @@ export async function POST(req: Request) {
       [recipient_name, course_title, description || "", issued_date || new Date().toISOString().split("T")[0], issuer_name || "", issuer_title || "", badge_image_url || "", certificate_image_url || "", certificate_url, credly_badge_id || "", credly_host || "https://www.credly.com", verify_url || "", category || ""]
     ) as { id: number };
 
-    return NextResponse.json({ id: result.id, certificate_url }, { status: 201 });
+    let signatureStatus = "pending";
+    if (certificate_image_url) {
+      try {
+        const outcome = await processCertificateById(result.id);
+        signatureStatus = outcome.status;
+      } catch (e) {
+        console.error("[CERT SIGNATURE] create processing failed:", e);
+      }
+    }
+
+    return NextResponse.json({ id: result.id, certificate_url, signature_status: signatureStatus }, { status: 201 });
   } catch (err: any) {
     return NextResponse.json({ error: err.message || "Something went wrong" }, { status: 500 });
   }

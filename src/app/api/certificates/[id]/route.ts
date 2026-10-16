@@ -2,8 +2,10 @@ import { NextResponse } from "next/server";
 import { execute, queryOne } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { ensureCertificatesTable } from "@/lib/schema";
+import { processCertificateById, redactSignatureFields } from "@/lib/certificateSignature";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -11,7 +13,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     const { id } = await params;
     const cert = await queryOne("SELECT * FROM certificates WHERE id = $1", [Number(id)]);
     if (!cert) return NextResponse.json({ error: "Not found" }, { status: 404 });
-    return NextResponse.json({ certificate: cert });
+    const user = await getSession();
+    return NextResponse.json({ certificate: redactSignatureFields(cert, user?.role === "admin") });
   } catch (err: any) {
     return NextResponse.json({ error: err.message || "Something went wrong" }, { status: 500 });
   }
@@ -38,9 +41,31 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     }
     if (fields.length === 0)
       return NextResponse.json({ error: "No fields to update" }, { status: 400 });
+
+    const current = await queryOne(
+      "SELECT certificate_image_url, signature_status FROM certificates WHERE id = $1",
+      [Number(id)]
+    ) as { certificate_image_url: string | null; signature_status: string | null } | null;
+
+    const incomingUrl = typeof body.certificate_image_url === "string" ? body.certificate_image_url : "";
+    const storedUrl = current?.certificate_image_url || "";
+    const imageChanged = !!incomingUrl && incomingUrl !== storedUrl;
+    const stillPending = (current?.signature_status || "pending") === "pending" && !!incomingUrl;
+
     values.push(Number(id));
     await execute(`UPDATE certificates SET ${fields.join(", ")} WHERE id = $${idx}`, values);
-    return NextResponse.json({ success: true });
+
+    let signatureStatus: string | undefined;
+    if (imageChanged || stillPending) {
+      try {
+        const outcome = await processCertificateById(Number(id), { urlChanged: imageChanged });
+        signatureStatus = outcome.status;
+      } catch (e) {
+        console.error("[CERT SIGNATURE] update processing failed:", e);
+      }
+    }
+
+    return NextResponse.json({ success: true, ...(signatureStatus ? { signature_status: signatureStatus } : {}) });
   } catch (err: any) {
     return NextResponse.json({ error: err.message || "Something went wrong" }, { status: 500 });
   }

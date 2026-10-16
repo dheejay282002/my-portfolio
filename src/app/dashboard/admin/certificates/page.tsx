@@ -21,7 +21,17 @@ interface Certificate {
   category: string;
   is_public: boolean;
   created_at: string;
+  signature_status?: string;
 }
+
+const signatureLabels: Record<string, { label: string; className: string }> = {
+  blurred: { label: "Signature blurred", className: "border-emerald-500/20 bg-emerald-500/10 text-emerald-400" },
+  "no-signature": { label: "No signature", className: "border-sky-500/20 bg-sky-500/10 text-sky-400" },
+  "skipped-pdf": { label: "PDF skipped", className: "border-amber-500/20 bg-amber-500/10 text-amber-400" },
+  "skipped-no-image": { label: "No image", className: "border-white/10 bg-white/5 text-zinc-400" },
+  error: { label: "Scan failed", className: "border-red-500/20 bg-red-500/10 text-red-400" },
+  pending: { label: "Not scanned", className: "border-white/10 bg-white/5 text-zinc-500" },
+};
 
 const categoryOptions = [
   "Government Exam",
@@ -42,6 +52,8 @@ export default function CertificatesPage() {
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState<number | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [scanNote, setScanNote] = useState("");
   const [form, setForm] = useState({
     recipient_name: "",
     course_title: "",
@@ -57,11 +69,48 @@ export default function CertificatesPage() {
     category: "",
   });
 
-  useEffect(() => {
+  const loadCerts = () =>
     fetch("/api/certificates")
       .then((r) => r.json())
       .then((d) => { setCerts(d.certificates || []); setLoading(false); });
-  }, []);
+
+  useEffect(() => { loadCerts(); }, []);
+
+  const runScan = async (force = false) => {
+    if (scanning) return;
+    const msg = force
+      ? "Re-scan ALL certificates? Existing blurs will be re-processed from the original image."
+      : "Scan all certificates for signatures and blur any that are found?";
+    if (!confirm(msg)) return;
+    setScanning(true);
+    setScanNote("Scanning…");
+    try {
+      const ids = certs.map((c) => c.id);
+      const counts: Record<string, number> = {};
+      let total = 0;
+      const BATCH = 6;
+      for (let i = 0; i < ids.length; i += BATCH) {
+        const res = await fetch("/api/certificates/scan-signatures", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ force, ids: ids.slice(i, i + BATCH) }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Scan failed");
+        total += data.total;
+        for (const [k, v] of Object.entries(data.counts || {})) {
+          counts[k] = (counts[k] || 0) + (v as number);
+        }
+        setScanNote(`Scanning… ${total}/${ids.length}`);
+      }
+      const parts = Object.entries(counts).map(([k, v]) => `${v} ${signatureLabels[k]?.label || k}`);
+      setScanNote(`Scanned ${total}: ${parts.join(", ")}`);
+      await loadCerts();
+    } catch (e) {
+      setScanNote(e instanceof Error ? e.message : "Scan failed");
+    }
+    setScanning(false);
+  };
 
   const openAdd = () => {
     setEditing(null);
@@ -121,12 +170,15 @@ export default function CertificatesPage() {
     setSaving(true);
     try {
       if (editing) {
-        await fetch(`/api/certificates/${editing.id}`, {
+        const res = await fetch(`/api/certificates/${editing.id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(form),
         });
-        setCerts((p) => p.map((c) => (c.id === editing.id ? { ...c, ...form } : c)));
+        const data = await res.json().catch(() => ({}));
+        setCerts((p) => p.map((c) => (c.id === editing.id
+          ? { ...c, ...form, ...(data.signature_status ? { signature_status: data.signature_status } : {}) }
+          : c)));
       } else {
         const res = await fetch("/api/certificates", {
           method: "POST",
@@ -139,6 +191,7 @@ export default function CertificatesPage() {
             id: data.id,
             ...form,
             certificate_url: data.certificate_url,
+            signature_status: data.signature_status || "pending",
             is_public: true,
             created_at: new Date().toISOString(),
           };
@@ -146,6 +199,7 @@ export default function CertificatesPage() {
         }
       }
       setShowModal(false);
+      loadCerts();
     } catch {}
     setSaving(false);
   };
@@ -213,13 +267,25 @@ export default function CertificatesPage() {
             Create and manage certificates. Share embedded links with recipients.
           </p>
         </div>
-        <button
-          onClick={openAdd}
-          className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-5 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
-        >
-          <Plus className="h-4 w-4" />
-          Add Certificate
-        </button>
+        <div className="flex items-center gap-3">
+          {scanNote && (
+            <span className="max-w-[16rem] text-right text-xs text-zinc-400">{scanNote}</span>
+          )}
+          <button
+            onClick={() => runScan(false)}
+            disabled={scanning}
+            className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-zinc-300 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-50"
+          >
+            {scanning ? "Scanning…" : "Scan Signatures"}
+          </button>
+          <button
+            onClick={openAdd}
+            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-5 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
+          >
+            <Plus className="h-4 w-4" />
+            Add Certificate
+          </button>
+        </div>
       </div>
 
       <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -255,6 +321,11 @@ export default function CertificatesPage() {
               {c.category && (
                 <span className="mt-2 inline-flex items-center rounded-full border border-cyan-500/20 bg-cyan-500/10 px-2.5 py-0.5 text-[11px] font-medium text-cyan-400">
                   {c.category}
+                </span>
+              )}
+              {c.signature_status && (
+                <span className={`mt-2 ml-2 inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${signatureLabels[c.signature_status]?.className || signatureLabels.pending.className}`}>
+                  {signatureLabels[c.signature_status]?.label || c.signature_status}
                 </span>
               )}
               <p className="mt-1 text-xs text-zinc-500">

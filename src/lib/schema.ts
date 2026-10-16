@@ -209,6 +209,10 @@ export async function ensureCertificatesTable() {
   await execute(`ALTER TABLE certificates ADD COLUMN IF NOT EXISTS verify_url TEXT DEFAULT ''`);
   await execute(`ALTER TABLE certificates ADD COLUMN IF NOT EXISTS certificate_image_url TEXT DEFAULT ''`);
   await execute(`ALTER TABLE certificates ADD COLUMN IF NOT EXISTS category VARCHAR(100) DEFAULT ''`);
+  await execute(`ALTER TABLE certificates ADD COLUMN IF NOT EXISTS certificate_image_original_url TEXT DEFAULT ''`);
+  await execute(`ALTER TABLE certificates ADD COLUMN IF NOT EXISTS signature_status VARCHAR(20) DEFAULT 'pending'`);
+  await execute(`ALTER TABLE certificates ADD COLUMN IF NOT EXISTS signature_regions TEXT DEFAULT ''`);
+  await execute(`ALTER TABLE certificates ADD COLUMN IF NOT EXISTS signature_blurred_at TIMESTAMP`);
 }
 
 export async function ensureEducationsTable() {
