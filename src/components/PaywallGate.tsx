@@ -12,12 +12,10 @@ import SecurePortal from "@/components/SecurePortal";
  * - Timetopay "locked" → Secure Portal code screen. A correct code unlocks
  *   THIS device only (localStorage is per-browser). The unlock stays alive
  *   while the visitor is active (mouse / keys / touch / scroll); after 15
- *   minutes of no activity the site auto-relocks and the code is required
- *   again on this device.
+ *   minutes of no activity the site auto-relocks ON THE OPEN PAGE — the
+ *   portal re-appears without any refresh. Backstops (30s interval +
+ *   visibilitychange) cover browsers that suspend timers in background tabs.
  * - Status fetch failure fails closed (portal shown); the code still works.
- *
- * The site renders underneath and the portal covers it (fixed overlay), so
- * there is no blank flash while the status check runs.
  *
  * Owner routes (/login, /dashboard, /profile, /api) are never gated.
  */
@@ -26,6 +24,7 @@ const STATUS_URL =
 const STORAGE_KEY = "deejay_portal_last_active";
 const LEGACY_KEY = "deejay_portal_until"; // previous fixed-expiry scheme
 const IDLE_MS = 15 * 60 * 1000;
+const IDLE_CHECK_MS = 30 * 1000;
 const SAVE_THROTTLE_MS = 5000;
 
 const EXEMPT_PREFIXES = ["/login", "/dashboard", "/profile", "/api"];
@@ -34,22 +33,20 @@ export default function PaywallGate({ children }: { children: React.ReactNode })
   const pathname = usePathname();
   const [publicOpen, setPublicOpen] = useState(false);
   const [codeUnlocked, setCodeUnlocked] = useState(false);
-  const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastSaved = useRef(0);
+  const lastActivityRef = useRef(0);
+  const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSavedRef = useRef(0);
 
   const exempt = EXEMPT_PREFIXES.some(
     (p) => pathname === p || pathname.startsWith(p + "/"),
   );
 
-  const clearIdle = () => {
-    if (idleTimer.current) {
-      clearTimeout(idleTimer.current);
-      idleTimer.current = null;
+  const lockNow = () => {
+    if (idleTimerRef.current) {
+      clearTimeout(idleTimerRef.current);
+      idleTimerRef.current = null;
     }
-  };
-
-  const lockThisDevice = () => {
-    clearIdle();
+    lastActivityRef.current = 0;
     try {
       localStorage.removeItem(STORAGE_KEY);
       localStorage.removeItem(LEGACY_KEY);
@@ -59,9 +56,26 @@ export default function PaywallGate({ children }: { children: React.ReactNode })
     setCodeUnlocked(false);
   };
 
-  const armIdle = () => {
-    clearIdle();
-    idleTimer.current = setTimeout(lockThisDevice, IDLE_MS);
+  // Single idle check used by the timer, the interval, and tab refocus.
+  const checkIdle = () => {
+    if (lastActivityRef.current > 0 && Date.now() - lastActivityRef.current > IDLE_MS) {
+      lockNow();
+    }
+  };
+
+  const noteActivity = (persist = true) => {
+    const now = Date.now();
+    lastActivityRef.current = now;
+    if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+    idleTimerRef.current = setTimeout(checkIdle, IDLE_MS + 1000);
+    if (persist && now - lastSavedRef.current > SAVE_THROTTLE_MS) {
+      lastSavedRef.current = now;
+      try {
+        localStorage.setItem(STORAGE_KEY, String(now));
+      } catch {
+        // Ignore — unlock still lives in memory for this session.
+      }
+    }
   };
 
   // Re-check timetopay + restore a still-valid device unlock on each nav.
@@ -90,8 +104,9 @@ export default function PaywallGate({ children }: { children: React.ReactNode })
     }
 
     if (lastActive > 0) {
+      // Opening the page counts as activity; the idle window restarts.
+      noteActivity();
       setCodeUnlocked(true);
-      armIdle();
     } else {
       setCodeUnlocked(false);
     }
@@ -113,23 +128,12 @@ export default function PaywallGate({ children }: { children: React.ReactNode })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [exempt, pathname]);
 
-  // While code-unlocked (and not publicly open): sense activity, refresh the
-  // stored timestamp, and re-lock after IDLE_MS of silence.
+  // While code-unlocked (and not publicly open): sense activity and
+  // auto-relock on the open page after IDLE_MS of silence.
   useEffect(() => {
     if (exempt || publicOpen || !codeUnlocked) return;
 
-    const onActivity = () => {
-      armIdle();
-      const now = Date.now();
-      if (now - lastSaved.current > SAVE_THROTTLE_MS) {
-        lastSaved.current = now;
-        try {
-          localStorage.setItem(STORAGE_KEY, String(now));
-        } catch {
-          // Ignore — unlock still lives in memory for this session.
-        }
-      }
-    };
+    const onActivity = () => noteActivity();
 
     const events: (keyof WindowEventMap)[] = [
       "mousemove",
@@ -142,15 +146,29 @@ export default function PaywallGate({ children }: { children: React.ReactNode })
       window.addEventListener(ev, onActivity, { passive: true });
     }
 
+    // Backstops: background tabs can suspend setTimeout — re-check on an
+    // interval and the moment the tab becomes visible again.
+    const interval = setInterval(checkIdle, IDLE_CHECK_MS);
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") checkIdle();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
     return () => {
       for (const ev of events) {
         window.removeEventListener(ev, onActivity);
       }
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisibility);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [exempt, publicOpen, codeUnlocked]);
 
-  useEffect(() => clearIdle, []);
+  useEffect(() => {
+    return () => {
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+    };
+  }, []);
 
   if (exempt || publicOpen || codeUnlocked) return <>{children}</>;
 
@@ -159,14 +177,8 @@ export default function PaywallGate({ children }: { children: React.ReactNode })
       {children}
       <SecurePortal
         onUnlock={() => {
-          const now = Date.now();
-          lastSaved.current = now;
-          try {
-            localStorage.setItem(STORAGE_KEY, String(now));
-          } catch {
-            // Storage blocked — unlock still applies for this session.
-          }
-          armIdle();
+          lastSavedRef.current = Date.now();
+          noteActivity();
           setCodeUnlocked(true);
         }}
       />
