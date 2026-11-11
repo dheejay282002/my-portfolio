@@ -50,9 +50,8 @@ export default function AboutSection() {
         <div className="grid grid-cols-1 items-center gap-16 lg:grid-cols-2">
           <div>
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-              About{" "}
               <span className="bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
-                Me
+                Objective
               </span>
             </h2>
             {bioParagraphs.map((p, i) => (
