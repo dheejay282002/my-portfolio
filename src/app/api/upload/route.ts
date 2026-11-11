@@ -20,8 +20,9 @@ export async function POST(req: Request) {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
+    const isPdf = file.type === "application/pdf" || /\.pdf$/i.test(file.name);
     const isVideo = file.type?.startsWith("video") || /\.(mp4|mov|webm|avi|mkv)$/i.test(file.name);
-    const resourceType = isVideo ? "video" : "auto";
+    const resourceType = isPdf ? "raw" : isVideo ? "video" : "auto";
 
     // Upload to Cloudinary
     const result = await new Promise<{ secure_url: string }>((resolve, reject) => {
