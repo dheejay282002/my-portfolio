@@ -1,6 +1,36 @@
 import { NextResponse } from "next/server";
+import { v2 as cloudinary } from "cloudinary";
 
 export const dynamic = "force-dynamic";
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+function getSignedCloudinaryUrl(sourceUrl: string) {
+  const url = new URL(sourceUrl);
+  if (!url.hostname.endsWith("cloudinary.com")) return null;
+
+  const pathParts = url.pathname.split("/").filter(Boolean);
+  const deliveryIndex = pathParts.findIndex((part) => ["image", "raw", "video"].includes(part));
+  if (deliveryIndex < 0 || pathParts[deliveryIndex + 1] !== "upload") return null;
+
+  const publicIdParts = pathParts.slice(deliveryIndex + 2);
+  if (publicIdParts[0]?.match(/^v\d+$/)) publicIdParts.shift();
+  const publicIdWithFormat = publicIdParts.join("/");
+  const extensionIndex = publicIdWithFormat.lastIndexOf(".");
+  const format = extensionIndex >= 0 ? publicIdWithFormat.slice(extensionIndex + 1) : "";
+  const publicId = extensionIndex >= 0 ? publicIdWithFormat.slice(0, extensionIndex) : publicIdWithFormat;
+  if (!publicId) return null;
+
+  return cloudinary.utils.private_download_url(publicId, format, {
+    resource_type: pathParts[deliveryIndex] as "image" | "raw" | "video",
+    type: "upload",
+    attachment: false,
+  });
+}
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -12,7 +42,11 @@ export async function GET(req: Request) {
   }
 
   try {
-    const res = await fetch(url, { redirect: "follow" });
+    let res = await fetch(url, { redirect: "follow" });
+    if (res.status === 401) {
+      const signedUrl = getSignedCloudinaryUrl(url);
+      if (signedUrl) res = await fetch(signedUrl, { redirect: "follow" });
+    }
     if (!res.ok) {
       return NextResponse.json({ error: `Upstream returned ${res.status}` }, { status: 502 });
     }

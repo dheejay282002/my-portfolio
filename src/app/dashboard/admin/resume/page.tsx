@@ -122,7 +122,7 @@ export default function AdminResumePage() {
             </div>
             <div className="flex items-center gap-2">
               <a
-                href={resume.file_url}
+                href={isPdf ? `/api/pdf-proxy?url=${encodeURIComponent(resume.file_url)}` : resume.file_url}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="rounded-lg p-2 text-zinc-500 transition-colors hover:text-cyan-400"
@@ -148,7 +148,7 @@ export default function AdminResumePage() {
                   <FileText className="h-12 w-12 text-zinc-600" />
                   <p className="mt-3 text-sm text-zinc-400">PDF preview not available in this browser</p>
                   <a
-                    href={resume.file_url}
+                    href={`/api/pdf-proxy?url=${encodeURIComponent(resume.file_url)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="mt-4 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-5 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
