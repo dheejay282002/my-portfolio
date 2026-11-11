@@ -36,7 +36,7 @@ export default function HeroSection() {
         </h1>
 
         <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-zinc-400 sm:text-xl">
-          JUST KEEP IT SILENT!
+          NETWORK ENGINEER | WEB DEVELOPER | SOFTWARE ENGINEER | CLOUD ENGINEER | DEVOPS ENGINEER
         </p>
 
         <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
