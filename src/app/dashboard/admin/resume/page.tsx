@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Upload, Trash2, FileText, Image as ImageIcon, ExternalLink } from "lucide-react";
+import { Upload, Trash2, FileText, ExternalLink } from "lucide-react";
 
 interface Resume {
   id: number;
@@ -31,9 +31,8 @@ export default function AdminResumePage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const allowed = ["image/png", "image/jpeg", "image/jpg", "image/gif", "image/webp", "application/pdf"];
-    if (!allowed.includes(file.type)) {
-      alert("Only image files (PNG, JPG, GIF, WEBP) and PDF are allowed.");
+    if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
+      alert("Only PDF files are allowed.");
       e.target.value = "";
       return;
     }
@@ -51,7 +50,7 @@ export default function AdminResumePage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             file_url: data.url,
-            file_type: file.type,
+            file_type: "application/pdf",
             file_name: file.name,
           }),
         });
@@ -84,19 +83,17 @@ export default function AdminResumePage() {
   }
 
   const isPdf = resume?.file_type === "application/pdf";
-  const isImage = resume?.file_type?.startsWith("image/");
-
   return (
     <div className="p-8">
       <h1 className="text-2xl font-bold text-white">Resume Management</h1>
-      <p className="mt-1 text-sm text-zinc-400">Upload and manage your resume. Accepted formats: PDF, PNG, JPG, GIF, WEBP.</p>
+      <p className="mt-1 text-sm text-zinc-400">Upload and manage your resume as a PDF file.</p>
 
       <div className="mt-6">
         <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-white/10 px-5 py-3 text-sm text-zinc-400 transition-colors hover:border-white/20 hover:text-white">
           {uploading || saving ? "Uploading..." : "Upload Resume"}
           <input
             type="file"
-            accept="image/png,image/jpeg,image/jpg,image/gif,image/webp,.pdf"
+            accept="application/pdf,.pdf"
             onChange={handleUpload}
             className="hidden"
             disabled={uploading || saving}
@@ -108,11 +105,7 @@ export default function AdminResumePage() {
         <div className="mt-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              {isPdf ? (
-                <FileText className="h-5 w-5 text-red-400" />
-              ) : (
-                <ImageIcon className="h-5 w-5 text-cyan-400" />
-              )}
+              <FileText className="h-5 w-5 text-red-400" />
               <div>
                 <p className="text-sm font-medium text-white">{resume.file_name}</p>
                 <p className="text-xs text-zinc-500">
@@ -122,7 +115,7 @@ export default function AdminResumePage() {
             </div>
             <div className="flex items-center gap-2">
               <a
-                href={isPdf ? `/api/pdf-proxy?url=${encodeURIComponent(resume.file_url)}` : resume.file_url}
+                href={`/api/pdf-proxy?url=${encodeURIComponent(resume.file_url)}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="rounded-lg p-2 text-zinc-500 transition-colors hover:text-cyan-400"
@@ -165,12 +158,6 @@ export default function AdminResumePage() {
                   onError={() => setPdfFailed(true)}
                 />
               )
-            ) : isImage ? (
-              <img
-                src={resume.file_url}
-                alt="Resume Preview"
-                className="w-full max-h-[600px] rounded-xl object-contain border border-white/10"
-              />
             ) : null}
           </div>
         </div>

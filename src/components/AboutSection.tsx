@@ -122,7 +122,7 @@ export default function AboutSection() {
                   <Download className="h-4 w-4" />
                 </a>
                 <a
-                  href={resume.file_url}
+                  href={`/api/pdf-proxy?url=${encodeURIComponent(resume.file_url)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="rounded-lg p-1.5 text-zinc-500 transition-colors hover:text-cyan-400"
@@ -142,13 +142,7 @@ export default function AboutSection() {
                   className="w-full h-[700px] rounded-xl border border-white/10"
                   title="Resume"
                 />
-              ) : (
-                <img
-                  src={resume.file_url}
-                  alt="Resume"
-                  className="w-full rounded-xl object-contain border border-white/10"
-                />
-              )}
+              ) : null}
             </div>
           </div>
         </div>
